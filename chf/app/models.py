@@ -1,7 +1,17 @@
+"""Supported subset of TS 32.291 Rel16, not the entire OpenAPI."""
 from datetime import datetime
-from typing import Literal
+from ipaddress import IPv4Address, IPv6Address
+from typing import Annotated, Literal
+from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, HttpUrl, model_validator
+
+# Explicit profile bound: exact JSON integers in cJSON, SQLite and JavaScript.
+# Reject values beyond this range, never silently truncate a normative Uint64.
+MAX_BYTES = 2**53 - 1
+Volume = Annotated[int, Field(strict=True, ge=0, le=MAX_BYTES)]
+Uint32 = Annotated[int, Field(strict=True, ge=0, le=2**32 - 1)]
+Supi = Annotated[str, Field(pattern=r"^imsi-[0-9]{5,15}$")]
 
 
 class StrictModel(BaseModel):
@@ -9,88 +19,124 @@ class StrictModel(BaseModel):
 
 
 class NFIdentification(StrictModel):
-    nFName: str | None = None
-    nFIPv4Address: str | None = None
-    nFIPv6Address: str | None = None
-    nFFqdn: str | None = None
-    nodeFunctionality: str
+    nFName: UUID  # Required by our owner-bound session profile.
+    nFIPv4Address: IPv4Address | None = None
+    nFIPv6Address: IPv6Address | None = None
+    nFFqdn: str | None = Field(default=None, max_length=253)
+    nodeFunctionality: Literal["SMF"]
 
 
 class RequestedUnit(StrictModel):
-    time: int | None = Field(default=None, ge=0)
-    totalVolume: int | None = Field(default=None, ge=0)
-    uplinkVolume: int | None = Field(default=None, ge=0)
-    downlinkVolume: int | None = Field(default=None, ge=0)
-    serviceSpecificUnits: int | None = Field(default=None, ge=0)
+    totalVolume: Volume | None = None
+    # Non-volume units are not silently accepted or converted to bytes.
+
+
+class Trigger(StrictModel):
+    triggerType: Literal["QUOTA_THRESHOLD", "QUOTA_EXHAUSTED", "VALIDITY_TIME",
+                         "FINAL", "ABNORMAL_RELEASE", "FORCED_REAUTHORISATION"]
+    triggerCategory: Literal["IMMEDIATE_REPORT", "DEFERRED_REPORT"]
 
 
 class UsedUnitContainer(StrictModel):
-    localSequenceNumber: int = Field(ge=0)
-    time: int | None = Field(default=None, ge=0)
-    totalVolume: int | None = Field(default=None, ge=0)
-    uplinkVolume: int | None = Field(default=None, ge=0)
-    downlinkVolume: int | None = Field(default=None, ge=0)
+    localSequenceNumber: Uint32
+    totalVolume: Volume | None = None
+    uplinkVolume: Volume | None = None
+    downlinkVolume: Volume | None = None
+    triggers: list[Trigger] = Field(default_factory=list, max_length=16)
+    triggerTimestamp: AwareDatetime | None = None
+    quotaManagementIndicator: Literal["ONLINE_CHARGING"] | None = None
+
+    @model_validator(mode="after")
+    def consistent_volume(self):
+        if self.totalVolume is None and (self.uplinkVolume is None or self.downlinkVolume is None):
+            raise ValueError("provide totalVolume or both directional volumes")
+        directional = (self.uplinkVolume or 0) + (self.downlinkVolume or 0)
+        if self.totalVolume is not None:
+            if directional > self.totalVolume:
+                raise ValueError("directional usage exceeds totalVolume")
+            if self.uplinkVolume is not None and self.downlinkVolume is not None and directional != self.totalVolume:
+                raise ValueError("totalVolume must equal UL + DL when both are supplied")
+        if self.volume() > MAX_BYTES:
+            raise ValueError("volume exceeds the exact-integer profile limit")
+        return self
 
     def volume(self) -> int:
-        # TS 32.291 permits total and directional counters in the same
-        # container. totalVolume already represents UL+DL and must not be
-        # added to those values a second time.
-        if self.totalVolume is not None:
-            return self.totalVolume
-        return (self.uplinkVolume or 0) + (self.downlinkVolume or 0)
+        return self.totalVolume if self.totalVolume is not None else self.uplinkVolume + self.downlinkVolume
 
 
 class MultipleUnitUsage(StrictModel):
-    ratingGroup: int = Field(ge=0)
+    ratingGroup: Uint32
     requestedUnit: RequestedUnit | None = None
-    usedUnitContainer: list[UsedUnitContainer] = Field(default_factory=list)
-    uPFID: str | None = None
+    usedUnitContainer: list[UsedUnitContainer] = Field(default_factory=list, max_length=256)
+    uPFID: UUID | None = None
+
+
+class Snssai(StrictModel):
+    sst: Annotated[int, Field(strict=True, ge=0, le=255)]
+    sd: str | None = Field(default=None, pattern=r"^[0-9a-fA-F]{6}$")
+
+
+class NetworkSlicingInfo(StrictModel):
+    sNSSAI: Snssai
+
+
+class PDUSessionInformation(StrictModel):
+    pduSessionID: Annotated[int, Field(strict=True, ge=1, le=255)]
+    dnnId: str = Field(min_length=1, max_length=100)
+    networkSlicingInfo: NetworkSlicingInfo | None = None
+    pduType: Literal["IPV4", "IPV6", "IPV4V6"] | None = None
+    startTime: AwareDatetime | None = None
+    stopTime: AwareDatetime | None = None
+    sessionStopIndicator: bool | None = None
+
+
+class PDUSessionChargingInformation(StrictModel):
+    chargingId: Uint32 | None = None
+    pduSessionInformation: PDUSessionInformation | None = None
 
 
 class ChargingDataRequest(StrictModel):
-    subscriberIdentifier: str | None = None
-    chargingId: int | None = Field(default=None, ge=0)
+    subscriberIdentifier: Supi | None = None
+    chargingId: Uint32 | None = None
     nfConsumerIdentification: NFIdentification
-    invocationTimeStamp: datetime
-    invocationSequenceNumber: int = Field(ge=0)
+    invocationTimeStamp: AwareDatetime
+    invocationSequenceNumber: Uint32
     retransmissionIndicator: bool | None = None
-    notifyUri: str | None = None
-    multipleUnitUsage: list[MultipleUnitUsage] = Field(default_factory=list)
-    pDUSessionChargingInformation: dict | None = None
+    notifyUri: HttpUrl | None = None
+    multipleUnitUsage: list[MultipleUnitUsage] = Field(default_factory=list, max_length=1)
+    triggers: list[Trigger] = Field(default_factory=list, max_length=16)
+    pDUSessionChargingInformation: PDUSessionChargingInformation | None = None
 
-    @field_validator("subscriberIdentifier")
-    @classmethod
-    def validate_supi(cls, value: str | None) -> str | None:
-        if value is not None and not value.startswith("imsi-"):
-            raise ValueError("the online-charging profile requires an imsi- SUPI")
-        return value
+    @model_validator(mode="after")
+    def consistent_charging_id(self):
+        pdu = self.pDUSessionChargingInformation
+        if pdu and pdu.chargingId is not None and self.chargingId is not None and pdu.chargingId != self.chargingId:
+            raise ValueError("chargingId fields disagree")
+        return self
 
 
 class GrantedUnit(StrictModel):
-    time: int | None = None
-    totalVolume: int | None = None
-    uplinkVolume: int | None = None
-    downlinkVolume: int | None = None
+    totalVolume: Volume
 
 
 class FinalUnitIndication(StrictModel):
-    finalUnitAction: Literal["TERMINATE", "REDIRECT", "RESTRICT_ACCESS"]
+    finalUnitAction: Literal["TERMINATE"]
 
 
 class MultipleUnitInformation(StrictModel):
-    resultCode: str | None = None
-    ratingGroup: int
-    grantedUnit: GrantedUnit | None = None
-    validityTime: int | None = None
-    volumeQuotaThreshold: int | None = None
+    resultCode: str
+    ratingGroup: Uint32
+    grantedUnit: GrantedUnit
+    validityTime: int
+    volumeQuotaThreshold: Volume | None = None
     finalUnitIndication: FinalUnitIndication | None = None
 
 
 class ChargingDataResponse(StrictModel):
     invocationTimeStamp: datetime
-    invocationSequenceNumber: int
-    sessionFailover: Literal["FAILOVER_NOT_SUPPORTED", "FAILOVER_SUPPORTED"] | None = None
-    multipleUnitInformation: list[MultipleUnitInformation] = Field(default_factory=list)
+    invocationSequenceNumber: Uint32
+    sessionFailover: Literal["FAILOVER_NOT_SUPPORTED"] = "FAILOVER_NOT_SUPPORTED"
+    multipleUnitInformation: list[MultipleUnitInformation]
 
 
 class ProblemDetails(BaseModel):
@@ -101,14 +147,11 @@ class ProblemDetails(BaseModel):
 
 
 class AccountUpsert(StrictModel):
-    supi: str
-    quotaBytes: int = Field(gt=0)
+    supi: Supi
+    quotaBytes: Annotated[int, Field(strict=True, gt=0, le=MAX_BYTES)]
     enabled: bool = True
 
-    @field_validator("supi")
-    @classmethod
-    def validate_supi(cls, value: str) -> str:
-        if not value.startswith("imsi-"):
-            raise ValueError("supi must use the imsi- prefix")
-        return value
 
+class ReconcileRequest(StrictModel):
+    confirmedConsumerStopped: Literal[True]
+    reason: str = Field(min_length=10, max_length=500)

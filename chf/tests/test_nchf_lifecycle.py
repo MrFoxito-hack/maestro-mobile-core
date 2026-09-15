@@ -1,7 +1,7 @@
 from conftest import charging_request
 
 
-def test_create_update_release_and_accounting(client, account):
+def test_create_update_release_and_accounting(client, admin, account):
     create = client.post(
         "/nchf-convergedcharging/v3/chargingdata", json=charging_request(0)
     )
@@ -25,7 +25,7 @@ def test_create_update_release_and_accounting(client, account):
     )
     assert release.status_code == 204
 
-    stored = client.get("/admin/v1/accounts/imsi-999700000000001").json()
+    stored = admin.get("/admin/v1/accounts/imsi-999700000000001").json()
     assert stored["consumed_bytes"] == 1000
     assert stored["reserved_bytes"] == 0
 
@@ -43,7 +43,7 @@ def test_two_sessions_cannot_over_reserve(client, account):
     assert second.json()["multipleUnitInformation"][0]["grantedUnit"]["totalVolume"] == 500
 
 
-def test_duplicate_update_is_idempotent(client, account):
+def test_duplicate_update_is_idempotent(client, admin, account):
     create = client.post(
         "/nchf-convergedcharging/v3/chargingdata", json=charging_request(0)
     )
@@ -57,17 +57,17 @@ def test_duplicate_update_is_idempotent(client, account):
     )
     assert retry.status_code == 200
     assert retry.json() == first.json()
-    stored = client.get("/admin/v1/accounts/imsi-999700000000001").json()
+    stored = admin.get("/admin/v1/accounts/imsi-999700000000001").json()
     assert stored["consumed_bytes"] == 400
 
 
-def test_duplicate_create_returns_same_resource_without_double_reservation(client, account):
+def test_duplicate_create_returns_same_resource_without_double_reservation(client, admin, account):
     payload = charging_request(0, requested=1000)
     first = client.post("/nchf-convergedcharging/v3/chargingdata", json=payload)
     retry = client.post("/nchf-convergedcharging/v3/chargingdata", json=payload)
     assert first.status_code == retry.status_code == 201
     assert first.headers["location"] == retry.headers["location"]
-    stored = client.get("/admin/v1/accounts/imsi-999700000000001").json()
+    stored = admin.get("/admin/v1/accounts/imsi-999700000000001").json()
     assert stored["reserved_bytes"] == 1000
 
 

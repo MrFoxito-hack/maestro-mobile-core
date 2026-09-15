@@ -19,15 +19,28 @@ services:
     ports:
       - "8080:80"
   chf:
+    profiles: [charging]
     build: ./chf
     environment:
       CHF_DATABASE_PATH: /app/data/chf.db
       CHF_DEFAULT_GRANT_BYTES: 10485760
       CHF_VALIDITY_TIME_SECONDS: 300
+      CHF_SBI_TOKENS: ${CHF_SBI_TOKENS:-}
     volumes:
       - chf-data:/app/data
     ports:
       - "127.0.0.1:8081:8081"
+  chf-admin:
+    profiles: [charging]
+    build: ./chf
+    command: ["hypercorn", "app.main:admin_app", "--bind", "0.0.0.0:8082", "--workers", "1"]
+    environment:
+      CHF_DATABASE_PATH: /app/data/chf.db
+      CHF_ADMIN_TOKEN: ${CHF_ADMIN_TOKEN:-}
+    volumes:
+      - chf-data:/app/data
+    ports:
+      - "127.0.0.1:8082:8082"
 volumes:
   ems-data:
   chf-data:

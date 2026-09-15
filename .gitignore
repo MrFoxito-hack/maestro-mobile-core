@@ -3,6 +3,8 @@ backend/.venv/
 backend/.env
 backend/data/
 chf/data/
+.work/
+chf/.env
 *.db
 *.sqlite
 *.sqlite3

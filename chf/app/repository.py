@@ -4,6 +4,9 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
+from app.errors import ChargingError
+from app.migrations import migrate_v2
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -18,6 +21,7 @@ class ChargingRepository:
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
         conn.execute("PRAGMA journal_mode = WAL")
+        conn.execute("PRAGMA synchronous = FULL")
         return conn
 
     @contextmanager
@@ -36,6 +40,18 @@ class ChargingRepository:
 
     def initialize(self) -> None:
         with self.transaction() as conn:
+            version = conn.execute('PRAGMA user_version').fetchone()[0]
+            if version > 2:
+                raise RuntimeError('Charging database is newer than this binary; refusing downgrade')
+            exists = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='charging_accounts'").fetchone()
+            if exists and version < 2:
+                backup_path = self.database_path.with_suffix('.v1-backup.sqlite3')
+                if not backup_path.exists():
+                    backup = sqlite3.connect(backup_path)
+                    try:
+                        conn.backup(backup)
+                    finally:
+                        backup.close()
             conn.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS charging_accounts (
@@ -78,10 +94,16 @@ class ChargingRepository:
                 );
                 """
             )
+            migrate_v2(conn)
 
-    def upsert_account(self, supi: str, quota_bytes: int, enabled: bool) -> dict:
+    def upsert_account(self, supi: str, quota_bytes: int, enabled: bool, actor: str = "admin") -> dict:
+        from app.models import AccountUpsert
+        AccountUpsert(supi=supi, quotaBytes=quota_bytes, enabled=enabled)
         now = utc_now()
         with self.transaction(immediate=True) as conn:
+            previous = self.account_snapshot(conn, supi)
+            if previous and quota_bytes < previous['consumed_bytes'] + previous['reserved_bytes']:
+                raise ChargingError(409, "QUOTA_COMMITTED", "quota is below already debited and reserved units")
             conn.execute(
                 """INSERT INTO charging_accounts(
                        supi,quota_bytes,consumed_bytes,enabled,created_at,updated_at
@@ -92,22 +114,62 @@ class ChargingRepository:
                      updated_at=excluded.updated_at""",
                 (supi, quota_bytes, int(enabled), now, now),
             )
-            row = conn.execute(
-                "SELECT * FROM charging_accounts WHERE supi=?", (supi,)
-            ).fetchone()
-            return dict(row)
+            current = self.account_snapshot(conn, supi)
+            self.append_ledger(conn, supi, None, "ACCOUNT_UPSERT", actor,
+                               {"before": previous, "after": current})
+            return current
 
     def get_account(self, supi: str) -> dict | None:
         with self.transaction() as conn:
-            row = conn.execute(
-                """SELECT a.*,
-                          COALESCE((SELECT SUM(reserved_bytes) FROM charging_sessions s
-                                    WHERE s.supi=a.supi AND s.status='OPEN'), 0)
-                            AS reserved_bytes
-                   FROM charging_accounts a WHERE a.supi=?""",
-                (supi,),
-            ).fetchone()
-            return dict(row) if row else None
+            return self.account_snapshot(conn, supi)
+
+    @staticmethod
+    def account_snapshot(conn, supi):
+        row = conn.execute("""SELECT a.*, COALESCE((SELECT SUM(reserved_bytes)
+            FROM charging_sessions s WHERE s.supi=a.supi AND s.status='OPEN'),0)
+            AS reserved_bytes FROM charging_accounts a WHERE supi=?""", (supi,)).fetchone()
+        if not row:
+            return None
+        result = dict(row)
+        result['available_bytes'] = result['quota_bytes'] - result['consumed_bytes'] - result['reserved_bytes']
+        return result
+
+    @staticmethod
+    def append_ledger(conn, supi, ref, operation, actor, snapshot):
+        conn.execute("""INSERT INTO account_ledger(supi,charging_data_ref,operation,actor,
+            snapshot_json,created_at) VALUES(?,?,?,?,?,?)""",
+            (supi, ref, operation, actor, json.dumps(snapshot, sort_keys=True), utc_now()))
+
+    def readiness(self):
+        with self.transaction() as conn:
+            if conn.execute("PRAGMA quick_check").fetchone()[0] != 'ok':
+                raise ChargingError(503, "SYSTEM_FAILURE", "database integrity check failed")
+            if conn.execute("PRAGMA foreign_key_check").fetchone():
+                raise ChargingError(503, "SYSTEM_FAILURE", "database relationship check failed")
+            invalid = conn.execute("""SELECT supi FROM charging_accounts a WHERE consumed_bytes < 0
+                OR consumed_bytes + COALESCE((SELECT SUM(reserved_bytes) FROM charging_sessions s
+                    WHERE s.supi=a.supi AND status='OPEN'),0) > quota_bytes LIMIT 1""").fetchone()
+            if invalid:
+                raise ChargingError(503, "SYSTEM_FAILURE", "account invariants require reconciliation")
+        return {"status": "ready", "schemaVersion": 2}
+
+    def list_records(self, kind, *, supi=None, limit=100, offset=0):
+        tables = {"accounts": ("charging_accounts", "supi"),
+                  "sessions": ("charging_sessions", "created_at"),
+                  "cdrs": ("charging_cdrs", "closed_at"),
+                  "ledger": ("account_ledger", "id")}
+        table, order = tables[kind]
+        where, params = (" WHERE supi=?", [supi]) if supi else ("", [])
+        with self.transaction() as conn:
+            rows = conn.execute(f"SELECT * FROM {table}{where} ORDER BY {order} DESC LIMIT ? OFFSET ?",
+                                [*params, limit, offset]).fetchall()
+            total = conn.execute(f"SELECT COUNT(*) FROM {table}{where}", params).fetchone()[0]
+            items = [self.account_snapshot(conn, row['supi']) if kind == 'accounts' else dict(row) for row in rows]
+            for item in items:
+                for key in ("context_json", "record_json", "snapshot_json"):
+                    if item.get(key):
+                        item[key.removesuffix('_json')] = json.loads(item.pop(key))
+            return {"items": items, "total": total, "limit": limit, "offset": offset}
 
     @staticmethod
     def stored_response(row: sqlite3.Row, request_hash: str) -> dict | None:

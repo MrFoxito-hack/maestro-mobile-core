@@ -1,57 +1,55 @@
-import os
-import tempfile
-from pathlib import Path
-
 import pytest
+from fastapi.testclient import TestClient
 
+from app.config import Settings
+from app.main import create_app
 
-TEST_ROOT = Path(tempfile.mkdtemp(prefix="maestro-chf-tests-"))
-os.environ["CHF_DATABASE_PATH"] = str(TEST_ROOT / "chf.db")
-os.environ["CHF_DEFAULT_GRANT_BYTES"] = "1000"
-os.environ["CHF_VALIDITY_TIME_SECONDS"] = "60"
-
-from app.config import get_settings  # noqa: E402
-from app.main import app  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
-
-
-@pytest.fixture()
-def client():
-    database = Path(os.environ["CHF_DATABASE_PATH"])
-    if database.exists():
-        database.unlink()
-    get_settings.cache_clear()
-    with TestClient(app) as test_client:
-        yield test_client
+SMF_ID = "00000000-0000-4000-8000-000000000001"
+SMF_TOKEN = "test-smf-token-not-for-deployment-0001"
+ADMIN_TOKEN = "test-admin-token-not-for-deployment-0001"
+SUPI = "imsi-999700000000001"
+ROOT = "/nchf-convergedcharging/v3/chargingdata"
 
 
 @pytest.fixture()
-def account(client):
-    response = client.put(
-        "/admin/v1/accounts/imsi-999700000000001",
-        json={"supi": "imsi-999700000000001", "quotaBytes": 2500, "enabled": True},
-    )
+def settings(tmp_path):
+    return Settings(_env_file=None, database_path=tmp_path / "chf.db",
+                    default_grant_bytes=1000, validity_time_seconds=60,
+                    admin_token=ADMIN_TOKEN, sbi_tokens={SMF_ID: SMF_TOKEN})
+
+
+@pytest.fixture()
+def client(settings):
+    with TestClient(create_app(settings), headers={"Authorization": "Bearer " + SMF_TOKEN}) as result:
+        yield result
+
+
+@pytest.fixture()
+def admin(settings):
+    with TestClient(create_app(settings, management=True),
+                    headers={"Authorization": "Bearer " + ADMIN_TOKEN}) as result:
+        yield result
+
+
+@pytest.fixture()
+def account(admin):
+    response = admin.put("/admin/v1/accounts/" + SUPI,
+                         json={"supi": SUPI, "quotaBytes": 2500, "enabled": True})
     assert response.status_code == 200
     return response.json()
 
 
-def charging_request(
-    sequence: int,
-    *,
-    requested: int = 1000,
-    used: int | None = None,
-    charging_id: int = 100,
-):
+def charging_request(sequence, *, requested=1000, used=None, charging_id=100):
     unit = {"ratingGroup": 1, "requestedUnit": {"totalVolume": requested}}
     if used is not None:
-        unit["usedUnitContainer"] = [
-            {"localSequenceNumber": sequence, "totalVolume": used}
-        ]
+        unit["usedUnitContainer"] = [{"localSequenceNumber": sequence, "totalVolume": used}]
     return {
-        "subscriberIdentifier": "imsi-999700000000001",
-        "chargingId": charging_id,
-        "nfConsumerIdentification": {"nodeFunctionality": "SMF", "nFName": "smf-01"},
+        "subscriberIdentifier": SUPI, "chargingId": charging_id,
+        "nfConsumerIdentification": {"nodeFunctionality": "SMF", "nFName": SMF_ID},
+        "notifyUri": "http://127.0.0.4:7777/nchf-notify/test",
         "invocationTimeStamp": "2026-09-14T12:00:00Z",
-        "invocationSequenceNumber": sequence,
-        "multipleUnitUsage": [unit],
+        "invocationSequenceNumber": sequence, "multipleUnitUsage": [unit],
+        "pDUSessionChargingInformation": {
+            "pduSessionInformation": {"pduSessionID": 1, "dnnId": "internet",
+                                     "networkSlicingInfo": {"sNSSAI": {"sst": 1}}}}
     }
