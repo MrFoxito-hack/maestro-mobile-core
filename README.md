@@ -1,5 +1,9 @@
 # EMS educativo 4G/5G
 
+El directorio [`chf`](chf/README.md) contiene el primer incremento experimental
+del CHF 5G. Se ejecuta como servicio independiente en el puerto local `8081` y
+aún no implica integración con el SMF/UPF ni soporte upstream de Open5GS.
+
 Prototipo de plataforma web para gestionar, observar y analizar testbeds Open5GS/srsRAN previamente instalados. El frontend parte de [`satnaing/shadcn-admin`](https://github.com/satnaing/shadcn-admin) (MIT) y conserva su licencia. Incluye perfiles 4G EPC y 5G SA, RBAC, auditoría, topología, configuración YAML, suscriptores y capturas PCAP limitadas.
 
 ## Inicio rápido sin Open5GS
