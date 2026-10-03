@@ -1,0 +1,17 @@
+{
+  "valid": false,
+  "error": "unsupported_quantitative_or_command_prose",
+  "raw": "{\n  \"observations\": [\n    {\n      \"claim\": \"El analizador conserva un dictamen inconcluso.\",\n      \"evidence_ids\": [\"ev_01\"]\n    }\n  ],\n  \"hypotheses\": [\n    {\n      \"id\": \"h1\",\n      \"description\": \"La diferencia en la espera inicial entre los ensayos ON y OFF de NWDAF puede ser atribuible a la carga compartida entre el reproductor y el relay SSH.\",\n      \"supporting_evidence\": [\"ev_02\", \"ev_03\"],\n      \"contradicting_evidence\": [],\n      \"missing_information\": [\"El nivel de carga en el reproductor y relay SSH durante los ensayos ON y OFF de NWDAF.\"]\n    }\n  ],\n  \"proposed_test\": {\n    \"catalog_action\": \"review_receiver_counters\",\n    \"parameters\": {},\n    \"expected_observations_by_hypothesis\": {\n      \"h1\": \"Se espera que la revisi\u00f3n de los contadores del receptor durante los ensayos ON y OFF de NWDAF muestre una variaci\u00f3n en la carga entre los dos ensayos, lo que podr\u00eda indicar una carga compartida.\"\n    }\n  },\n  \"conclusion_status\": \"inconclusive\"\n}",
+  "timing": {
+    "model": "qwen2.5:7b-instruct-q4_K_M",
+    "model_digest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+    "prompt_version": "qoe-tutor-v2",
+    "context_tokens_limit": 4096,
+    "first_token_seconds": 0.22165939999831608,
+    "total_seconds": 3.4142235000035726,
+    "eval_count": 290,
+    "eval_duration_ns": 3191975000,
+    "prompt_eval_count": 907,
+    "local_only": true
+  }
+}

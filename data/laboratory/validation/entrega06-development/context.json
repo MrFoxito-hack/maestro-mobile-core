@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "model_context": {
+    "version": "authorized-qoe-context-v1",
+    "source": "live_campaign",
+    "observations": [
+      {
+        "id": "ev_01",
+        "claim": "La validez experimental y la conclusion deben evaluarse separadamente.",
+        "values": {
+          "valid_pairs": 0,
+          "excluded_pairs": 1,
+          "hypothesis_outcome": "inconclusive"
+        }
+      },
+      {
+        "id": "ev_02",
+        "claim": "Ensayo 1, NWDAF OFF: espera inicial 7.0615 s; validez inconclusive.",
+        "values": {
+          "subject": "observed_ue",
+          "trial": 1,
+          "controller": "OFF",
+          "execution_status": "completed",
+          "validity_status": "inconclusive",
+          "startup_seconds": 7.0615,
+          "received_payload_bytes": 2160183,
+          "receiver_rx_delta_bytes": 2251096,
+          "competing_received_bytes": 11947200,
+          "rebuffer_count": 0,
+          "rebuffer_seconds": 0,
+          "p1203_mos": 4.049165280413813
+        }
+      },
+      {
+        "id": "ev_03",
+        "claim": "Ensayo 2, NWDAF ON: espera inicial 3.45239999999851 s; validez inconclusive.",
+        "values": {
+          "subject": "observed_ue",
+          "trial": 2,
+          "controller": "ON",
+          "execution_status": "completed",
+          "validity_status": "inconclusive",
+          "startup_seconds": 3.45239999999851,
+          "received_payload_bytes": 2160183,
+          "receiver_rx_delta_bytes": 2251184,
+          "competing_received_bytes": 8402400,
+          "rebuffer_count": 0,
+          "rebuffer_seconds": 0,
+          "p1203_mos": 4.281406424544629
+        }
+      }
+    ],
+    "documents": [
+      {
+        "id": "doc_01",
+        "version": "laboratory-method-v1",
+        "text": "La ejecucion completada no demuestra validez experimental. Un ACK N7/PFCP no demuestra enforcement. La recuperacion de auxiliares no verifica politicas efectivas."
+      },
+      {
+        "id": "doc_02",
+        "version": "qoe-measurement-v2",
+        "text": "La espera inicial incluye el reproductor y el relay SSH. P.1203 estima calidad; no es una evaluacion subjetiva. Una pareja no demuestra causalidad ni significacion."
+      },
+      {
+        "id": "doc_03",
+        "version": "laboratory-method-v1",
+        "text": "Comparar tratamientos requiere medios identicos, condiciones verificadas y repeticiones. El consumo CHF no se borra para recuperar una prueba."
+      }
+    ],
+    "official_conclusion": "inconclusive"
+  },
+  "references": {
+    "ev_01": {
+      "evidence_id": "19ff9d1b98124be0a55726491038bac2",
+      "sha256": "9e1ccf60097123dc7a9785598fc6bfba49dbdd1b7de3c62c65280d75e3097d56"
+    },
+    "ev_02": {
+      "evidence_id": "58b1f189d543494990358fba726d7d33",
+      "sha256": "0fba1274223ec85a8308b4522763f4b9912540435eb43d5f1d14b67c69e636a1"
+    },
+    "ev_03": {
+      "evidence_id": "d100e50276ac4cecb0276bebe88218cd",
+      "sha256": "07c4d92aa385b0f1e35f209f3662abede91c46ba7e6934217e6dbc426ebb89e2"
+    }
+  },
+  "dataset_id": "e905bcb62833449c9f3c858c3559ddaa",
+  "dataset_sha256": "155839427dadb55a3a3051a73b03d7dd1d8b0ae9e87ed0638d36860dc379ca9a",
+  "context_sha256": "6cb704c0da77e36b77b120ccc3ba17be8ddb81730ce1e1abe9915e2f674efc0f"
+}

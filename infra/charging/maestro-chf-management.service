@@ -1,0 +1,20 @@
+[Unit]
+Description=MAEstro CHF management (loopback only)
+After=network.target
+
+[Service]
+Type=simple
+User=emsadmin
+WorkingDirectory=/home/emsadmin/maestro-charging/chf
+EnvironmentFile=/home/emsadmin/maestro-charging/management/management.env
+ExecStart=/home/emsadmin/maestro-charging/chf/.venv/bin/hypercorn app.main:admin_app --bind 127.0.0.1:8082
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/emsadmin/maestro-charging
+
+[Install]
+WantedBy=multi-user.target

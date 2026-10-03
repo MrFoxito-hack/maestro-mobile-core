@@ -1,0 +1,2987 @@
+diff --git a/lib/pfcp/handler.c b/lib/pfcp/handler.c
+index 82e3835..db35c0a 100644
+--- a/lib/pfcp/handler.c
++++ b/lib/pfcp/handler.c
+@@ -1702,9 +1702,10 @@ ogs_pfcp_urr_t *ogs_pfcp_handle_update_urr(ogs_pfcp_sess_t *sess,
+         urr->meas_method = message->measurement_method.u8;
+ 
+     if (message->reporting_triggers.presence) {
+-        urr->rep_triggers.reptri_5 = message->reporting_triggers.u24 & 0xFF;
++        /* Same octet order as Create URR and ogs_pfcp_build_update_urr(). */
++        urr->rep_triggers.reptri_5 = (message->reporting_triggers.u24 >> 16) & 0xFF;
+         urr->rep_triggers.reptri_6 = (message->reporting_triggers.u24 >> 8) & 0xFF;
+-        urr->rep_triggers.reptri_7 = (message->reporting_triggers.u24 >> 16) & 0xFF;
++        urr->rep_triggers.reptri_7 = message->reporting_triggers.u24 & 0xFF;
+     }
+ 
+     if (message->measurement_period.presence) {
+diff --git a/lib/sbi/client.c b/lib/sbi/client.c
+index 30f630f..49cddd9 100644
+--- a/lib/sbi/client.c
++++ b/lib/sbi/client.c
+@@ -468,6 +468,7 @@ static connection_t *connection_add(
+     /* If http response is not received within deadline,
+      * Open5GS will discard this request. */
+     ogs_timer_start(conn->timer,
++            request->deadline > 0 ? request->deadline :
+             ogs_local_conf()->time.message.sbi.connection_deadline);
+ 
+     conn->easy = curl_easy_init();
+@@ -759,6 +760,8 @@ static void check_multi_info(ogs_sbi_client_t *client)
+ 
+                 if (conn->memory_overflow == true) {
+                     ogs_sbi_response_free(response);
++                    /* Notify the owner as for other transport failures. */
++                    conn->client_cb(OGS_ERROR, NULL, conn->data);
+                     connection_remove(conn);
+                     break;
+                 }
+diff --git a/lib/sbi/message.h b/lib/sbi/message.h
+index e733b12..df8b6ca 100644
+--- a/lib/sbi/message.h
++++ b/lib/sbi/message.h
+@@ -637,6 +637,9 @@ typedef struct ogs_sbi_request_s {
+     ogs_sbi_header_t h;
+     ogs_sbi_http_message_t http;
+ 
++    /* Optional per-request deadline. Zero preserves the global SBI default. */
++    ogs_time_t deadline;
++
+     /* Used in microhttpd */
+     bool suspended;
+     struct {
+diff --git a/src/smf/chf-build.c b/src/smf/chf-build.c
+new file mode 100644
+index 0000000..a1da346
+--- /dev/null
++++ b/src/smf/chf-build.c
+@@ -0,0 +1,130 @@
++/* SPDX-License-Identifier: AGPL-3.0-or-later
++ * TS 32.291 V16.17.0, 6.1: explicit supported volume-charging subset.
++ * Uses cJSON for this new service; no shell, synchronous HTTP or fake traffic.
++ */
++#include "chf-path.h"
++
++ogs_sbi_request_t *smf_chf_build_create(smf_sess_t *sess)
++{
++    ogs_chf_config_t *config = &smf_self()->chf_config;
++    smf_ue_t *ue = smf_ue_find_by_id(sess->smf_ue_id);
++    ogs_sbi_request_t *request;
++    ogs_sbi_header_t header;
++    cJSON *root, *nf, *pdu, *info, *slice, *snssai, *usage, *unit, *requested;
++    char *timestamp, *notify, *body, *authorization;
++    char sd[7];
++    if (!ue || !ue->supi || !sess->chf || !sess->session.name ||
++            !ogs_sbi_server_first()) return NULL;
++
++    root = cJSON_CreateObject();
++    ogs_assert(root);
++    timestamp = ogs_sbi_gmtime_string(ogs_time_now());
++    cJSON_AddStringToObject(root, "subscriberIdentifier", ue->supi);
++    cJSON_AddNumberToObject(root, "chargingId", sess->chf->charging_id);
++    cJSON_AddStringToObject(root, "invocationTimeStamp", timestamp);
++    cJSON_AddNumberToObject(root, "invocationSequenceNumber", sess->chf->sequence_number);
++    ogs_free(timestamp);
++    nf = cJSON_AddObjectToObject(root, "nfConsumerIdentification");
++    cJSON_AddStringToObject(nf, "nFName", ogs_sbi_self()->nf_instance->id);
++    cJSON_AddStringToObject(nf, "nodeFunctionality", "SMF");
++
++    memset(&header, 0, sizeof(header));
++    header.service.name = (char *)"nchf-convergedcharging-notify";
++    header.api.version = (char *)"v1";
++    header.resource.component[0] = (char *)"notify";
++    notify = ogs_sbi_server_uri(ogs_sbi_server_first(), &header);
++    cJSON_AddStringToObject(root, "notifyUri", notify);
++    ogs_free(notify);
++
++    pdu = cJSON_AddObjectToObject(root, "pDUSessionChargingInformation");
++    cJSON_AddNumberToObject(pdu, "chargingId", sess->chf->charging_id);
++    info = cJSON_AddObjectToObject(pdu, "pduSessionInformation");
++    cJSON_AddNumberToObject(info, "pduSessionID", sess->psi);
++    cJSON_AddStringToObject(info, "dnnId", sess->session.name);
++    slice = cJSON_AddObjectToObject(info, "networkSlicingInfo");
++    snssai = cJSON_AddObjectToObject(slice, "sNSSAI");
++    cJSON_AddNumberToObject(snssai, "sst", sess->s_nssai.sst);
++    if (sess->s_nssai.sd.v != OGS_S_NSSAI_NO_SD_VALUE) {
++        ogs_snprintf(sd, sizeof(sd), "%06x", sess->s_nssai.sd.v);
++        cJSON_AddStringToObject(snssai, "sd", sd);
++    }
++
++    usage = cJSON_AddArrayToObject(root, "multipleUnitUsage");
++    unit = cJSON_CreateObject();
++    cJSON_AddItemToArray(usage, unit);
++    cJSON_AddNumberToObject(unit, "ratingGroup", sess->chf->rating_group);
++    requested = cJSON_AddObjectToObject(unit, "requestedUnit");
++    cJSON_AddNumberToObject(requested, "totalVolume", config->requested_units);
++    body = cJSON_PrintUnformatted(root);
++    cJSON_Delete(root);
++    if (!body) return NULL;
++
++    request = ogs_sbi_request_new();
++    if (!request) { cJSON_free(body); return NULL; }
++    request->h.method = ogs_strdup(OGS_SBI_HTTP_METHOD_POST);
++    request->h.uri = ogs_msprintf("http://%s:%u%s", config->addr,
++            config->port, SMF_CHF_COLLECTION);
++    request->http.content = ogs_strdup(body);
++    request->http.content_length = strlen(body);
++    cJSON_free(body);
++    request->deadline = ogs_time_from_msec(config->timeout_ms);
++    ogs_sbi_header_set(request->http.headers, OGS_SBI_CONTENT_TYPE, "application/json");
++    ogs_sbi_header_set(request->http.headers, OGS_SBI_ACCEPT, "application/json, application/problem+json");
++    if (!config->lab_no_auth) {
++        authorization = ogs_msprintf("Bearer %s", getenv(config->token_env));
++        ogs_sbi_header_set(request->http.headers, "authorization", authorization);
++        ogs_free(authorization);
++    }
++    return request;
++}
++
++ogs_sbi_request_t *smf_chf_build_change(smf_sess_t *sess,
++        smf_chf_operation_e operation, const smf_chf_usage_t *usage)
++{
++    ogs_sbi_request_t *request;
++    cJSON *root, *unit, *used, *container, *triggers, *trigger;
++    char *body;
++    const char *reason = usage ? usage->trigger : "FINAL";
++    if (!sess->chf || !sess->chf->resource_uri ||
++            (operation != SMF_CHF_UPDATE && operation != SMF_CHF_RELEASE)) return NULL;
++    if (operation == SMF_CHF_UPDATE && !usage) return NULL;
++    if (usage && (usage->uplink > 9007199254740991ULL ||
++                usage->downlink > 9007199254740991ULL - usage->uplink)) return NULL;
++    if (!reason || (strcmp(reason, "QUOTA_THRESHOLD") && strcmp(reason, "QUOTA_EXHAUSTED") &&
++                strcmp(reason, "VALIDITY_TIME") && strcmp(reason, "FINAL") &&
++                strcmp(reason, "ABNORMAL_RELEASE"))) return NULL;
++    request = smf_chf_build_create(sess);
++    if (!request) return NULL;
++    root = cJSON_Parse(request->http.content);
++    if (!root) { ogs_sbi_request_free(request); return NULL; }
++    cJSON_DeleteItemFromObjectCaseSensitive(root, "notifyUri");
++    unit = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(root, "multipleUnitUsage"), 0);
++    if (operation == SMF_CHF_RELEASE)
++        cJSON_DeleteItemFromObjectCaseSensitive(unit, "requestedUnit");
++    if (usage) {
++        used = cJSON_AddArrayToObject(unit, "usedUnitContainer");
++        container = cJSON_CreateObject();
++        cJSON_AddItemToArray(used, container);
++        cJSON_AddNumberToObject(container, "localSequenceNumber", usage->sequence);
++        cJSON_AddNumberToObject(container, "totalVolume", usage->uplink + usage->downlink);
++        cJSON_AddNumberToObject(container, "uplinkVolume", usage->uplink);
++        cJSON_AddNumberToObject(container, "downlinkVolume", usage->downlink);
++        cJSON_AddStringToObject(container, "quotaManagementIndicator", "ONLINE_CHARGING");
++    }
++    triggers = cJSON_AddArrayToObject(root, "triggers");
++    trigger = cJSON_CreateObject();
++    cJSON_AddItemToArray(triggers, trigger);
++    cJSON_AddStringToObject(trigger, "triggerType", reason);
++    cJSON_AddStringToObject(trigger, "triggerCategory", "IMMEDIATE_REPORT");
++    body = cJSON_PrintUnformatted(root);
++    cJSON_Delete(root);
++    if (!body) { ogs_sbi_request_free(request); return NULL; }
++    ogs_free(request->http.content);
++    request->http.content = ogs_strdup(body);
++    request->http.content_length = strlen(body);
++    cJSON_free(body);
++    ogs_free(request->h.uri);
++    request->h.uri = ogs_msprintf("%s/%s", sess->chf->resource_uri,
++            operation == SMF_CHF_UPDATE ? "update" : "release");
++    return request;
++}
+diff --git a/src/smf/chf-config.c b/src/smf/chf-config.c
+new file mode 100644
+index 0000000..80595de
+--- /dev/null
++++ b/src/smf/chf-config.c
+@@ -0,0 +1,147 @@
++/* SPDX-License-Identifier: AGPL-3.0-or-later
++ * MAEstro experimental TS 32.291 Rel16 volume-charging profile.
++ */
++#include "chf-path.h"
++#include <errno.h>
++#include <ctype.h>
++
++void smf_chf_config_init(ogs_chf_config_t *config)
++{
++    memset(config, 0, sizeof(*config));
++    config->port = 8081;
++    config->timeout_ms = 2000;
++    config->retries = 2;
++    config->rating_group = 1;
++    config->requested_units = 1048576;
++    config->token_env = "SMF_CHF_TOKEN";
++    config->journal_dir = "./chf-journal";
++}
++
++static bool parse_uint(ogs_yaml_iter_t *iter, uint64_t min,
++        uint64_t max, uint64_t *out)
++{
++    const char *value = ogs_yaml_iter_value(iter);
++    const char *p;
++    char *end = NULL;
++    unsigned long long number;
++    if (!value || !*value) return false;
++    for (p = value; *p; p++)
++        if (!isdigit((unsigned char)*p)) return false;
++    errno = 0;
++    number = strtoull(value, &end, 10);
++    if (errno || *end || number < min || number > max) return false;
++    *out = number;
++    return true;
++}
++
++static bool parse_bool(ogs_yaml_iter_t *iter, bool *out)
++{
++    const char *value = ogs_yaml_iter_value(iter);
++    if (value && !strcmp(value, "true")) { *out = true; return true; }
++    if (value && !strcmp(value, "false")) { *out = false; return true; }
++    return false;
++}
++
++static int parse_endpoint(ogs_yaml_iter_t *iter, ogs_chf_config_t *c)
++{
++    ogs_yaml_iter_t array, endpoint;
++    uint64_t number;
++    int count = 0;
++    ogs_yaml_iter_recurse(iter, &array);
++    if (ogs_yaml_iter_type(&array) != YAML_SEQUENCE_NODE) goto invalid;
++    while (ogs_yaml_iter_next(&array)) {
++        if (++count != 1) goto invalid; /* Failover not yet implemented. */
++        ogs_yaml_iter_recurse(&array, &endpoint);
++        if (ogs_yaml_iter_type(&endpoint) != YAML_MAPPING_NODE) goto invalid;
++        while (ogs_yaml_iter_next(&endpoint)) {
++            const char *key = ogs_yaml_iter_key(&endpoint);
++            if (!strcmp(key, "addr")) c->addr = ogs_yaml_iter_value(&endpoint);
++            else if (!strcmp(key, "port")) {
++                if (!parse_uint(&endpoint, 1, 65535, &number)) goto invalid;
++                c->port = number;
++            } else goto invalid;
++        }
++    }
++    if (count == 1) return OGS_OK;
++invalid:
++    ogs_error("smf.chf.sbi requires exactly one {addr, port} endpoint");
++    return OGS_ERROR;
++}
++
++int smf_chf_config_parse(ogs_yaml_iter_t *iter)
++{
++    ogs_chf_config_t *c = &smf_self()->chf_config;
++    ogs_yaml_iter_t child;
++    uint64_t number;
++    bool enabled_seen = false;
++    ogs_yaml_iter_recurse(iter, &child);
++    if (ogs_yaml_iter_type(&child) != YAML_MAPPING_NODE) goto invalid;
++    /* Explicit false ignores all remaining CHF settings, without DNS/client I/O. */
++    while (ogs_yaml_iter_next(&child)) {
++        if (!strcmp(ogs_yaml_iter_key(&child), "enabled")) {
++            if (enabled_seen || !parse_bool(&child, &c->enabled)) goto invalid;
++            enabled_seen = true;
++        }
++    }
++    if (!enabled_seen) goto invalid;
++    if (!c->enabled) return OGS_OK;
++    ogs_yaml_iter_recurse(iter, &child);
++    while (ogs_yaml_iter_next(&child)) {
++        const char *key = ogs_yaml_iter_key(&child);
++        if (!strcmp(key, "enabled")) continue;
++        if (!strcmp(key, "sbi")) {
++            if (parse_endpoint(&child, c) != OGS_OK) return OGS_ERROR;
++        } else if (!strcmp(key, "timeout_ms")) {
++            if (!parse_uint(&child, 100, 30000, &number)) goto invalid;
++            c->timeout_ms = number;
++        } else if (!strcmp(key, "retries")) {
++            if (!parse_uint(&child, 0, 5, &number)) goto invalid;
++            c->retries = number;
++        } else if (!strcmp(key, "rating_group")) {
++            if (!parse_uint(&child, 0, UINT32_MAX, &number)) goto invalid;
++            c->rating_group = number;
++        } else if (!strcmp(key, "requested_units")) {
++            if (!parse_uint(&child, 1, UINT32_MAX, &number)) goto invalid;
++            c->requested_units = number;
++        } else if (!strcmp(key, "token_env")) {
++            c->token_env = ogs_yaml_iter_value(&child);
++        } else if (!strcmp(key, "journal_dir")) {
++            c->journal_dir = ogs_yaml_iter_value(&child);
++            if (!c->journal_dir || !*c->journal_dir) goto invalid;
++        } else if (!strcmp(key, "nf_instance_id")) {
++            c->nf_instance_id = ogs_yaml_iter_value(&child);
++        } else if (!strcmp(key, "lab_no_auth")) {
++            if (!parse_bool(&child, &c->lab_no_auth)) goto invalid;
++        } else goto invalid;
++    }
++    return OGS_OK;
++invalid:
++    ogs_error("Invalid smf.chf configuration (unsupported key or value)");
++    return OGS_ERROR;
++}
++
++int smf_chf_config_validate(ogs_chf_config_t *c)
++{
++    struct in_addr addr;
++    ogs_uuid_t uuid;
++    const char *token;
++    if (!c->enabled) return OGS_OK;
++    /* First native profile: static IPv4 endpoint over isolated lab HTTP/2. */
++    if (!c->addr || inet_pton(AF_INET, c->addr, &addr) != 1) {
++        ogs_error("smf.chf.sbi.addr must be an IPv4 address");
++        return OGS_ERROR;
++    }
++    if (c->nf_instance_id && ogs_uuid_parse(&uuid, c->nf_instance_id) != OGS_OK) {
++        ogs_error("smf.chf.nf_instance_id must be a UUID");
++        return OGS_ERROR;
++    }
++    token = c->token_env ? getenv(c->token_env) : NULL;
++    if (!c->lab_no_auth && (!token || strlen(token) < 32 ||
++                strchr(token, '\r') || strchr(token, '\n'))) {
++        ogs_error("CHF bearer credential missing or invalid in environment");
++        return OGS_ERROR;
++    }
++    if (c->lab_no_auth)
++        ogs_warn("CHF lab_no_auth enabled: isolated laboratory ONLY");
++    return OGS_OK;
++}
+diff --git a/src/smf/chf-path.c b/src/smf/chf-path.c
+new file mode 100644
+index 0000000..e9d4c55
+--- /dev/null
++++ b/src/smf/chf-path.c
+@@ -0,0 +1,418 @@
++/* SPDX-License-Identifier: AGPL-3.0-or-later
++ * Native asynchronous Nchf client for MAEstro's experimental Rel16 profile.
++ */
++#include "chf-path.h"
++#include <math.h>
++#include <unistd.h>
++
++OGS_STATIC_ASSERT(sizeof(uint64_t) == sizeof(double));
++
++static ogs_sbi_client_t *chf_client;
++static uint64_t generation;
++static int client_callback(int status, ogs_sbi_response_t *response, void *data);
++
++int smf_chf_open(void)
++{
++    ogs_chf_config_t *config = &smf_self()->chf_config;
++    ogs_sockaddr_t *addr = NULL;
++    if (!config->enabled) return OGS_OK;
++    if (ogs_getaddrinfo(&addr, AF_INET, config->addr, config->port, 0) != OGS_OK)
++        return OGS_ERROR;
++    chf_client = ogs_sbi_client_add(OpenAPI_uri_scheme_http, NULL, 0, addr, NULL);
++    ogs_freeaddrinfo(addr);
++    if (!chf_client) return OGS_ERROR;
++    if (config->nf_instance_id) {
++        /* Configure the ACTUAL SMF identity before NRF registration, not a fake owner. */
++        ogs_sbi_nf_instance_t *nf = ogs_sbi_self()->nf_instance;
++        ogs_assert(ogs_uuid_parse(&ogs_sbi_self()->uuid, config->nf_instance_id) == OGS_OK);
++        ogs_free(nf->id);
++        ogs_sbi_nf_instance_set_id(nf, (char *)config->nf_instance_id);
++    }
++    ogs_info("Experimental Nchf volume profile enabled (static direct HTTP/2)");
++    return OGS_OK;
++}
++
++void smf_chf_sess_clear(smf_sess_t *sess)
++{
++    if (!sess->chf) return;
++    smf_chf_context_unref(sess->chf);
++    sess->chf = NULL;
++}
++
++void smf_chf_context_unref(smf_chf_sess_t *chf)
++{
++    if (chf->refs > 1) { chf->refs--; return; }
++    if (chf->resource_uri && !chf->closed) {
++        ogs_warn("CHF context removed without Release; reservation requires reconciliation");
++        smf_chf_journal(chf, "reconciliation_required", NULL, NULL, 0);
++    }
++    if (chf->release_request) ogs_sbi_request_free(chf->release_request);
++    if (chf->resource_uri) ogs_free(chf->resource_uri);
++    if (chf->charging_session_id) ogs_free(chf->charging_session_id);
++    if (chf->journal_path) {
++        close(chf->journal_fd);
++        ogs_free(chf->journal_path);
++    }
++    ogs_free(chf);
++}
++
++void smf_chf_transaction_free(smf_chf_transaction_t *transaction)
++{
++    if (transaction->request) ogs_sbi_request_free(transaction->request);
++    if (transaction->owner) smf_chf_context_unref(transaction->owner);
++    ogs_free(transaction);
++}
++
++static int client_callback(int status, ogs_sbi_response_t *response, void *data)
++{
++    smf_chf_transaction_t *transaction = data;
++    smf_event_t *event;
++    smf_sess_t *sess = smf_sess_find_by_id(transaction->sess_id);
++    bool live = sess && sess->chf && sess->chf->generation == transaction->generation;
++    bool retryable = status == OGS_ERROR || status == OGS_TIMEUP ||
++        (response && (response->status == 503 || response->status == 504));
++    if ((live || transaction->owner) && retryable && transaction->retries < smf_self()->chf_config.retries) {
++        transaction->retries++;
++        /* Exactly the same sequence, timestamp and payload on every retry. */
++        if (ogs_sbi_client_send_request(chf_client, client_callback,
++                    transaction->request, transaction)) {
++            if (response) ogs_sbi_response_free(response);
++            return OGS_OK;
++        }
++    }
++    if (status == OGS_DONE) { /* shutdown, event loop has terminated */
++        if (transaction->owner)
++            smf_chf_journal(transaction->owner, "shutdown_pending", NULL, NULL, status);
++        if (response) ogs_sbi_response_free(response);
++        smf_chf_transaction_free(transaction);
++        return OGS_OK;
++    }
++    event = smf_event_new(SMF_EVT_CHF_RESPONSE);
++    event->sess_id = transaction->sess_id;
++    event->h.sbi.data = transaction;
++    event->h.sbi.response = response;
++    event->h.sbi.state = status;
++    if (ogs_queue_push(ogs_app()->queue, event) != OGS_OK) {
++        if (response) ogs_sbi_response_free(response);
++        smf_chf_transaction_free(transaction);
++        ogs_event_free(event);
++        ogs_error("CHF response delivery failed; reconciliation required");
++        return OGS_ERROR;
++    }
++    ogs_pollset_notify(ogs_app()->pollset);
++    return OGS_OK;
++}
++
++int smf_chf_send_create(smf_sess_t *sess)
++{
++    smf_chf_transaction_t *transaction;
++    if (!smf_self()->chf_config.enabled || !chf_client || sess->epc || sess->chf)
++        return OGS_ERROR;
++    sess->chf = ogs_calloc(1, sizeof(*sess->chf));
++    ogs_assert(sess->chf);
++    sess->chf->refs = 1;
++    if (smf_chf_journal_open(sess->chf) != OGS_OK) {
++        ogs_error("Cannot open private CHF journal; Create blocked");
++        smf_chf_sess_clear(sess);
++        return OGS_ERROR;
++    }
++    sess->chf->generation = ++generation;
++    if (smf_chf_allocate_id(ogs_sbi_self()->nf_instance->id,
++                &sess->chf->charging_id) != OGS_OK) {
++        ogs_error("Durable chargingId allocation failed; Create blocked");
++        smf_chf_sess_clear(sess);
++        return OGS_ERROR;
++    }
++    sess->chf->rating_group = smf_self()->chf_config.rating_group;
++    sess->chf->sequence_number = 1;
++    transaction = ogs_calloc(1, sizeof(*transaction));
++    ogs_assert(transaction);
++    transaction->sess_id = sess->id;
++    transaction->generation = sess->chf->generation;
++    transaction->operation = SMF_CHF_CREATE;
++    transaction->owner = sess->chf;
++    sess->chf->refs++;
++    transaction->request = smf_chf_build_create(sess);
++    if (!transaction->request || smf_chf_journal(sess->chf, "request",
++                transaction->request->h.uri, transaction->request->http.content, 0) != OGS_OK ||
++            !ogs_sbi_client_send_request(chf_client,
++                client_callback, transaction->request, transaction)) {
++        smf_chf_transaction_free(transaction);
++        return OGS_ERROR;
++    }
++    sess->chf->pending = true;
++    return OGS_OK;
++}
++
++int smf_chf_send_change(smf_sess_t *sess,
++        smf_chf_operation_e operation, const smf_chf_usage_t *usage)
++{
++    smf_chf_transaction_t *transaction;
++    smf_chf_sess_t *chf = sess->chf;
++    if (!smf_self()->chf_config.enabled || !chf_client || !chf ||
++            !chf->resource_uri || chf->closed || chf->uncertain || chf->pending ||
++            chf->sequence_number == UINT32_MAX ||
++            (operation != SMF_CHF_UPDATE && operation != SMF_CHF_RELEASE)) return OGS_ERROR;
++    if (usage && (usage->uplink > 9007199254740991ULL ||
++                usage->downlink > 9007199254740991ULL - usage->uplink ||
++                chf->consumed_units > 9007199254740991ULL - usage->uplink - usage->downlink ||
++                (chf->has_usage_sequence && usage->sequence <= chf->usage_sequence_number)))
++        return OGS_ERROR;
++    transaction = ogs_calloc(1, sizeof(*transaction));
++    ogs_assert(transaction);
++    transaction->sess_id = sess->id;
++    transaction->generation = chf->generation;
++    transaction->operation = operation;
++    transaction->owner = chf;
++    chf->refs++;
++    if (usage) {
++        transaction->has_usage = true;
++        transaction->used_units = usage->uplink + usage->downlink;
++        transaction->usage_sequence = usage->sequence;
++    }
++    chf->sequence_number++;
++    transaction->request = smf_chf_build_change(sess, operation, usage);
++    if (!transaction->request) {
++        chf->sequence_number--; /* No request sent. */
++        smf_chf_transaction_free(transaction);
++        return OGS_ERROR;
++    }
++    if (smf_chf_journal(chf, "request", transaction->request->h.uri,
++                transaction->request->http.content, 0) != OGS_OK ||
++            !ogs_sbi_client_send_request(chf_client, client_callback, transaction->request, transaction)) {
++        chf->uncertain = true;
++        smf_chf_transaction_free(transaction);
++        return OGS_ERROR;
++    }
++    chf->pending = true;
++    return OGS_OK;
++}
++
++static bool json_uint(cJSON *object, const char *key, uint64_t max, uint64_t *out)
++{
++    cJSON *value = cJSON_GetObjectItemCaseSensitive(object, key);
++    double number;
++    uint64_t bits;
++    if (!cJSON_IsNumber(value)) return false;
++    number = value->valuedouble;
++    /* Upstream uses -ffast-math: test IEEE exponent bits, not isfinite(). */
++    memcpy(&bits, &number, sizeof(bits));
++    if ((bits & 0x7ff0000000000000ULL) == 0x7ff0000000000000ULL ||
++            number < 0 || number > (double)max || floor(number) < number)
++        return false;
++    *out = (uint64_t)number;
++    return true;
++}
++
++bool smf_chf_handle_response(smf_sess_t *sess, smf_event_t *event)
++{
++    ogs_sbi_response_t *response = event->h.sbi.response;
++    smf_chf_transaction_t *transaction = event->h.sbi.data;
++    smf_chf_operation_e operation = transaction ? transaction->operation : SMF_CHF_CREATE;
++    cJSON *root = NULL, *units, *unit, *grant, *result, *final, *action;
++    uint64_t sequence, rating_group, granted, validity;
++    const char *location, *path, *ref;
++    char *origin = NULL;
++    ogs_uuid_t uuid;
++    bool valid = false;
++    if (operation == SMF_CHF_RELEASE) {
++        if (smf_chf_release_confirmed(event->h.sbi.state, response)) {
++            sess->chf->closed = true;
++            sess->chf->granted_units = 0;
++            valid = true;
++        }
++        goto done;
++    }
++    if (operation != SMF_CHF_CREATE && operation != SMF_CHF_UPDATE) goto done;
++    if (event->h.sbi.state != OGS_OK || !response ||
++            response->status != (operation == SMF_CHF_CREATE ? 201 : 200) ||
++            !response->http.content || response->http.content_length > 262144)
++        goto done;
++    root = cJSON_ParseWithLength(response->http.content, response->http.content_length);
++    if (!cJSON_IsObject(root) || !json_uint(root, "invocationSequenceNumber", UINT32_MAX, &sequence) ||
++            sequence != sess->chf->sequence_number) goto done;
++    units = cJSON_GetObjectItemCaseSensitive(root, "multipleUnitInformation");
++    if (!cJSON_IsArray(units) || cJSON_GetArraySize(units) != 1) goto done;
++    unit = cJSON_GetArrayItem(units, 0);
++    grant = cJSON_GetObjectItemCaseSensitive(unit, "grantedUnit");
++    result = cJSON_GetObjectItemCaseSensitive(unit, "resultCode");
++    if (!json_uint(unit, "ratingGroup", UINT32_MAX, &rating_group) ||
++            rating_group != sess->chf->rating_group ||
++            !json_uint(grant, "totalVolume", 9007199254740991ULL, &granted) ||
++            granted > smf_self()->chf_config.requested_units ||
++            !json_uint(unit, "validityTime", UINT32_MAX, &validity) || !validity ||
++            !cJSON_IsString(result)) goto done;
++    if (granted && strcmp(result->valuestring, "SUCCESS")) goto done;
++    final = cJSON_GetObjectItemCaseSensitive(unit, "finalUnitIndication");
++    if (final) {
++        action = cJSON_GetObjectItemCaseSensitive(final, "finalUnitAction");
++        if (!cJSON_IsString(action) || strcmp(action->valuestring, "TERMINATE")) goto done;
++    }
++    if (operation == SMF_CHF_UPDATE) goto grant_accepted;
++    location = ogs_sbi_header_get(response->http.headers, OGS_SBI_LOCATION);
++    if (!location) goto done;
++    origin = ogs_msprintf("http://%s:%u", smf_self()->chf_config.addr,
++            smf_self()->chf_config.port);
++    path = location;
++    if (*location != '/') {
++        if (strncmp(location, origin, strlen(origin))) goto done;
++        path = location + strlen(origin);
++    }
++    if (strncmp(path, SMF_CHF_COLLECTION "/", strlen(SMF_CHF_COLLECTION) + 1)) goto done;
++    ref = path + strlen(SMF_CHF_COLLECTION) + 1;
++    /* This CHF's profile uses UUID references. Prevent credential-forwarding/SSRF. */
++    if (strlen(ref) != 36 || ogs_uuid_parse(&uuid, ref) != OGS_OK) goto done;
++    sess->chf->resource_uri = ogs_msprintf("%s%s", origin, path);
++    sess->chf->charging_session_id = ogs_strdup(ref);
++grant_accepted:
++    sess->chf->granted_units = granted;
++    sess->chf->validity_time = validity;
++    sess->chf->final_units = final != NULL;
++    valid = true;
++    ogs_info("Nchf response authorized: operation=%d session=%u grant=%" PRIu64 " final=%d",
++            operation, sess->id, granted, sess->chf->final_units);
++done:
++    if (smf_chf_journal(sess->chf, valid ? "response_valid" : "response_invalid",
++                operation == SMF_CHF_CREATE ? sess->chf->resource_uri :
++                    (transaction && transaction->request ? transaction->request->h.uri : NULL),
++                response ? response->http.content : NULL,
++                response ? response->status : 0) != OGS_OK) {
++        valid = false;
++        sess->chf->closed = false;
++    }
++    if (!valid) {
++        sess->chf->uncertain = true;
++        ogs_warn("Nchf operation=%d failed or invalid response (HTTP %d)",
++                operation, response ? response->status : 0);
++    } else if (transaction && transaction->has_usage) {
++        sess->chf->consumed_units += transaction->used_units;
++        sess->chf->usage_sequence_number = transaction->usage_sequence;
++        sess->chf->has_usage_sequence = true;
++        for (unsigned int i = 0; i < sess->chf->report_count; i++) {
++            if (sess->chf->reports[i].sequence <= transaction->usage_sequence)
++                sess->chf->reports[i].confirmed = true;
++        }
++    }
++    if (origin) ogs_free(origin);
++    if (root) cJSON_Delete(root);
++    return valid;
++}
++
++/* Bridge a PFCP Usage Report to an Nchf_Update.
++ * Called from n4-handler.c when a session has an active CHF context.
++ * Returns true if the update was sent (or the session should terminate). */
++bool smf_chf_handle_usage_report(smf_sess_t *sess,
++        ogs_pfcp_usage_report_trigger_t *rep_trig,
++        uint64_t uplink, uint64_t downlink, uint32_t ur_seqn)
++{
++    const char *trigger;
++    int recorded;
++    if (!sess->chf || !sess->chf->resource_uri || sess->chf->closed) return false;
++    recorded = smf_chf_record_report(sess->chf, ur_seqn, uplink, downlink);
++    if (recorded == OGS_ERROR) return false;
++    if (recorded == 0) return true; /* Exact PFCP retransmission: no second debit. */
++    /* Determine the Nchf trigger from the PFCP reporting trigger. */
++    if (rep_trig->volume_quota)
++        trigger = "QUOTA_EXHAUSTED";
++    else if (rep_trig->volume_threshold)
++        trigger = "QUOTA_THRESHOLD";
++    else if (rep_trig->quota_validity_time)
++        trigger = "VALIDITY_TIME";
++    else {
++        sess->chf->closing = true;
++        return false; /* Unknown trigger retained, never mislabeled as exhaustion. */
++    }
++    /* If we already received TERMINATE, don't request more quota. */
++    sess->chf->reports[sess->chf->report_count - 1].trigger = trigger;
++    if (sess->chf->final_units || sess->chf->closing ||
++            sess->chf->report_count >= SMF_CHF_MAX_REPORTS - 1) {
++        /* Keep ALL deltas for Release, wait for an in-flight Update first. */
++        sess->chf->closing = true;
++        ogs_info("CHF report retained for terminal accounting session=%u", sess->id);
++        return true; /* Signal caller to initiate session release. */
++    }
++    if (sess->chf->pending) {
++        ogs_info("CHF usage queued behind pending Update session=%u sequence=%u",
++                sess->id, ur_seqn);
++        return true;
++    }
++    if (smf_chf_flush_update(sess) != OGS_OK) {
++        ogs_warn("CHF Update send failed for session=%u; marking uncertain", sess->id);
++        return false;
++    }
++    return true;
++}
++
++/* OGS_OK: one Update submitted; OGS_DONE: no queued usage; OGS_ERROR: fail closed. */
++int smf_chf_flush_update(smf_sess_t *sess)
++{
++    smf_chf_usage_t usage;
++    int rv = smf_chf_next_usage(sess->chf, &usage);
++    if (rv != OGS_OK) return rv;
++    return smf_chf_send_change(sess, SMF_CHF_UPDATE, &usage);
++}
++
++/* Send Nchf_Release with final usage extracted from Session Deletion Response.
++ * Sets release_pending so the session context is retained until 204 arrives. */
++int smf_chf_send_final_release(smf_sess_t *sess,
++        uint64_t uplink, uint64_t downlink, uint32_t sequence)
++{
++    if (!sess->chf || !sess->chf->resource_uri || sess->chf->closed)
++        return OGS_ERROR;
++    sess->chf->closing = true;
++    if (smf_chf_record_report(sess->chf, sequence, uplink, downlink) == OGS_ERROR)
++        return OGS_ERROR;
++    if (sess->chf->release_pending) return OGS_OK;
++    sess->chf->release_request = smf_chf_build_change(sess, SMF_CHF_RELEASE, NULL);
++    if (!sess->chf->release_request) return OGS_ERROR;
++    sess->chf->release_pending = true;
++    if (smf_chf_journal(sess->chf, "release_queued", sess->chf->release_request->h.uri,
++                sess->chf->release_request->http.content, 0) != OGS_OK) return OGS_ERROR;
++    return smf_chf_flush_release(sess->chf, sess->id);
++}
++
++int smf_chf_flush_release(smf_chf_sess_t *chf, ogs_pool_id_t sess_id)
++{
++    smf_chf_transaction_t *transaction;
++    if (!chf->release_request || chf->pending) return OGS_OK;
++    if (chf->uncertain || chf->closed) return OGS_ERROR;
++    transaction = ogs_calloc(1, sizeof(*transaction));
++    ogs_assert(transaction);
++    transaction->operation = SMF_CHF_RELEASE;
++    transaction->sess_id = sess_id;
++    transaction->generation = chf->generation;
++    transaction->owner = chf;
++    chf->refs++;
++    transaction->request = chf->release_request;
++    chf->release_request = NULL;
++    if (smf_chf_release_body(chf, transaction->request, transaction) != OGS_OK) goto failed;
++    chf->sequence_number++;
++    if (smf_chf_journal(chf, "request", transaction->request->h.uri,
++                transaction->request->http.content, 0) != OGS_OK ||
++            !ogs_sbi_client_send_request(chf_client, client_callback,
++                transaction->request, transaction)) goto failed;
++    chf->pending = true;
++    return OGS_OK;
++failed:
++    chf->uncertain = true;
++    smf_chf_transaction_free(transaction);
++    return OGS_ERROR;
++}
++
++/* Called ONLY from wait_chf_create before any PFCP establishment is sent.
++ * A zero grant still created an Nchf resource; close it without inventing URR
++ * evidence or leaving a permanently OPEN, zero-credit accounting context. */
++int smf_chf_cancel_before_pfcp(smf_sess_t *sess)
++{
++    smf_chf_sess_t *chf = sess->chf;
++    if (!chf || !chf->resource_uri || chf->uncertain || chf->pending ||
++            chf->report_count || chf->closed || chf->release_pending) return OGS_ERROR;
++    chf->closing = true;
++    if (smf_chf_journal(chf, "no_user_plane", NULL, NULL, 0) != OGS_OK) return OGS_ERROR;
++    chf->release_request = smf_chf_build_change(sess, SMF_CHF_RELEASE, NULL);
++    if (!chf->release_request) return OGS_ERROR;
++    chf->release_pending = true;
++    if (smf_chf_journal(chf, "release_queued", chf->release_request->h.uri,
++                chf->release_request->http.content, 0) != OGS_OK) return OGS_ERROR;
++    return smf_chf_flush_release(chf, sess->id);
++}
+diff --git a/src/smf/chf-path.h b/src/smf/chf-path.h
+new file mode 100644
+index 0000000..feb40d6
+--- /dev/null
++++ b/src/smf/chf-path.h
+@@ -0,0 +1,65 @@
++/* SPDX-License-Identifier: AGPL-3.0-or-later
++ * MAEstro experimental TS 32.291 Rel16 volume-charging profile.
++ */
++#ifndef SMF_CHF_PATH_H
++#define SMF_CHF_PATH_H
++#include "context.h"
++
++void smf_chf_config_init(ogs_chf_config_t *config);
++int smf_chf_config_parse(ogs_yaml_iter_t *iter);
++int smf_chf_config_validate(ogs_chf_config_t *config);
++
++#define SMF_CHF_COLLECTION "/nchf-convergedcharging/v3/chargingdata"
++typedef enum { SMF_CHF_CREATE = 1, SMF_CHF_UPDATE, SMF_CHF_RELEASE } smf_chf_operation_e;
++typedef struct smf_chf_usage_s {
++    uint32_t sequence;
++    uint64_t uplink;
++    uint64_t downlink;
++    const char *trigger;
++} smf_chf_usage_t;
++typedef struct smf_chf_transaction_s {
++    ogs_pool_id_t sess_id;
++    uint64_t generation;
++    smf_chf_operation_e operation;
++    unsigned int retries;
++    uint64_t used_units;
++    uint32_t usage_sequence;
++    bool has_usage;
++    smf_chf_sess_t *owner;
++    ogs_sbi_request_t *request;
++} smf_chf_transaction_t;
++
++int smf_chf_open(void);
++void smf_chf_sess_clear(smf_sess_t *sess);
++int smf_chf_send_create(smf_sess_t *sess);
++bool smf_chf_urr_supported(smf_sess_t *sess);
++int smf_chf_prepare_initial_urr(smf_sess_t *sess);
++int smf_chf_renew_urr(smf_sess_t *sess);
++ogs_sbi_request_t *smf_chf_build_create(smf_sess_t *sess);
++ogs_sbi_request_t *smf_chf_build_change(smf_sess_t *sess,
++        smf_chf_operation_e operation, const smf_chf_usage_t *usage);
++int smf_chf_send_change(smf_sess_t *sess,
++        smf_chf_operation_e operation, const smf_chf_usage_t *usage);
++int smf_chf_next_usage(smf_chf_sess_t *chf, smf_chf_usage_t *usage);
++int smf_chf_flush_update(smf_sess_t *sess);
++bool smf_chf_handle_response(smf_sess_t *sess, smf_event_t *event);
++void smf_chf_transaction_free(smf_chf_transaction_t *transaction);
++bool smf_chf_handle_usage_report(smf_sess_t *sess,
++        ogs_pfcp_usage_report_trigger_t *rep_trig,
++        uint64_t uplink, uint64_t downlink, uint32_t ur_seqn);
++int smf_chf_send_final_release(smf_sess_t *sess,
++        uint64_t uplink, uint64_t downlink, uint32_t sequence);
++void smf_chf_context_unref(smf_chf_sess_t *chf);
++int smf_chf_record_report(smf_chf_sess_t *chf, uint32_t sequence,
++        uint64_t uplink, uint64_t downlink);
++int smf_chf_release_body(smf_chf_sess_t *chf, ogs_sbi_request_t *request,
++        smf_chf_transaction_t *transaction);
++int smf_chf_flush_release(smf_chf_sess_t *chf, ogs_pool_id_t sess_id);
++int smf_chf_cancel_before_pfcp(smf_sess_t *sess);
++bool smf_chf_release_confirmed(int status, const ogs_sbi_response_t *response);
++int smf_chf_journal_open(smf_chf_sess_t *chf);
++int smf_chf_allocate_id(const char *nf_id, uint32_t *value);
++int smf_chf_journal(smf_chf_sess_t *chf, const char *event,
++        const char *uri, const char *body, int status);
++
++#endif
+diff --git a/src/smf/chf-probe.c b/src/smf/chf-probe.c
+new file mode 100644
+index 0000000..420ee2f
+--- /dev/null
++++ b/src/smf/chf-probe.c
+@@ -0,0 +1,149 @@
++/* SPDX-License-Identifier: AGPL-3.0-or-later
++ * Component integration probe: uses the real SMF context, builder, HTTP/2
++ * client and response handler. Does not start a RAN or establish an N4 session.
++ */
++#include "chf-path.h"
++
++int main(int argc, char *argv[])
++{
++    const char *app_argv[4];
++    ogs_yaml_iter_t root, node;
++    smf_ue_t *ue;
++    smf_sess_t *sess;
++    ogs_time_t deadline;
++    bool complete = false, accepted = false;
++    bool lifecycle, terminal, concurrent;
++    uint64_t last_grant = 0, last_consumed = 0;
++    bool last_closed = false;
++    int result = 1, stage = 0;
++    if (argc != 3) {
++        fprintf(stderr, "Usage: chf-probe CONFIG success|failure|disabled|lifecycle|final-usage|concurrent-close\n");
++        return 2;
++    }
++    lifecycle = !strcmp(argv[2], "lifecycle");
++    concurrent = !strcmp(argv[2], "concurrent-close");
++    terminal = concurrent || !strcmp(argv[2], "final-usage");
++    app_argv[0] = argv[0]; app_argv[1] = "-c"; app_argv[2] = argv[1]; app_argv[3] = NULL;
++    if (ogs_app_initialize(NULL, NULL, app_argv) != OGS_OK) return 2;
++    if (ogs_app_parse_local_conf("smf") != OGS_OK) return 2;
++    smf_metrics_init();
++    ogs_gtp_context_init(ogs_app()->pool.nf * OGS_MAX_NUM_OF_GTPU_RESOURCE);
++    ogs_pfcp_context_init();
++    ogs_sbi_context_init(OpenAPI_nf_type_SMF);
++    smf_context_init();
++    if (ogs_sbi_context_parse_config("smf", "nrf", "scp") != OGS_OK) return 2;
++    ogs_yaml_iter_init(&root, ogs_app()->document);
++    while (ogs_yaml_iter_next(&root)) {
++        if (strcmp(ogs_yaml_iter_key(&root), "smf")) continue;
++        ogs_yaml_iter_recurse(&root, &node);
++        while (ogs_yaml_iter_next(&node)) {
++            if (!strcmp(ogs_yaml_iter_key(&node), "chf") &&
++                    smf_chf_config_parse(&node) != OGS_OK) return 2;
++        }
++    }
++    if (smf_chf_config_validate(&smf_self()->chf_config) != OGS_OK ||
++            smf_chf_open() != OGS_OK) return 2;
++    if (!strcmp(argv[2], "disabled")) {
++        result = smf_self()->chf_config.enabled ? 1 : 0;
++        printf("CHF disabled: %s\n", result ? "FAIL" : "PASS");
++        goto done;
++    }
++    ue = smf_ue_add_by_supi((char *)"imsi-001010000000001");
++    ogs_assert(ue);
++    sess = smf_sess_add_by_psi(ue, 1);
++    ogs_assert(sess);
++    sess->session.name = ogs_strdup("internet");
++    sess->s_nssai.sst = 1;
++    if (smf_chf_send_create(sess) != OGS_OK) goto done;
++    deadline = ogs_get_monotonic_time() + ogs_time_from_sec(30);
++    while (!complete && ogs_get_monotonic_time() < deadline) {
++        smf_event_t *event = NULL;
++        ogs_pollset_poll(ogs_app()->pollset, ogs_time_from_msec(50));
++        ogs_timer_mgr_expire(ogs_app()->timer_mgr);
++        while (ogs_queue_trypop(ogs_app()->queue, (void **)&event) == OGS_OK) {
++            if (event->h.id == SMF_EVT_CHF_RESPONSE) {
++                smf_chf_transaction_t *transaction = event->h.sbi.data;
++                smf_chf_sess_t *owner = transaction->owner;
++                smf_sess_t shadow = {0};
++                smf_chf_operation_e operation = transaction->operation;
++                shadow.chf = owner;
++                owner->pending = false; /* Same ownership as smf-sm.c. */
++                /* Match the FSM: a valid zero-grant response cannot authorize N4. */
++                accepted = smf_chf_handle_response(&shadow, event) &&
++                    (operation == SMF_CHF_RELEASE || owner->granted_units > 0);
++                last_grant = owner->granted_units;
++                last_consumed = owner->consumed_units;
++                last_closed = owner->closed;
++                printf("NCHF_OPERATION=%d\n", transaction->operation);
++                printf("NCHF_REQUEST_JSON=%s\n", transaction->request->http.content);
++                printf("NCHF_RETRIES=%u\n", transaction->retries);
++                printf("NCHF_GRANT=%" PRIu64 "\n", owner->granted_units);
++                printf("NCHF_FINAL=%d\n", owner->final_units);
++                if (event->h.sbi.response) {
++                    if (event->h.sbi.response->http.content_length)
++                        printf("NCHF_RESPONSE_JSON=%s\n", event->h.sbi.response->http.content);
++                    printf("NCHF_HTTP_STATUS=%d\n", event->h.sbi.response->status);
++                    ogs_sbi_response_free(event->h.sbi.response);
++                }
++                complete = true;
++                if (terminal && accepted && operation == SMF_CHF_CREATE) {
++                    ogs_pfcp_usage_report_trigger_t report_trigger = {0};
++                    if (concurrent) {
++                        report_trigger.volume_threshold = 1;
++                        ogs_assert(smf_chf_handle_usage_report(sess, &report_trigger, 4112, 4112, 0));
++                        report_trigger.volume_threshold = 0;
++                        report_trigger.volume_quota = 1;
++                        ogs_assert(smf_chf_handle_usage_report(sess, &report_trigger, 1028, 1028, 1));
++                        ogs_assert(smf_chf_send_final_release(sess, 0, 0, 2) == OGS_OK);
++                    } else {
++                        ogs_assert(owner->final_units);
++                        report_trigger.volume_quota = 1;
++                        ogs_assert(smf_chf_handle_usage_report(sess, &report_trigger, 5140, 5140, 0));
++                        ogs_assert(smf_chf_send_final_release(sess, 0, 0, 1) == OGS_OK);
++                    }
++                    smf_chf_sess_clear(sess); /* Release/Update outlive network ownership. */
++                    printf("NCHF_NETWORK_OWNER_DETACHED=1\n");
++                    complete = false;
++                } else if (terminal && accepted && operation == SMF_CHF_UPDATE) {
++                    ogs_assert(smf_chf_flush_release(owner, sess->id) == OGS_OK);
++                    complete = false;
++                }
++                smf_chf_transaction_free(transaction);
++                if (lifecycle && accepted && stage < 2) {
++                    /* Explicit protocol-test fixtures, NOT PFCP/UE measurements. */
++                    smf_chf_usage_t usage = {0};
++                    if (stage == 1) {
++                        smf_chf_usage_t duplicate = {0};
++                        duplicate.uplink = 100;
++                        duplicate.downlink = 200;
++                        duplicate.trigger = "QUOTA_THRESHOLD";
++                        ogs_assert(smf_chf_send_change(sess, SMF_CHF_UPDATE, &duplicate) == OGS_ERROR);
++                        printf("NCHF_DUPLICATE_LOCAL=REJECTED\n");
++                    }
++                    usage.sequence = stage;
++                    usage.uplink = stage == 0 ? 100 : 50;
++                    usage.downlink = stage == 0 ? 200 : 50;
++                    usage.trigger = stage == 0 ? "QUOTA_THRESHOLD" : "FINAL";
++                    if (smf_chf_send_change(sess, stage == 0 ? SMF_CHF_UPDATE : SMF_CHF_RELEASE,
++                                &usage) != OGS_OK) accepted = false;
++                    else { stage++; complete = false; }
++                }
++            }
++            ogs_event_free(event);
++        }
++    }
++    result = complete && (accepted == (!strcmp(argv[2], "success") || lifecycle || terminal)) ? 0 : 1;
++    if (lifecycle && (!last_closed || last_consumed != 400)) result = 1;
++    if (terminal && (!last_closed || last_consumed != 10280)) result = 1;
++    printf("Native Nchf component: %s (accepted=%d, grant=%" PRIu64 ")\n",
++            result ? "FAIL" : "PASS", accepted, last_grant);
++done:
++    ogs_sbi_client_stop_all();
++    smf_context_final();
++    ogs_sbi_context_final();
++    ogs_pfcp_context_final();
++    ogs_gtp_context_final();
++    smf_metrics_final();
++    ogs_app_terminate();
++    return result;
++}
+diff --git a/src/smf/chf-unit.c b/src/smf/chf-unit.c
+new file mode 100644
+index 0000000..c18fff1
+--- /dev/null
++++ b/src/smf/chf-unit.c
+@@ -0,0 +1,355 @@
++/* SPDX-License-Identifier: AGPL-3.0-or-later
++ * Native parser/response unit tests; these are NOT an end-to-end demonstration.
++ */
++#include "chf-path.h"
++#include <unistd.h>
++#include <sys/stat.h>
++
++static int checks;
++#define CHECK(condition) do { \
++    checks++; \
++    if (!(condition)) { fprintf(stderr, "FAILED line %d: %s\n", __LINE__, #condition); exit(1); } \
++} while (0)
++
++static void config_case(const char *yaml, bool valid, bool enabled)
++{
++    yaml_parser_t parser;
++    yaml_document_t document;
++    ogs_yaml_iter_t iter;
++    int result;
++    CHECK(yaml_parser_initialize(&parser));
++    yaml_parser_set_input_string(&parser, (const unsigned char *)yaml, strlen(yaml));
++    CHECK(yaml_parser_load(&parser, &document));
++    smf_chf_config_init(&smf_self()->chf_config);
++    ogs_yaml_iter_init(&iter, &document);
++    CHECK(ogs_yaml_iter_next(&iter));
++    result = smf_chf_config_parse(&iter);
++    if (result == OGS_OK) result = smf_chf_config_validate(&smf_self()->chf_config);
++    CHECK((result == OGS_OK) == valid);
++    if (valid) CHECK(smf_self()->chf_config.enabled == enabled);
++    yaml_document_delete(&document);
++    yaml_parser_delete(&parser);
++}
++
++static void response_case(const char *body, const char *location,
++        int status, bool valid, uint64_t granted, bool final_units)
++{
++    smf_sess_t sess;
++    smf_event_t event;
++    ogs_sbi_response_t *response = ogs_sbi_response_new();
++    memset(&sess, 0, sizeof(sess));
++    memset(&event, 0, sizeof(event));
++    sess.chf = ogs_calloc(1, sizeof(*sess.chf));
++    sess.chf->sequence_number = 1;
++    sess.chf->rating_group = 1;
++    response->status = status;
++    response->http.content = ogs_strdup(body);
++    response->http.content_length = strlen(body);
++    if (location) ogs_sbi_header_set(response->http.headers, OGS_SBI_LOCATION, location);
++    event.h.sbi.state = OGS_OK;
++    event.h.sbi.response = response;
++    CHECK(smf_chf_handle_response(&sess, &event) == valid);
++    if (valid) {
++        CHECK(sess.chf->granted_units == granted);
++        CHECK(sess.chf->final_units == final_units);
++    } else CHECK(sess.chf->resource_uri == NULL);
++    sess.chf->closed = true;
++    smf_chf_sess_clear(&sess);
++    ogs_sbi_response_free(response);
++}
++
++#define BODY_PREFIX "{\"invocationSequenceNumber\":1,\"multipleUnitInformation\":[{\"ratingGroup\":1,\"resultCode\":\"SUCCESS\",\"validityTime\":60,\"grantedUnit\":{\"totalVolume\":"
++#define BODY_SUFFIX "}}]}"
++#define LOCATION SMF_CHF_COLLECTION "/00000000-0000-4000-8000-000000000001"
++
++static void change_response_case(smf_chf_operation_e operation,
++        int status, const char *body, bool valid)
++{
++    smf_sess_t sess = {0};
++    smf_event_t event = {0};
++    smf_chf_transaction_t transaction = {0};
++    ogs_sbi_response_t *response = ogs_sbi_response_new();
++    sess.chf = ogs_calloc(1, sizeof(*sess.chf));
++    sess.chf->sequence_number = 1;
++    sess.chf->rating_group = 1;
++    sess.chf->resource_uri = ogs_strdup("http://127.0.0.1:8081" LOCATION);
++    transaction.operation = operation;
++    transaction.used_units = 10;
++    transaction.has_usage = true;
++    transaction.usage_sequence = 0;
++    response->status = status;
++    response->http.content = ogs_strdup(body);
++    response->http.content_length = strlen(body);
++    event.h.sbi.state = OGS_OK;
++    event.h.sbi.response = response;
++    event.h.sbi.data = &transaction;
++    CHECK(smf_chf_handle_response(&sess, &event) == valid);
++    CHECK(sess.chf->consumed_units == (valid ? 10 : 0));
++    CHECK(sess.chf->uncertain == !valid);
++    CHECK(sess.chf->closed == (valid && operation == SMF_CHF_RELEASE));
++    CHECK(sess.chf->has_usage_sequence == valid);
++    sess.chf->closed = true;
++    smf_chf_sess_clear(&sess);
++    ogs_sbi_response_free(response);
++}
++
++static void urr_cases(void)
++{
++    smf_sess_t sess = {0};
++    smf_chf_sess_t chf = {0};
++    smf_bearer_t bearer = {0}, extra = {0};
++    ogs_pfcp_node_t node = {0};
++    ogs_pfcp_urr_t urr = {0};
++    ogs_pfcp_pdr_t ul = {0}, dl = {0};
++    ogs_pfcp_tlv_create_urr_t encoded = {0};
++    ogs_pfcp_volume_quota_t decoded = {0};
++    sess.chf = &chf;
++    sess.pfcp_node = &node;
++    node.up_function_features.vtime = 1;
++    bearer.urr = &urr;
++    bearer.ul_pdr = &ul;
++    bearer.dl_pdr = &dl;
++    urr.id = 7;
++    ogs_list_add(&sess.bearer_list, &bearer);
++    ogs_pfcp_pdr_associate_urr(&dl, &urr); /* Existing default DL association */
++    chf.granted_units = 1048576;
++    chf.validity_time = 300;
++    smf_self()->chf_config.enabled = false;
++    CHECK(smf_chf_prepare_initial_urr(&sess) == OGS_OK);
++    CHECK(urr.vol_quota.total_volume == 0 && ul.num_of_urr == 0);
++    smf_self()->chf_config.enabled = true;
++    CHECK(smf_chf_urr_supported(&sess));
++    CHECK(smf_chf_prepare_initial_urr(&sess) == OGS_OK);
++    CHECK(urr.id == 7);
++    CHECK(urr.meas_method == OGS_PFCP_MEASUREMENT_METHOD_VOLUME);
++    CHECK(urr.vol_quota.tovol && urr.vol_quota.total_volume == 1048576);
++    CHECK(urr.vol_threshold.total_volume == 838860);
++    CHECK(urr.rep_triggers.volume_threshold && urr.rep_triggers.volume_quota);
++    CHECK(urr.rep_triggers.quota_validity_time && urr.quota_validity_time == 300);
++    CHECK(ul.num_of_urr == 1 && dl.num_of_urr == 1);
++    CHECK(ul.urr[0] == &urr && dl.urr[0] == &urr);
++    CHECK(smf_chf_prepare_initial_urr(&sess) == OGS_OK);
++    CHECK(ul.num_of_urr == 1 && dl.num_of_urr == 1);
++    /* Exercise upstream's real PFCP IE encoder and volume decoder. */
++    ogs_pfcp_build_create_urr(&encoded, 0, &urr);
++    CHECK(encoded.presence && encoded.urr_id.u32 == 7);
++    CHECK(encoded.volume_quota.presence && encoded.volume_threshold.presence);
++    CHECK(ogs_pfcp_parse_volume(&decoded, &encoded.volume_quota) > 0);
++    CHECK(decoded.tovol && decoded.total_volume == 1048576);
++    CHECK(ogs_pfcp_parse_volume(&decoded, &encoded.volume_threshold) > 0);
++    CHECK(decoded.total_volume == 838860);
++    CHECK(encoded.quota_validity_time.presence && encoded.quota_validity_time.u32 == 300);
++    chf.final_units = true;
++    CHECK(smf_chf_prepare_initial_urr(&sess) == OGS_OK);
++    CHECK(!urr.rep_triggers.volume_threshold && !urr.vol_threshold.flags);
++    CHECK(urr.vol_quota.total_volume == 1048576 && urr.rep_triggers.volume_quota);
++    chf.final_units = false;
++    chf.granted_units = 1;
++    CHECK(smf_chf_prepare_initial_urr(&sess) == OGS_OK);
++    CHECK(!urr.rep_triggers.volume_threshold && urr.vol_quota.total_volume == 1);
++    chf.granted_units = UINT32_MAX;
++    CHECK(smf_chf_prepare_initial_urr(&sess) == OGS_OK);
++    CHECK(urr.vol_threshold.total_volume == 3435973836ULL);
++    chf.granted_units = (uint64_t)UINT32_MAX + 1;
++    CHECK(smf_chf_prepare_initial_urr(&sess) == OGS_ERROR);
++    chf.granted_units = 0;
++    CHECK(smf_chf_prepare_initial_urr(&sess) == OGS_ERROR);
++    chf.granted_units = 10;
++    chf.validity_time = 0;
++    CHECK(smf_chf_prepare_initial_urr(&sess) == OGS_ERROR);
++    chf.validity_time = 60;
++    node.up_function_features.vtime = 0;
++    CHECK(!smf_chf_urr_supported(&sess));
++    CHECK(smf_chf_prepare_initial_urr(&sess) == OGS_ERROR);
++    node.up_function_features.vtime = 1;
++    ogs_list_add(&sess.bearer_list, &extra);
++    CHECK(!smf_chf_urr_supported(&sess));
++    ogs_list_remove(&sess.bearer_list, &extra);
++    sess.epc = true;
++    CHECK(!smf_chf_urr_supported(&sess));
++    smf_self()->chf_config.enabled = false;
++}
++
++static void accounting_cases(void)
++{
++    {
++        smf_chf_sess_t window = {0};
++        smf_chf_usage_t next;
++        for (uint32_t sequence = 0; sequence < 10000; sequence++) {
++            CHECK(smf_chf_record_report(&window, sequence, 10, 20) == 1);
++            CHECK(window.report_count < SMF_CHF_MAX_REPORTS - 1);
++            window.reports[window.report_count - 1].trigger = "QUOTA_THRESHOLD";
++            CHECK(smf_chf_next_usage(&window, &next) == OGS_OK);
++            CHECK(next.sequence == sequence && next.uplink + next.downlink == 30);
++            window.reports[window.report_count - 1].confirmed = true;
++            CHECK(smf_chf_record_report(&window, sequence, 10, 20) == 0);
++        }
++        CHECK(!window.uncertain && !window.closing);
++        CHECK(smf_chf_record_report(&window, 10000, 5, 6) == 1);
++        CHECK(!window.reports[window.report_count - 1].confirmed);
++        /* Never silently accept a stale delta outside the retained window. */
++        CHECK(smf_chf_record_report(&window, 0, 10, 20) == OGS_ERROR);
++        CHECK(window.uncertain);
++    }
++    smf_chf_sess_t chf = {0}, conflict = {0}, gap = {0};
++    smf_chf_transaction_t tx = {0};
++    ogs_sbi_request_t *request = ogs_sbi_request_new();
++    ogs_sbi_response_t *response = ogs_sbi_response_new();
++    cJSON *root, *used;
++    CHECK(smf_chf_record_report(&chf, 0, 4112, 4112) == 1);
++    CHECK(smf_chf_record_report(&chf, 0, 4112, 4112) == 0);
++    CHECK(chf.report_count == 1);
++    {
++        smf_chf_usage_t next;
++        chf.reports[0].trigger = "QUOTA_THRESHOLD";
++        chf.pending = true;
++        CHECK(smf_chf_next_usage(&chf, &next) == OGS_DONE);
++        CHECK(!chf.closing);
++        chf.pending = false;
++        CHECK(smf_chf_next_usage(&chf, &next) == OGS_OK);
++        CHECK(next.sequence == 0 && next.uplink == 4112 && next.downlink == 4112);
++        CHECK(!strcmp(next.trigger, "QUOTA_THRESHOLD"));
++    }
++    chf.reports[0].confirmed = true;
++    chf.consumed_units = 8224;
++    chf.sequence_number = 2;
++    CHECK(smf_chf_record_report(&chf, 1, 1028, 1028) == 1);
++    CHECK(smf_chf_record_report(&chf, 2, 0, 0) == 1);
++    {
++        smf_chf_usage_t next;
++        chf.reports[1].trigger = "QUOTA_EXHAUSTED";
++        chf.reports[2].trigger = "VALIDITY_TIME";
++        CHECK(smf_chf_next_usage(&chf, &next) == OGS_OK);
++        CHECK(next.sequence == 1 && next.uplink == 1028);
++        chf.reports[1].confirmed = true;
++        CHECK(smf_chf_next_usage(&chf, &next) == OGS_OK);
++        CHECK(next.sequence == 2 && !strcmp(next.trigger, "VALIDITY_TIME"));
++        chf.reports[1].confirmed = false;
++    }
++    request->http.content = ogs_strdup("{\"invocationSequenceNumber\":2,\"invocationTimeStamp\":\"old\",\"multipleUnitUsage\":[{\"ratingGroup\":1}]}");
++    CHECK(smf_chf_release_body(&chf, request, &tx) == OGS_OK);
++    CHECK(tx.used_units == 2056 && tx.usage_sequence == 2 && tx.has_usage);
++    root = cJSON_Parse(request->http.content);
++    CHECK(cJSON_GetObjectItemCaseSensitive(root, "invocationSequenceNumber")->valueint == 3);
++    used = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(root, "multipleUnitUsage"), 0), "usedUnitContainer");
++    CHECK(cJSON_GetArraySize(used) == 2);
++    CHECK(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(used, 0), "localSequenceNumber")->valueint == 1);
++    CHECK(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(used, 0), "totalVolume")->valueint == 2056);
++    CHECK(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(used, 1), "localSequenceNumber")->valueint == 2);
++    CHECK(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(used, 1), "totalVolume")->valueint == 0);
++    cJSON_Delete(root);
++    ogs_sbi_request_free(request);
++    CHECK(smf_chf_record_report(&conflict, 0, 1, 2) == 1);
++    CHECK(smf_chf_record_report(&conflict, 0, 2, 2) == OGS_ERROR);
++    CHECK(conflict.uncertain && conflict.closing && conflict.report_count == 1);
++    CHECK(smf_chf_record_report(&gap, 1, 1, 2) == OGS_ERROR);
++    CHECK(gap.uncertain && gap.report_count == 0);
++    response->status = 204;
++    CHECK(smf_chf_release_confirmed(OGS_OK, response));
++    CHECK(!smf_chf_release_confirmed(OGS_TIMEUP, response));
++    CHECK(!smf_chf_release_confirmed(OGS_OK, NULL));
++    response->http.content_length = 2;
++    CHECK(!smf_chf_release_confirmed(OGS_OK, response));
++    response->http.content_length = 0;
++    response->status = 503;
++    CHECK(!smf_chf_release_confirmed(OGS_OK, response));
++    ogs_sbi_response_free(response);
++    /* Detaching the network session must not free accounting owned by HTTP. */
++    {
++        smf_sess_t sess = {0};
++        smf_chf_transaction_t *pending = ogs_calloc(1, sizeof(*pending));
++        sess.chf = ogs_calloc(1, sizeof(*sess.chf));
++        sess.chf->refs = 2;
++        pending->owner = sess.chf;
++        pending->owner->consumed_units = 8224;
++        smf_chf_sess_clear(&sess);
++        CHECK(sess.chf == NULL && pending->owner->refs == 1);
++        CHECK(pending->owner->consumed_units == 8224);
++        pending->owner->closed = true;
++        smf_chf_transaction_free(pending);
++    }
++    /* Durable journal records original evidence and fails closed on disk errors. */
++    {
++        char directory[] = "/tmp/maestro-chf-unit-XXXXXX";
++        smf_chf_sess_t *durable = ogs_calloc(1, sizeof(*durable));
++        struct stat st;
++        FILE *file;
++        char line[1024];
++        CHECK(mkdtemp(directory) != NULL);
++        smf_self()->chf_config.journal_dir = directory;
++        {
++            uint32_t id = 0;
++            const char *nf = "00100000-0000-4000-8000-000000000001";
++            char *counter = ogs_msprintf("%s/charging-id-%s", directory, nf);
++            CHECK(smf_chf_allocate_id(nf, &id) == OGS_OK && id == 1);
++            CHECK(smf_chf_allocate_id(nf, &id) == OGS_OK && id == 2);
++            CHECK(smf_chf_allocate_id("../escape", &id) == OGS_ERROR);
++            file = fopen(counter, "a");
++            CHECK(file != NULL);
++            CHECK(fputs("x", file) >= 0);
++            fclose(file);
++            CHECK(smf_chf_allocate_id(nf, &id) == OGS_ERROR && id == 2);
++            ogs_free(counter);
++        }
++        CHECK(smf_chf_journal_open(durable) == OGS_OK);
++        CHECK(stat(durable->journal_path, &st) == 0 && (st.st_mode & 0077) == 0);
++        CHECK(smf_chf_record_report(durable, 0, 123, 456) == 1);
++        file = fopen(durable->journal_path, "r");
++        CHECK(file != NULL);
++        CHECK(fgets(line, sizeof(line), file) != NULL);
++        CHECK(strstr(line, "pfcp_usage") != NULL && strstr(line, "123") != NULL);
++        fclose(file);
++        close(durable->journal_fd);
++        durable->journal_fd = -1;
++        CHECK(smf_chf_record_report(durable, 1, 5, 6) == OGS_ERROR);
++        CHECK(durable->uncertain && durable->report_count == 1);
++        smf_chf_context_unref(durable);
++        smf_self()->chf_config.journal_dir = "./chf-journal";
++    }
++}
++
++int main(void)
++{
++    ogs_core_initialize();
++    ogs_log_install_domain(&__smf_log_domain, "smf", OGS_LOG_ERROR);
++    ogs_sbi_message_init(32, 32);
++    config_case("chf: {enabled: false, sbi: malformed, unknown: ignored}", true, false);
++    config_case("chf: {enabled: TRUE}", false, false);
++    config_case("chf: {enabled: true, enabled: false}", false, false);
++    config_case("chf: {}", false, false);
++    config_case("chf: {enabled: true, lab_no_auth: true, sbi: [{addr: 127.0.0.1, port: 8081}]}", true, true);
++    config_case("chf: {enabled: true, lab_no_auth: true, sbi: [{addr: invalid}]}", false, false);
++    config_case("chf: {enabled: true, lab_no_auth: true, sbi: [{addr: 127.0.0.1, port: 65536}]}", false, false);
++    config_case("chf: {enabled: true, lab_no_auth: true, sbi: [{addr: 127.0.0.1}], retries: -1}", false, false);
++    config_case("chf: {enabled: true, lab_no_auth: true, sbi: [{addr: 127.0.0.1}], timeout_ms: 0}", false, false);
++    config_case("chf: {enabled: true, lab_no_auth: true, sbi: [{addr: 127.0.0.1}, {addr: 127.0.0.2}]}", false, false);
++    config_case("chf: {enabled: true, lab_no_auth: true, sbi: [{addr: 127.0.0.1}], typo: 1}", false, false);
++    config_case("chf: {enabled: true, sbi: [{addr: 127.0.0.1}], token_env: MAESTRO_TEST_ABSENT_TOKEN}", false, false);
++    smf_chf_config_init(&smf_self()->chf_config);
++    smf_self()->chf_config.addr = "127.0.0.1";
++    response_case(BODY_PREFIX "1048576" BODY_SUFFIX, LOCATION, 201, true, 1048576, false);
++    response_case(BODY_PREFIX "10},\"finalUnitIndication\":{\"finalUnitAction\":\"TERMINATE\"}}]}", LOCATION, 201, true, 10, true);
++    response_case(BODY_PREFIX "0" BODY_SUFFIX, LOCATION, 201, true, 0, false);
++    response_case(BODY_PREFIX "1.5" BODY_SUFFIX, LOCATION, 201, false, 0, false);
++    response_case(BODY_PREFIX "-1" BODY_SUFFIX, LOCATION, 201, false, 0, false);
++    response_case(BODY_PREFIX "1e999" BODY_SUFFIX, LOCATION, 201, false, 0, false);
++    response_case(BODY_PREFIX "1048577" BODY_SUFFIX, LOCATION, 201, false, 0, false);
++    response_case(BODY_PREFIX "100" BODY_SUFFIX, "http://evil.invalid" LOCATION, 201, false, 0, false);
++    response_case(BODY_PREFIX "100" BODY_SUFFIX, "http://127.0.0.1:8081.evil.invalid" LOCATION, 201, false, 0, false);
++    response_case(BODY_PREFIX "100" BODY_SUFFIX, LOCATION "/../admin", 201, false, 0, false);
++    response_case(BODY_PREFIX "100" BODY_SUFFIX, NULL, 201, false, 0, false);
++    response_case(BODY_PREFIX "100" BODY_SUFFIX, LOCATION, 200, false, 0, false);
++    response_case("{}", LOCATION, 201, false, 0, false);
++    change_response_case(SMF_CHF_UPDATE, 200, BODY_PREFIX "100" BODY_SUFFIX, true);
++    change_response_case(SMF_CHF_UPDATE, 201, BODY_PREFIX "100" BODY_SUFFIX, false);
++    change_response_case(SMF_CHF_UPDATE, 200, "{}", false);
++    change_response_case(SMF_CHF_RELEASE, 204, "", true);
++    change_response_case(SMF_CHF_RELEASE, 200, "", false);
++    change_response_case(SMF_CHF_RELEASE, 204, "{}", false);
++    urr_cases();
++    accounting_cases();
++    ogs_sbi_message_final();
++    ogs_core_terminate();
++    printf("Native CHF checks passed: %d\n", checks);
++    return 0;
++}
+diff --git a/src/smf/chf-urr.c b/src/smf/chf-urr.c
+new file mode 100644
+index 0000000..579dee1
+--- /dev/null
++++ b/src/smf/chf-urr.c
+@@ -0,0 +1,91 @@
++/* SPDX-License-Identifier: AGPL-3.0-or-later
++ * TS 29.244 V16.10.0, 5.2.2.2.1 / 5.2.2.3.1.
++ * One rating group, one default QoS flow, one UPF per PDU session.
++ * Rule construction only; the UPF must separately enforce the quota.
++ */
++#include "chf-path.h"
++
++bool smf_chf_urr_supported(smf_sess_t *sess)
++{
++    smf_bearer_t *bearer;
++    if (!sess || sess->epc || !sess->pfcp_node ||
++            !sess->pfcp_node->up_function_features.vtime ||
++            ogs_list_count(&sess->bearer_list) != 1) return false;
++    bearer = smf_default_bearer_in_sess(sess);
++    /* Do not silently authorize extra QoS flows outside this charging profile. */
++    return bearer && bearer->urr && bearer->ul_pdr && bearer->dl_pdr &&
++        bearer->ul_pdr->num_of_urr < OGS_MAX_NUM_OF_URR &&
++        bearer->dl_pdr->num_of_urr < OGS_MAX_NUM_OF_URR;
++}
++
++int smf_chf_prepare_initial_urr(smf_sess_t *sess)
++{
++    smf_bearer_t *bearer;
++    ogs_pfcp_urr_t *urr;
++    uint64_t grant, threshold;
++    if (!smf_self()->chf_config.enabled) return OGS_OK;
++    if (!smf_chf_urr_supported(sess) || !sess->chf ||
++            !sess->chf->granted_units || !sess->chf->validity_time ||
++            sess->chf->granted_units > UINT32_MAX) return OGS_ERROR;
++    bearer = smf_default_bearer_in_sess(sess);
++    urr = bearer->urr;
++    grant = sess->chf->granted_units;
++    threshold = grant * 4 / 5;
++    /* Preserve the allocator's URR ID, not a hard-coded ID shared by sessions. */
++    urr->meas_method = OGS_PFCP_MEASUREMENT_METHOD_VOLUME;
++    memset(&urr->rep_triggers, 0, sizeof(urr->rep_triggers));
++    memset(&urr->meas_info, 0, sizeof(urr->meas_info));
++    memset(&urr->vol_threshold, 0, sizeof(urr->vol_threshold));
++    memset(&urr->vol_quota, 0, sizeof(urr->vol_quota));
++    urr->meas_period = 0;
++    urr->time_threshold = 0;
++    urr->time_quota = 0;
++    urr->rep_triggers.volume_quota = 1;
++    urr->vol_quota.tovol = 1;
++    urr->vol_quota.total_volume = grant;
++    /* A positive final grant remains usable. No early renewal for final units. */
++    if (threshold && !sess->chf->final_units) {
++        urr->rep_triggers.volume_threshold = 1;
++        urr->vol_threshold.tovol = 1;
++        urr->vol_threshold.total_volume = threshold;
++    }
++    urr->rep_triggers.quota_validity_time = 1;
++    urr->quota_validity_time = sess->chf->validity_time;
++    ogs_pfcp_pdr_associate_urr(bearer->ul_pdr, urr);
++    ogs_pfcp_pdr_associate_urr(bearer->dl_pdr, urr);
++    return OGS_OK;
++}
++
++/* Apply quota from a CHF Update response to the existing URR.
++ * Returns the PFCP modify_flags needed for Session Modification, or 0. */
++int smf_chf_renew_urr(smf_sess_t *sess)
++{
++    smf_bearer_t *bearer;
++    ogs_pfcp_urr_t *urr;
++    uint64_t grant, threshold;
++    if (!smf_self()->chf_config.enabled || !sess->chf ||
++            !sess->chf->granted_units || !sess->chf->validity_time ||
++            sess->chf->granted_units > UINT32_MAX) return OGS_ERROR;
++    bearer = smf_default_bearer_in_sess(sess);
++    if (!bearer || !bearer->urr) return OGS_ERROR;
++    urr = bearer->urr;
++    grant = sess->chf->granted_units;
++    threshold = grant * 4 / 5;
++    urr->meas_method = OGS_PFCP_MEASUREMENT_METHOD_VOLUME;
++    memset(&urr->rep_triggers, 0, sizeof(urr->rep_triggers));
++    memset(&urr->vol_threshold, 0, sizeof(urr->vol_threshold));
++    memset(&urr->vol_quota, 0, sizeof(urr->vol_quota));
++    urr->rep_triggers.volume_quota = 1;
++    urr->vol_quota.tovol = 1;
++    urr->vol_quota.total_volume = grant;
++    if (threshold && !sess->chf->final_units) {
++        urr->rep_triggers.volume_threshold = 1;
++        urr->vol_threshold.tovol = 1;
++        urr->vol_threshold.total_volume = threshold;
++    }
++    urr->rep_triggers.quota_validity_time = 1;
++    urr->quota_validity_time = sess->chf->validity_time;
++    ogs_pfcp_pdr_associate_urr(bearer->ul_pdr, urr);
++    ogs_pfcp_pdr_associate_urr(bearer->dl_pdr, urr);
++    return OGS_OK;
++}
+diff --git a/src/smf/context.c b/src/smf/context.c
+index 96516af..1f8e0c9 100644
+--- a/src/smf/context.c
++++ b/src/smf/context.c
+@@ -20,6 +20,7 @@
+ #include "context.h"
+ #include "gtp-path.h"
+ #include "pfcp-path.h"
++#include "chf-path.h"
+ 
+ static smf_context_t self;
+ static ogs_diam_config_t g_diam_conf;
+@@ -75,6 +76,7 @@ void smf_context_init(void)
+     /* Initialize SMF context */
+     memset(&self, 0, sizeof(smf_context_t));
+     smf_ctf_config_init(&self.ctf_config);
++    smf_chf_config_init(&self.chf_config);
+     self.diam_config = &g_diam_conf;
+ 
+     ogs_log_install_domain(&__ogs_ngap_domain, "ngap", ogs_core()->log.level);
+@@ -176,6 +178,9 @@ static int smf_context_validation(void)
+     nf_instance = ogs_sbi_self()->nf_instance;
+     ogs_assert(nf_instance);
+ 
++    if (smf_chf_config_validate(&self.chf_config) != OGS_OK)
++        return OGS_ERROR;
++
+     if (self.dns[0] == NULL && self.dns6[0] == NULL) {
+         ogs_error("No smf.dns in '%s'", ogs_app()->file);
+         return OGS_ERROR;
+@@ -322,7 +327,10 @@ int smf_context_parse_config(void)
+             while (ogs_yaml_iter_next(&smf_iter)) {
+                 const char *smf_key = ogs_yaml_iter_key(&smf_iter);
+                 ogs_assert(smf_key);
+-                if (!strcmp(smf_key, "freeDiameter")) {
++                if (!strcmp(smf_key, "chf")) {
++                    if (smf_chf_config_parse(&smf_iter) != OGS_OK)
++                        return OGS_ERROR;
++                } else if (!strcmp(smf_key, "freeDiameter")) {
+                     yaml_node_t *node =
+                         yaml_document_get_node(document, smf_iter.pair->value);
+                     ogs_assert(node);
+@@ -2046,6 +2054,8 @@ void smf_sess_remove(smf_sess_t *sess)
+     e.sess_id = sess->id;
+     ogs_fsm_fini(&sess->sm, &e);
+ 
++    smf_chf_sess_clear(sess);
++
+     OGS_TLV_CLEAR_DATA(&sess->gtp.ue_pco);
+     OGS_TLV_CLEAR_DATA(&sess->gtp.ue_apco);
+     OGS_TLV_CLEAR_DATA(&sess->gtp.ue_epco);
+diff --git a/src/smf/context.h b/src/smf/context.h
+index 54736a6..4ef73a7 100644
+--- a/src/smf/context.h
++++ b/src/smf/context.h
+@@ -64,6 +64,55 @@ typedef struct smf_ctf_config_s {
+ 
+ int smf_ctf_config_init(smf_ctf_config_t *ctf_config);
+ 
++/* MAEstro experimental Nchf profile; independent of EPC/Gy CTF. */
++typedef struct ogs_chf_config_s {
++    bool enabled;
++    const char *addr;
++    uint16_t port;
++    uint32_t timeout_ms;
++    unsigned int retries;
++    uint32_t rating_group;
++    uint64_t requested_units;
++    const char *token_env;
++    const char *nf_instance_id;
++    bool lab_no_auth;
++    const char *journal_dir;
++} ogs_chf_config_t;
++
++#define SMF_CHF_MAX_REPORTS 256
++typedef struct smf_chf_report_s {
++    uint32_t sequence;
++    uint64_t uplink, downlink;
++    bool confirmed;
++    const char *trigger; /* Static name, retained while an Update is in flight. */
++} smf_chf_report_t;
++
++typedef struct smf_chf_sess_s {
++    uint64_t generation;
++    char *charging_session_id;
++    char *resource_uri;
++    uint32_t charging_id;
++    uint32_t rating_group;
++    uint64_t granted_units;
++    uint64_t consumed_units;
++    uint32_t sequence_number;
++    uint32_t usage_sequence_number;
++    bool has_usage_sequence;
++    bool final_units;
++    uint32_t validity_time;
++    bool pending;
++    bool uncertain; /* No further invocation after an ambiguous transport failure. */
++    bool closed;
++    bool release_pending;
++    bool closing;
++    unsigned int refs; /* Session + outstanding native transactions. */
++    unsigned int report_count;
++    smf_chf_report_t reports[SMF_CHF_MAX_REPORTS];
++    ogs_sbi_request_t *release_request;
++    char *journal_path;
++    int journal_fd;
++} smf_chf_sess_t;
++
+ typedef struct smf_nsmf_pdusession_param_s {
+     OpenAPI_request_indication_e request_indication;
+ 
+@@ -121,6 +170,7 @@ typedef struct smf_nsmf_pdusession_param_s {
+ 
+ typedef struct smf_context_s {
+     smf_ctf_config_t    ctf_config;
++    ogs_chf_config_t    chf_config;
+     const char*         diam_conf_path;   /* SMF Diameter conf path */
+     ogs_diam_config_t   *diam_config;     /* SMF Diameter config */
+ 
+@@ -281,6 +331,7 @@ typedef struct smf_bearer_s {
+ typedef struct smf_sess_s {
+     ogs_sbi_object_t sbi;
+     ogs_pool_id_t id;
++    smf_chf_sess_t *chf;
+ 
+     uint32_t        index;              /* An index of this node */
+     ogs_pool_id_t   *smf_n4_seid_node;  /* A node of SMF-N4-SEID */
+diff --git a/src/smf/event.c b/src/smf/event.c
+index a60bc42..cb79cf5 100644
+--- a/src/smf/event.c
++++ b/src/smf/event.c
+@@ -79,6 +79,8 @@ const char *smf_event_get_name(smf_event_t *e)
+ 
+     case SMF_EVT_SESSION_RELEASE:
+         return "SMF_EVT_SESSION_RELEASE";
++    case SMF_EVT_CHF_RESPONSE:
++        return "SMF_EVT_CHF_RESPONSE";
+ 
+     default:
+        break;
+diff --git a/src/smf/event.h b/src/smf/event.h
+index 4d07c4d..eaf1992 100644
+--- a/src/smf/event.h
++++ b/src/smf/event.h
+@@ -63,6 +63,7 @@ typedef enum {
+     SMF_EVT_5GSM_TIMER,
+ 
+     SMF_EVT_SESSION_RELEASE,
++    SMF_EVT_CHF_RESPONSE,
+ 
+     SMF_EVT_TOP,
+ 
+diff --git a/src/smf/gsm-sm.c b/src/smf/gsm-sm.c
+index aa2f266..3b21976 100644
+--- a/src/smf/gsm-sm.c
++++ b/src/smf/gsm-sm.c
+@@ -18,6 +18,7 @@
+  */
+ 
+ #include "binding.h"
++#include "chf-path.h"
+ #include "sbi-path.h"
+ #include "gn-handler.h"
+ #include "gx-handler.h"
+@@ -595,6 +596,10 @@ void smf_gsm_state_wait_5gc_sm_policy_association(ogs_fsm_t *s, smf_event_t *e)
+     case OGS_FSM_EXIT_SIG:
+         break;
+ 
++    case SMF_EVT_CHF_RESPONSE:
++        smf_chf_handle_response(sess, e);
++        break;
++
+     case OGS_EVENT_SBI_CLIENT:
+         sbi_message = e->h.sbi.message;
+         ogs_assert(sbi_message);
+@@ -731,8 +736,11 @@ void smf_gsm_state_wait_5gc_sm_policy_association(ogs_fsm_t *s, smf_event_t *e)
+                     OGS_FSM_TRAN(s, smf_gsm_state_5gc_n1_n2_reject);
+                 } else if (smf_npcf_smpolicycontrol_handle_create(
+                         sess, stream, sbi_message) == true) {
+-                    OGS_FSM_TRAN(s,
+-                        &smf_gsm_state_wait_pfcp_establishment);
++                    if (smf_self()->chf_config.enabled)
++                        OGS_FSM_TRAN(s, smf_gsm_state_wait_chf_create);
++                    else
++                        OGS_FSM_TRAN(s,
++                            &smf_gsm_state_wait_pfcp_establishment);
+                 } else {
+                     ogs_error(
+                         "smf_npcf_smpolicycontrol_handle_create() failed");
+@@ -762,6 +770,39 @@ void smf_gsm_state_wait_5gc_sm_policy_association(ogs_fsm_t *s, smf_event_t *e)
+ }
+ 
+ 
++void smf_gsm_state_wait_chf_create(ogs_fsm_t *s, smf_event_t *e)
++{
++    smf_sess_t *sess = smf_sess_find_by_id(e->sess_id);
++    ogs_assert(sess);
++    switch (e->h.id) {
++    case OGS_FSM_ENTRY_SIG:
++        if (!smf_chf_urr_supported(sess) || smf_chf_send_create(sess) != OGS_OK)
++            OGS_FSM_TRAN(s, smf_gsm_state_5gc_n1_n2_reject);
++        break;
++    case OGS_FSM_EXIT_SIG:
++        break;
++    case SMF_EVT_CHF_RESPONSE:
++        if (smf_chf_handle_response(sess, e) && sess->chf->granted_units > 0 &&
++                smf_chf_prepare_initial_urr(sess) == OGS_OK) {
++            if (smf_5gc_pfcp_send_session_establishment_request(
++                        sess, NULL, 0) == OGS_OK)
++                OGS_FSM_TRAN(s, smf_gsm_state_wait_pfcp_establishment);
++            else
++                OGS_FSM_TRAN(s, smf_gsm_state_5gc_n1_n2_reject);
++        } else {
++            ogs_warn("CHF did not authorize PDU establishment (fail closed)");
++            if (sess->chf && sess->chf->resource_uri && !sess->chf->uncertain &&
++                    smf_chf_cancel_before_pfcp(sess) != OGS_OK)
++                ogs_warn("Pre-N4 charging context requires recovery");
++            OGS_FSM_TRAN(s, smf_gsm_state_5gc_n1_n2_reject);
++        }
++        break;
++    default:
++        ogs_warn("Unexpected event while awaiting CHF: %s", smf_event_get_name(e));
++        break;
++    }
++}
++
+ void smf_gsm_state_wait_pfcp_establishment(ogs_fsm_t *s, smf_event_t *e)
+ {
+     smf_sess_t *sess = NULL;
+@@ -1052,6 +1093,7 @@ void smf_gsm_state_operational(ogs_fsm_t *s, smf_event_t *e)
+             pfcp_cause = smf_n4_handle_session_report_request(sess, pfcp_xact,
+                             &pfcp_message->pfcp_session_report_request);
+             if (pfcp_cause != OGS_PFCP_CAUSE_REQUEST_ACCEPTED) {
++                e->h.sbi.state = OGS_PFCP_DELETE_TRIGGER_LOCAL_INITIATED;
+                 OGS_FSM_TRAN(s, smf_gsm_state_wait_pfcp_deletion);
+             }
+             break;
+@@ -1074,14 +1116,63 @@ void smf_gsm_state_operational(ogs_fsm_t *s, smf_event_t *e)
+                 ogs_assert(pfcp_xact);
+                 diam_err = smf_gy_handle_cca_update_request(
+                         sess, gy_message, pfcp_xact);
+-                if (diam_err != ER_DIAMETER_SUCCESS)
++                if (diam_err != ER_DIAMETER_SUCCESS) {
++                    e->h.sbi.state = OGS_PFCP_DELETE_TRIGGER_LOCAL_INITIATED;
+                     OGS_FSM_TRAN(s, smf_gsm_state_wait_pfcp_deletion);
++                }
+                 break;
+             }
+             break;
+         }
+         break;
+ 
++    case SMF_EVT_CHF_RESPONSE:
++        /* Nchf Update/Release response while session is operational. */
++        if (smf_chf_handle_response(sess, e)) {
++            smf_chf_transaction_t *chf_txn = e->h.sbi.data;
++            if (chf_txn && chf_txn->operation == SMF_CHF_RELEASE) {
++                /* Release confirmed (204); session accounting is closed. */
++                ogs_info("CHF Release confirmed for session=%u", sess->id);
++            } else if (sess->chf->granted_units > 0) {
++                /* A threshold and exhaustion report may arrive before HTTP
++                 * completes. Debit the queued old-window delta BEFORE installing
++                 * a replacement quota. Never apply two overlapping grants. */
++                int queued = smf_chf_flush_update(sess);
++                if (queued == OGS_OK) break;
++                if (queued != OGS_DONE) {
++                    e->h.sbi.state = OGS_PFCP_DELETE_TRIGGER_LOCAL_INITIATED;
++                    OGS_FSM_TRAN(s, smf_gsm_state_wait_pfcp_deletion);
++                    break;
++                }
++                /* Quota renewed (either regular or final tranche); update URR in UPF. */
++                if (smf_chf_renew_urr(sess) == OGS_OK) {
++                    uint64_t modify_flags =
++                        OGS_PFCP_MODIFY_URR |
++                        OGS_PFCP_MODIFY_URR_VOLUME_QUOTA |
++                        OGS_PFCP_MODIFY_URR_VOLUME_THRESH |
++                        OGS_PFCP_MODIFY_URR_REPORT_TRIGGER |
++                        OGS_PFCP_MODIFY_URR_QUOTA_VALIDITY_TIME |
++                        OGS_PFCP_MODIFY_UL_ONLY;
++                    smf_5gc_pfcp_send_all_pdr_modification_request(
++                            sess, NULL, modify_flags, 0, 0);
++                    ogs_info("CHF quota renewed for session=%u grant=%" PRIu64 " final=%d",
++                            sess->id, sess->chf->granted_units, sess->chf->final_units);
++                }
++            } else {
++                /* Quota exhausted: release session via wait_pfcp_deletion state. */
++                ogs_info("CHF quota exhausted for session=%u; releasing",
++                        sess->id);
++                e->h.sbi.state = OGS_PFCP_DELETE_TRIGGER_LOCAL_INITIATED;
++                OGS_FSM_TRAN(s, smf_gsm_state_wait_pfcp_deletion);
++            }
++        } else {
++            ogs_warn("CHF response failed in operational state; releasing session=%u",
++                    sess->id);
++            e->h.sbi.state = OGS_PFCP_DELETE_TRIGGER_LOCAL_INITIATED;
++            OGS_FSM_TRAN(s, smf_gsm_state_wait_pfcp_deletion);
++        }
++        break;
++
+     case OGS_EVENT_SBI_SERVER:
+         sbi_message = e->h.sbi.message;
+         ogs_assert(sbi_message);
+@@ -2274,6 +2365,7 @@ void smf_gsm_state_wait_pfcp_deletion(ogs_fsm_t *s, smf_event_t *e)
+     case OGS_FSM_ENTRY_SIG:
+         /* Since `pfcp_xact->epc` is not available,
+          * we'll use `sess->epc` */
++        if (sess->chf) sess->chf->closing = true;
+         if (sess->epc) {
+             /* EPC */
+             gtp_xact = ogs_gtp_xact_find_by_id(e->gtp_xact_id);
+@@ -2281,8 +2373,10 @@ void smf_gsm_state_wait_pfcp_deletion(ogs_fsm_t *s, smf_event_t *e)
+                 smf_epc_pfcp_send_session_deletion_request(
+                     sess, gtp_xact ? gtp_xact->id : OGS_INVALID_POOL_ID));
+         } else {
+-            /* 5GC */
+-            stream_id = OGS_POINTER_TO_UINT(e->h.sbi.data);
++            /* 5GC: only SBI events carry an associated stream. CHF events
++             * carry an owned transaction, never an SBI stream identifier. */
++            stream_id = e->h.id == SMF_EVT_CHF_RESPONSE ? OGS_INVALID_POOL_ID :
++                OGS_POINTER_TO_UINT(e->h.sbi.data);
+             if (stream_id >= OGS_MIN_POOL_ID && stream_id <= OGS_MAX_POOL_ID)
+                 stream = ogs_sbi_stream_find_by_id(stream_id);
+ 
+@@ -2306,6 +2400,12 @@ void smf_gsm_state_wait_pfcp_deletion(ogs_fsm_t *s, smf_event_t *e)
+         ogs_assert(pfcp_message);
+ 
+         switch (pfcp_message->h.type) {
++        case OGS_PFCP_SESSION_REPORT_REQUEST_TYPE:
++            /* A quota report can arrive while deletion is in flight. It is
++             * still accounting evidence; never silently drop its delta. */
++            smf_n4_handle_session_report_request(sess, pfcp_xact,
++                    &pfcp_message->pfcp_session_report_request);
++            break;
+         case OGS_PFCP_SESSION_DELETION_RESPONSE_TYPE:
+             if (pfcp_xact->epc) {
+                 gtp_xact = ogs_gtp_xact_find_by_id(pfcp_xact->assoc_xact_id);
+@@ -2350,9 +2450,90 @@ void smf_gsm_state_wait_pfcp_deletion(ogs_fsm_t *s, smf_event_t *e)
+                     break;
+                 }
+ 
++                /* MAEstro CHF: send Nchf_Release with final usage from
++                 * the Session Deletion Response usage reports. */
++                if (sess->chf && sess->chf->resource_uri &&
++                        !sess->chf->closed) {
++                    uint64_t final_ul = 0, final_dl = 0;
++                    uint32_t final_sequence = 0;
++                    unsigned int matching_reports = 0;
++                    bool final_valid = true;
++                    unsigned int j;
++                    smf_bearer_t *chf_bearer =
++                        smf_default_bearer_in_sess(sess);
++                    for (j = 0; j < OGS_ARRAY_SIZE(
++                            pfcp_message->pfcp_session_deletion_response
++                                .usage_report); j++) {
++                        ogs_pfcp_tlv_usage_report_session_deletion_response_t
++                            *ur = &pfcp_message
++                                ->pfcp_session_deletion_response
++                                .usage_report[j];
++                        ogs_pfcp_volume_measurement_t vol;
++                        int16_t dec;
++                        if (!ur->presence) break;
++                        if (!ur->urr_id.presence) continue;
++                        if (!chf_bearer || !chf_bearer->urr ||
++                                chf_bearer->urr->id != ur->urr_id.u32)
++                            continue;
++                        matching_reports++;
++                        if (!ur->ur_seqn.presence || !ur->volume_measurement.presence) {
++                            final_valid = false;
++                            continue;
++                        }
++                        dec = ogs_pfcp_parse_volume_measurement(
++                                &vol, &ur->volume_measurement);
++                        if (ur->volume_measurement.len != dec || !vol.ulvol || !vol.dlvol ||
++                                vol.uplink_volume > UINT64_MAX - vol.downlink_volume ||
++                                (vol.tovol && vol.total_volume != vol.uplink_volume + vol.downlink_volume)) {
++                            final_valid = false;
++                            continue;
++                        }
++                        final_ul = vol.uplink_volume;
++                        final_dl = vol.downlink_volume;
++                        final_sequence = ur->ur_seqn.u32;
++                    }
++                    if (matching_reports != 1 || !final_valid) {
++                        sess->chf->uncertain = true;
++                        smf_chf_journal(sess->chf, "invalid_final_usage", NULL, NULL, 0);
++                        ogs_error("Missing/inconsistent final PFCP evidence; CHF closure not fabricated");
++                    } else if (smf_chf_send_final_release(sess, final_ul, final_dl, final_sequence) != OGS_OK) {
++                        ogs_warn("CHF Release pending recovery; accounting not confirmed");
++                    }
++                    /* Native transactions retain the accounting owner independently
++                     * of the network session; the final callback validates HTTP 204. */
++                }
++
+                 if (trigger == OGS_PFCP_DELETE_TRIGGER_LOCAL_INITIATED) {
+ 
+-                    ogs_error("OLD Session Released");
++                    if (sess->chf) {
++                        smf_n1_n2_message_transfer_param_t param;
++                        /* TS 23.502 Rel16 4.3.4.2 steps 2 and 3b: deleting
++                         * N4 does not release NAS/N2 resources at UE and RAN.
++                         * Do not request reactivation after credit exhaustion. */
++                        memset(&param, 0, sizeof(param));
++                        param.state = SMF_UE_OR_NETWORK_REQUESTED_PDU_SESSION_RELEASE;
++                        sess->pti = OGS_NAS_PROCEDURE_TRANSACTION_IDENTITY_UNASSIGNED;
++                        param.n1smbuf = gsm_build_pdu_session_release_command(
++                                sess, OGS_5GSM_CAUSE_REGULAR_DEACTIVATION);
++                        ogs_assert(param.n1smbuf);
++                        param.n2smbuf = ngap_build_pdu_session_resource_release_command_transfer(
++                                sess, SMF_NGAP_STATE_DELETE_TRIGGER_SMF_INITIATED,
++                                NGAP_Cause_PR_nas, NGAP_CauseNas_normal_release);
++                        ogs_assert(param.n2smbuf);
++                        param.skip_ind = true;
++                        smf_namf_comm_send_n1_n2_message_transfer(sess, NULL, &param);
++                        OGS_FSM_TRAN(s, smf_gsm_state_wait_5gc_n1_n2_release);
++                        break;
++                    }
++
++                    ogs_info("CHF/Local Session Deletion Complete; initiating SBI cleanup");
++                    r = smf_sbi_cleanup_session(
++                            sess, NULL,
++                            SMF_UECM_STATE_DEREG_BY_N1N2,
++                            SMF_SBI_CLEANUP_MODE_POLICY_FIRST);
++                    ogs_expect(r == OGS_OK);
++                    ogs_assert(r != OGS_ERROR);
++
+                     OGS_FSM_TRAN(s, smf_gsm_state_5gc_session_will_deregister);
+ 
+                 } else if (trigger == OGS_PFCP_DELETE_TRIGGER_UE_REQUESTED) {
+@@ -3857,6 +4038,10 @@ void smf_gsm_state_5gc_session_will_deregister(ogs_fsm_t *s, smf_event_t *e)
+     case OGS_FSM_EXIT_SIG:
+         break;
+ 
++    case SMF_EVT_CHF_RESPONSE:
++        smf_chf_handle_response(sess, e);
++        break;
++
+     case OGS_EVENT_SBI_SERVER:
+         sbi_message = e->h.sbi.message;
+         ogs_assert(sbi_message);
+diff --git a/src/smf/init.c b/src/smf/init.c
+index 61d3951..7310b27 100644
+--- a/src/smf/init.c
++++ b/src/smf/init.c
+@@ -22,6 +22,7 @@
+ #include "gtp-path.h"
+ #include "pfcp-path.h"
+ #include "sbi-path.h"
++#include "chf-path.h"
+ #include "metrics.h"
+ #include "ogs-metrics.h"
+ #include "metrics/prometheus/json_pager.h"
+@@ -73,6 +74,9 @@ int smf_initialize(void)
+     rv = smf_context_parse_config();
+     if (rv != OGS_OK) return rv;
+ 
++    rv = smf_chf_open();
++    if (rv != OGS_OK) return rv;
++
+     rv = ogs_pfcp_ue_pool_generate();
+     if (rv != OGS_OK) return rv;
+ 
+diff --git a/src/smf/meson.build b/src/smf/meson.build
+index b501710..eba3ebd 100644
+--- a/src/smf/meson.build
++++ b/src/smf/meson.build
+@@ -38,6 +38,7 @@ libsmf_sources = files('''
+     event.h
+     timer.h
+     context.h
++    chf-path.h
+     smf-sm.h
+     gtp-path.h
+     gn-build.h
+@@ -76,6 +77,11 @@ libsmf_sources = files('''
+     event.c
+     timer.c
+     context.c
++    chf-config.c
++    chf-build.c
++    chf-path.c
++    chf-urr.c
++    chf-accounting.c
+     smf-sm.c
+     gsm-sm.c
+     pfcp-sm.c
+@@ -145,6 +151,11 @@ smf_sources = files('''
+     ../main.c
+ '''.split())
+ 
++chf_unit = executable('chf-unit', 'chf-unit.c',
++    dependencies : libsmf_dep, install : false)
++test('chf-native-unit', chf_unit, suite : 'charging', is_parallel : false)
++executable('chf-probe', 'chf-probe.c', dependencies : libsmf_dep, install : false)
++
+ executable('open5gs-smfd',
+     sources : smf_sources,
+     c_args : '-DDEFAULT_CONFIG_FILENAME="@0@/smf.yaml"'.format(open5gs_sysconfdir),
+diff --git a/src/smf/n4-handler.c b/src/smf/n4-handler.c
+index e081736..b3d4c65 100644
+--- a/src/smf/n4-handler.c
++++ b/src/smf/n4-handler.c
+@@ -26,6 +26,7 @@
+ #include "sbi-path.h"
+ #include "ngap-path.h"
+ #include "fd-path.h"
++#include "chf-path.h"
+ 
+ uint8_t gtp_cause_from_pfcp(uint8_t pfcp_cause, uint8_t gtp_version)
+ {
+@@ -1741,10 +1742,20 @@ uint8_t smf_n4_handle_session_report_request(
+             urr_id = use_rep->urr_id.u32;
+             if (!bearer || !bearer->urr || bearer->urr->id != urr_id)
+                 continue;
++            if (!sess->epc && sess->chf && !use_rep->volume_measurement.presence) {
++                sess->chf->uncertain = true;
++                cause_value = OGS_PFCP_CAUSE_MANDATORY_IE_MISSING;
++                goto chf_handled;
++            }
+             decoded = ogs_pfcp_parse_volume_measurement(
+                     &volume, &use_rep->volume_measurement);
+             if (use_rep->volume_measurement.len != decoded) {
+                 ogs_error("Invalid Volume Measurement");
++                if (!sess->epc && sess->chf) {
++                    sess->chf->uncertain = true;
++                    cause_value = OGS_PFCP_CAUSE_MANDATORY_IE_INCORRECT;
++                    goto chf_handled;
++                }
+                 continue;
+             }
+             if (volume.ulvol)
+@@ -1756,7 +1767,37 @@ uint8_t smf_n4_handle_session_report_request(
+                     &rep_trig, &use_rep->usage_report_trigger);
+             sess->gy.reporting_reason =
+                 smf_pfcp_urr_usage_report_trigger2diam_gy_reporting_reason(&rep_trig);
++
++            /* MAEstro CHF path: 5GC sessions with active Nchf context. */
++            if (!sess->epc && sess->chf && sess->chf->resource_uri &&
++                    !sess->chf->closed) {
++                if (!use_rep->ur_seqn.presence || !use_rep->volume_measurement.presence ||
++                        !use_rep->usage_report_trigger.presence || !volume.ulvol || !volume.dlvol ||
++                        (volume.tovol && (volume.uplink_volume > UINT64_MAX - volume.downlink_volume ||
++                            volume.total_volume != volume.uplink_volume + volume.downlink_volume))) {
++                    sess->chf->uncertain = true;
++                    sess->chf->closing = true;
++                    ogs_error("Incomplete/inconsistent CHF PFCP usage; reconciliation required");
++                    cause_value = OGS_PFCP_CAUSE_MANDATORY_IE_INCORRECT;
++                    goto chf_handled;
++                }
++                bool chf_ok = smf_chf_handle_usage_report(sess, &rep_trig,
++                        volume.ulvol ? volume.uplink_volume : 0,
++                        volume.dlvol ? volume.downlink_volume : 0,
++                        use_rep->ur_seqn.u32);
++                if (!chf_ok) {
++                    ogs_warn("CHF Update failed; triggering session release");
++                    cause_value = OGS_PFCP_CAUSE_NO_RESOURCES_AVAILABLE;
++                } else if (sess->chf->closing) {
++                    /* Already received TERMINATE; initiate session release. */
++                    cause_value = OGS_PFCP_CAUSE_NO_RESOURCES_AVAILABLE;
++                }
++                /* Preserve every report in the message, not just its first URR. */
++                continue;
++            }
+         }
++        if (!sess->epc && sess->chf && sess->chf->resource_uri && !sess->chf->closed)
++            goto chf_handled;
+         switch (smf_use_gy_iface()) {
+         case 1:
+             if (!sess->gy.final_unit) {
+@@ -1777,6 +1818,7 @@ uint8_t smf_n4_handle_session_report_request(
+         /* default: continue below */
+         }
+     }
++chf_handled:
+ 
+     /* TS 29.244 sec 8.2.21: At least one bit shall be set to "1". Several bits may be set to "1". */
+     if (report_type.downlink_data_report ||
+diff --git a/src/smf/npcf-handler.c b/src/smf/npcf-handler.c
+index c54347d..3a35537 100644
+--- a/src/smf/npcf-handler.c
++++ b/src/smf/npcf-handler.c
+@@ -748,6 +748,15 @@ bool smf_npcf_smpolicycontrol_handle_create(
+     cp2up_pdr->precedence = OGS_PFCP_CP2UP_PDR_PRECEDENCE;
+     up2cp_pdr->precedence = OGS_PFCP_UP2CP_PDR_PRECEDENCE;
+ 
++    if (smf_self()->chf_config.enabled) {
++        /* Native CHF gate in GSM FSM: never establish N4 before authorization. */
++        if (HOME_ROUTED_ROAMING_IN_HSMF(sess) || HOME_ROUTED_ROAMING_IN_VSMF(sess)) {
++            ogs_error("Home-routed roaming is outside the CHF volume profile");
++            return false;
++        }
++        return true;
++    }
++
+     ogs_assert(OGS_OK ==
+             smf_5gc_pfcp_send_session_establishment_request(sess, stream, 0));
+ 
+diff --git a/src/smf/pfcp-path.c b/src/smf/pfcp-path.c
+index d768082..c26fd1c 100644
+--- a/src/smf/pfcp-path.c
++++ b/src/smf/pfcp-path.c
+@@ -618,7 +618,7 @@ int smf_5gc_pfcp_send_all_pdr_modification_request(
+     ogs_pfcp_pdr_t *pdr = NULL;
+ 
+     ogs_assert(sess);
+-    if ((flags & OGS_PFCP_MODIFY_ERROR_INDICATION) == 0)
++    if ((flags & (OGS_PFCP_MODIFY_ERROR_INDICATION|OGS_PFCP_MODIFY_URR)) == 0)
+         ogs_assert(stream);
+ 
+     xact = ogs_pfcp_xact_local_create(
+diff --git a/src/smf/smf-sm.c b/src/smf/smf-sm.c
+index e10af0e..1a856de 100644
+--- a/src/smf/smf-sm.c
++++ b/src/smf/smf-sm.c
+@@ -18,6 +18,7 @@
+  */
+ 
+ #include "context.h"
++#include "chf-path.h"
+ #include "gtp-path.h"
+ #include "fd-path.h"
+ #include "pfcp-path.h"
+@@ -370,6 +371,36 @@ void smf_state_operational(ogs_fsm_t *s, smf_event_t *e)
+         ogs_free(gx_message);
+         break;
+ 
++    case SMF_EVT_CHF_RESPONSE: {
++        smf_chf_transaction_t *transaction = e->h.sbi.data;
++        smf_chf_sess_t *owner = transaction ? transaction->owner : NULL;
++        sess = smf_sess_find_by_id(e->sess_id);
++        /* A delayed HTTP response must never act on a reused session slot. */
++        if (owner) owner->pending = false;
++        if (owner && (owner->closing || transaction->operation == SMF_CHF_RELEASE ||
++                    !sess || sess->chf != owner)) {
++            smf_sess_t shadow = {0};
++            shadow.chf = owner;
++            if (smf_chf_handle_response(&shadow, e)) {
++                if (transaction->operation == SMF_CHF_RELEASE)
++                    ogs_info("CHF Release confirmed: HTTP 204, accounting closed");
++                else if (smf_chf_flush_release(owner, transaction->sess_id) != OGS_OK)
++                    ogs_warn("CHF terminal accounting awaits reconciliation");
++            } else {
++                ogs_warn("CHF terminal response not confirmed; journal requires recovery");
++            }
++        } else if (transaction && sess && sess->chf &&
++                sess->chf->generation == transaction->generation) {
++            sess->chf->pending = false;
++            ogs_fsm_dispatch(&sess->sm, e);
++        } else {
++            ogs_warn("CHF response without live owner; reconciliation required");
++        }
++        if (e->h.sbi.response) ogs_sbi_response_free(e->h.sbi.response);
++        if (transaction) smf_chf_transaction_free(transaction);
++        break;
++    }
++
+     case SMF_EVT_GY_MESSAGE:
+         ogs_assert(e);
+         gy_message = e->gy_message;
+diff --git a/src/smf/smf-sm.h b/src/smf/smf-sm.h
+index cbb7097..971d203 100644
+--- a/src/smf/smf-sm.h
++++ b/src/smf/smf-sm.h
+@@ -37,6 +37,7 @@ void smf_gsm_state_wait_epc_auth_initial(ogs_fsm_t *s, smf_event_t *e);
+ void smf_gsm_state_wait_5gc_sm_policy_association(ogs_fsm_t *s, smf_event_t *e);
+ void smf_gsm_state_wait_pfcp_establishment(ogs_fsm_t *s, smf_event_t *e);
+ void smf_gsm_state_operational(ogs_fsm_t *s, smf_event_t *e);
++void smf_gsm_state_wait_chf_create(ogs_fsm_t *s, smf_event_t *e);
+ void smf_gsm_state_wait_pfcp_deletion(ogs_fsm_t *s, smf_event_t *e);
+ void smf_gsm_state_wait_epc_auth_release(ogs_fsm_t *s, smf_event_t *e);
+ void smf_gsm_state_wait_5gc_n1_n2_release(ogs_fsm_t *s, smf_event_t *e);
+diff --git a/src/upf/context.c b/src/upf/context.c
+index 9350f54..6e87e17 100644
+--- a/src/upf/context.c
++++ b/src/upf/context.c
+@@ -149,7 +149,12 @@ int upf_context_parse_config(void)
+             while (ogs_yaml_iter_next(&upf_iter)) {
+                 const char *upf_key = ogs_yaml_iter_key(&upf_iter);
+                 ogs_assert(upf_key);
+-                if (!strcmp(upf_key, "gtpu")) {
++                if (!strcmp(upf_key, "charging_enforcement")) {
++                    const char *value = ogs_yaml_iter_value(&upf_iter);
++                    if (!value || (strcmp(value, "true") && strcmp(value, "false")))
++                        return OGS_ERROR;
++                    self.charging_enforcement = !strcmp(value, "true");
++                } else if (!strcmp(upf_key, "gtpu")) {
+                     /* handle config in gtp library */
+                 } else if (!strcmp(upf_key, "pfcp")) {
+                     /* handle config in pfcp library */
+@@ -708,7 +713,12 @@ void upf_sess_urr_acc_add(upf_sess_t *sess, ogs_pfcp_urr_t *urr, size_t size, bo
+ 
+     /* generate report if volume threshold/quota is reached */
+     vol = urr_acc->total_octets - urr_acc->last_report.total_octets;
+-    if ((urr->rep_triggers.volume_quota && urr->vol_quota.tovol && vol >= urr->vol_quota.total_volume) ||
++    if (urr_acc->quota.active) {
++        if (urr_acc->total_octets >= urr_acc->quota.limit ||
++                (urr->rep_triggers.volume_threshold && urr->vol_threshold.tovol &&
++                 vol >= urr->vol_threshold.total_volume))
++            upf_quota_report(sess, urr);
++    } else if ((urr->rep_triggers.volume_quota && urr->vol_quota.tovol && vol >= urr->vol_quota.total_volume) ||
+         (urr->rep_triggers.volume_threshold && urr->vol_threshold.tovol && vol >= urr->vol_threshold.total_volume)) {
+         ogs_pfcp_user_plane_report_t report;
+         memset(&report, 0, sizeof(report));
+@@ -785,6 +795,15 @@ void upf_sess_urr_acc_fill_usage_report(upf_sess_t *sess, const ogs_pfcp_urr_t *
+     if (urr->rep_triggers.volume_threshold && urr->vol_threshold.tovol &&
+             report->usage_report[idx].vol_measurement.total_volume >= urr->vol_threshold.total_volume)
+         report->usage_report[idx].rep_trigger.volume_threshold = 1;
++    if (urr_acc->quota.active) {
++        /* No packets in this reporting interval: omit optional packet times,
++         * instead of encoding an invented Unix-epoch packet timestamp. */
++        if (!urr_acc->time_of_first_packet) report->usage_report[idx].time_of_first_packet = 0;
++        if (!urr_acc->time_of_last_packet) report->usage_report[idx].time_of_last_packet = 0;
++        report->usage_report[idx].rep_trigger.volume_quota =
++            urr_acc->total_octets >= urr_acc->quota.limit;
++        report->usage_report[idx].rep_trigger.quota_validity_time = urr_acc->quota.expired;
++    }
+ }
+ 
+ void upf_sess_urr_acc_snapshot(upf_sess_t *sess, ogs_pfcp_urr_t *urr)
+@@ -801,6 +820,11 @@ void upf_sess_urr_acc_snapshot(upf_sess_t *sess, ogs_pfcp_urr_t *urr)
+     urr_acc->last_report.dl_pkts = urr_acc->dl_pkts;
+     urr_acc->last_report.ul_pkts = urr_acc->ul_pkts;
+     urr_acc->last_report.timestamp = ogs_time_now();
++    if (urr_acc->quota.active) {
++        urr_acc->time_start = ogs_time_to_ntp32(urr_acc->last_report.timestamp);
++        urr_acc->time_of_first_packet = 0;
++        urr_acc->time_of_last_packet = 0;
++    }
+ }
+ 
+ static void upf_sess_urr_acc_timers_cb(void *data)
+@@ -881,6 +905,8 @@ void upf_sess_urr_acc_timers_setup(upf_sess_t *sess, ogs_pfcp_urr_t *urr)
+     ogs_assert(urr->id > 0 && urr->id <= OGS_MAX_NUM_OF_URR);
+     urr_acc = &sess->urr_acc[urr->id-1];
+ 
++    if (urr_acc->quota.active) return; /* Reporting must not renew validity. */
++
+     urr_acc->time_start = ogs_time_ntp32_now();
+     if (urr->rep_triggers.quota_validity_time && urr->quota_validity_time > 0)
+         upf_sess_urr_acc_validity_time_setup(sess, urr);
+diff --git a/src/upf/context.h b/src/upf/context.h
+index 08cf996..a995a99 100644
+--- a/src/upf/context.h
++++ b/src/upf/context.h
+@@ -48,6 +48,7 @@ extern int __upf_log_domain;
+ struct upf_route_trie_node;
+ 
+ typedef struct upf_context_s {
++    bool charging_enforcement; /* Experimental total-volume profile; default off. */
+     ogs_hash_t *upf_n4_seid_hash;   /* hash table (UPF-N4-SEID) */
+     ogs_hash_t *smf_n4_seid_hash;   /* hash table (SMF-N4-SEID) */
+     ogs_hash_t *smf_n4_f_seid_hash; /* hash table (SMF-N4-F-SEID) */
+@@ -71,6 +72,14 @@ struct upf_route_trie_node {
+ 
+ /* Accounting: */
+ typedef struct upf_sess_urr_acc_s {
++    struct {
++        bool active;
++        bool expired;
++        bool volume_reported;
++        bool expiry_reported;
++        uint64_t limit; /* Absolute counter limit; NOT reset by a usage report. */
++        ogs_time_t deadline; /* Monotonic quota validity deadline. */
++    } quota;
+     bool reporting_enabled;
+     ogs_timer_t *t_validity_time; /* Quota Validity Time expiration handler */
+     ogs_timer_t *t_time_quota; /* Time Quota expiration handler */
+@@ -156,6 +165,13 @@ void upf_sess_urr_acc_fill_usage_report(upf_sess_t *sess, const ogs_pfcp_urr_t *
+                                         ogs_pfcp_user_plane_report_t *report, unsigned int idx);
+ void upf_sess_urr_acc_snapshot(upf_sess_t *sess, ogs_pfcp_urr_t *urr);
+ void upf_sess_urr_acc_timers_setup(upf_sess_t *sess, ogs_pfcp_urr_t *urr);
++void upf_quota_install(upf_sess_t *sess, ogs_pfcp_urr_t *urr,
++        bool volume_changed, bool validity_changed);
++bool upf_quota_allow(upf_sess_t *sess, ogs_pfcp_pdr_t *pdr, bool uplink);
++void upf_quota_report(upf_sess_t *sess, ogs_pfcp_urr_t *urr);
++void upf_quota_cancel_timers(upf_sess_t *sess);
++bool upf_quota_controlled(upf_sess_t *sess, ogs_pfcp_pdr_t *pdr);
++void upf_quota_forward_buffered(upf_sess_t *sess, ogs_pfcp_pdr_t *pdr);
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/src/upf/gtp-path.c b/src/upf/gtp-path.c
+index a8c920c..79d7907 100644
+--- a/src/upf/gtp-path.c
++++ b/src/upf/gtp-path.c
+@@ -210,6 +210,7 @@ static void _gtpv1_tun_recv_common_cb(
+     }
+ 
+     /* Increment total & dl octets + pkts */
++    if (!upf_quota_allow(sess, pdr, false)) goto cleanup;
+     for (i = 0; i < pdr->num_of_urr; i++)
+         upf_sess_urr_acc_add(sess, pdr->urr[i], recvbuf->len, false);
+ 
+@@ -722,6 +723,7 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
+             ogs_assert(dev);
+ 
+             /* Increment total & ul octets + pkts */
++            if (!upf_quota_allow(sess, pdr, true)) goto cleanup;
+             for (i = 0; i < pdr->num_of_urr; i++)
+                 upf_sess_urr_acc_add(sess, pdr->urr[i], pkbuf->len, true);
+ 
+@@ -787,6 +789,7 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
+                     dl_pdr = dl_fallback_pdr;
+ 
+                 if (dl_pdr) {
++                    if (!upf_quota_allow(dst_sess, dl_pdr, false)) goto cleanup;
+                     /* Increment dl octets + pkts */
+                     for (i = 0; i < dl_pdr->num_of_urr; i++)
+                         upf_sess_urr_acc_add(
+@@ -857,6 +860,12 @@ static void _gtpv1_u_recv_cb(short when, ogs_socket_t fd, void *data)
+             }
+ #endif
+ 
++            if (upf_quota_controlled(sess, pdr)) {
++                bool uplink = pdr->src_if == OGS_PFCP_INTERFACE_ACCESS;
++                if (!upf_quota_allow(sess, pdr, uplink)) goto cleanup;
++                for (i = 0; i < pdr->num_of_urr; i++)
++                    upf_sess_urr_acc_add(sess, pdr->urr[i], pkbuf->len, uplink);
++            }
+             ogs_assert(true == ogs_pfcp_up_handle_pdr(
+                         pdr, header_desc.type, len, &header_desc,
+                         pkbuf, &report));
+@@ -1065,6 +1074,12 @@ static void upf_gtp_handle_multicast(ogs_pkbuf_t *recvbuf)
+ 
+                     ogs_list_for_each(&sess->pfcp.pdr_list, pdr) {
+                         if (pdr->src_if == OGS_PFCP_INTERFACE_CORE) {
++                            int i;
++                            if (!upf_quota_allow(sess, pdr, false)) break;
++                            /* Only the experimental profile changes multicast accounting. */
++                            if (upf_quota_controlled(sess, pdr))
++                                for (i = 0; i < pdr->num_of_urr; i++)
++                                    upf_sess_urr_acc_add(sess, pdr->urr[i], recvbuf->len, false);
+                             ogs_pkbuf_t *sendbuf = ogs_pkbuf_copy(recvbuf);
+                             ogs_assert(sendbuf);
+                             ogs_assert(true ==
+diff --git a/src/upf/meson.build b/src/upf/meson.build
+index 8150068..c0bb56f 100644
+--- a/src/upf/meson.build
++++ b/src/upf/meson.build
+@@ -62,6 +62,7 @@ libupf_sources = files('''
+     event.c
+     timer.c
+     context.c
++    quota.c
+     upf-sm.c
+     pfcp-sm.c
+     gtp-path.c
+@@ -109,6 +110,9 @@ upf_sources = files('''
+     ../main.c
+ '''.split())
+ 
++quota_unit = executable('quota-unit', 'quota-unit.c', dependencies : libupf_dep, install : false)
++test('upf-quota-unit', quota_unit, suite : 'charging', is_parallel : false)
++
+ executable('open5gs-upfd',
+     sources : upf_sources,
+     c_args : '-DDEFAULT_CONFIG_FILENAME="@0@/upf.yaml"'.format(open5gs_sysconfdir),
+diff --git a/src/upf/n4-handler.c b/src/upf/n4-handler.c
+index 3eb0884..b1ff4a4 100644
+--- a/src/upf/n4-handler.c
++++ b/src/upf/n4-handler.c
+@@ -36,6 +36,8 @@ static void upf_n4_handle_create_urr(upf_sess_t *sess, ogs_pfcp_tlv_create_urr_t
+         if (!urr)
+             return;
+ 
++        upf_quota_install(sess, urr, true, true);
++
+         /* TODO: enable counters somewhere else if ISTM not set, upon first pkt received */
+         if (urr->meas_info.istm) {
+             upf_sess_urr_acc_timers_setup(sess, urr);
+@@ -214,7 +216,7 @@ void upf_n4_handle_session_establishment_request(
+     /* Send Buffered Packet to gNB/SGW */
+     ogs_list_for_each(&sess->pfcp.pdr_list, pdr) {
+         if (pdr->src_if == OGS_PFCP_INTERFACE_CORE) { /* Downlink */
+-            ogs_pfcp_send_buffered_gtpu(pdr);
++            upf_quota_forward_buffered(sess, pdr);
+         }
+     }
+ 
+@@ -233,6 +235,7 @@ void upf_n4_handle_session_establishment_request(
+ cleanup:
+     upf_metrics_inst_by_cause_add(cause_value,
+             UPF_METR_CTR_SM_N4SESSIONESTABFAIL, 1);
++    upf_quota_cancel_timers(sess);
+     ogs_pfcp_sess_clear(&sess->pfcp);
+     ogs_pfcp_send_error_message(xact, sess ? sess->smf_n4_f_seid.seid : 0,
+             OGS_PFCP_SESSION_ESTABLISHMENT_RESPONSE_TYPE,
+@@ -266,6 +269,23 @@ void upf_n4_handle_session_modification_request(
+         return;
+     }
+ 
++    /* Initial charging profile closes through Session Deletion (final usage).
++     * Do not silently remove a live charged URR or leave a timer on freed memory.
++     * Reject BEFORE mutating other rules in this Modification Request. */
++    if (upf_self()->charging_enforcement) {
++        for (i = 0; i < OGS_MAX_NUM_OF_URR; i++) {
++            ogs_pfcp_urr_t *urr;
++            if (!req->remove_urr[i].presence || !req->remove_urr[i].urr_id.presence) continue;
++            urr = ogs_pfcp_urr_find(&sess->pfcp, req->remove_urr[i].urr_id.u32);
++            if (urr && sess->urr_acc[urr->id-1].quota.active) {
++                ogs_pfcp_send_error_message(xact, sess->smf_n4_f_seid.seid,
++                        OGS_PFCP_SESSION_MODIFICATION_RESPONSE_TYPE,
++                        OGS_PFCP_CAUSE_SERVICE_NOT_SUPPORTED, 0);
++                return;
++            }
++        }
++    }
++
+     for (i = 0; i < OGS_MAX_NUM_OF_PDR; i++) {
+         created_pdr[i] = ogs_pfcp_handle_create_pdr(&sess->pfcp,
+                 &req->create_pdr[i], NULL, &cause_value, &offending_ie_value);
+@@ -341,9 +361,12 @@ void upf_n4_handle_session_modification_request(
+         goto cleanup;
+ 
+     for (i = 0; i < OGS_MAX_NUM_OF_URR; i++) {
+-        if (ogs_pfcp_handle_update_urr(&sess->pfcp, &req->update_urr[i],
+-                    &cause_value, &offending_ie_value) == NULL)
++        ogs_pfcp_urr_t *urr = ogs_pfcp_handle_update_urr(&sess->pfcp, &req->update_urr[i],
++                    &cause_value, &offending_ie_value);
++        if (!urr)
+             break;
++        upf_quota_install(sess, urr, req->update_urr[i].volume_quota.presence,
++                req->update_urr[i].quota_validity_time.presence);
+     }
+     if (cause_value != OGS_PFCP_CAUSE_REQUEST_ACCEPTED)
+         goto cleanup;
+@@ -421,7 +444,7 @@ void upf_n4_handle_session_modification_request(
+     /* Send Buffered Packet to gNB/SGW */
+     ogs_list_for_each(&sess->pfcp.pdr_list, pdr) {
+         if (pdr->src_if == OGS_PFCP_INTERFACE_CORE) { /* Downlink */
+-            ogs_pfcp_send_buffered_gtpu(pdr);
++            upf_quota_forward_buffered(sess, pdr);
+         }
+     }
+ 
+@@ -436,6 +459,7 @@ void upf_n4_handle_session_modification_request(
+     return;
+ 
+ cleanup:
++    upf_quota_cancel_timers(sess);
+     ogs_pfcp_sess_clear(&sess->pfcp);
+     ogs_pfcp_send_error_message(xact, sess ? sess->smf_n4_f_seid.seid : 0,
+             OGS_PFCP_SESSION_MODIFICATION_RESPONSE_TYPE,
+diff --git a/src/upf/quota-unit.c b/src/upf/quota-unit.c
+new file mode 100644
+index 0000000..0c095e6
+--- /dev/null
++++ b/src/upf/quota-unit.c
+@@ -0,0 +1,171 @@
++/* SPDX-License-Identifier: AGPL-3.0-or-later
++ * Unit harness for real UPF accounting/gate functions. The report transport is
++ * replaced by a sink here; this is NOT a network or UE acceptance test.
++ */
++#include "context.h"
++#include "pfcp-path.h"
++
++static int checks, reports;
++static bool transport_error;
++static ogs_pfcp_user_plane_report_t last;
++#define CHECK(c) do { checks++; if (!(c)) { \
++    fprintf(stderr, "FAILED %d: %s\n", __LINE__, #c); exit(1); } } while (0)
++
++int upf_pfcp_send_session_report_request(upf_sess_t *sess,
++        ogs_pfcp_user_plane_report_t *report)
++{
++    if (transport_error) return OGS_ERROR;
++    last = *report;
++    reports++;
++    return OGS_OK;
++}
++
++static bool packet(upf_sess_t *sess, ogs_pfcp_pdr_t *pdr, size_t bytes, bool ul)
++{
++    int i;
++    if (!upf_quota_allow(sess, pdr, ul)) return false;
++    for (i = 0; i < pdr->num_of_urr; i++)
++        upf_sess_urr_acc_add(sess, pdr->urr[i], bytes, ul);
++    return true;
++}
++
++int main(void)
++{
++    upf_sess_t sess = {0};
++    ogs_pfcp_urr_t urr = {0};
++    ogs_pfcp_pdr_t pdr = {0};
++    ogs_pfcp_far_t far = {0};
++    ogs_pfcp_qer_t qer = {0};
++    ogs_gtp_node_t gnode = {0};
++    upf_sess_urr_acc_t *acc = &sess.urr_acc[0];
++    ogs_time_t deadline;
++    int before;
++    ogs_core_initialize();
++    ogs_log_install_domain(&__upf_log_domain, "upf", OGS_LOG_ERROR);
++    ogs_app()->timer_mgr = ogs_timer_mgr_create(32);
++    urr.id = 1;
++    urr.sess = &sess.pfcp;
++    urr.meas_method = OGS_PFCP_MEASUREMENT_METHOD_VOLUME;
++    urr.vol_quota.tovol = urr.vol_threshold.tovol = 1;
++    urr.vol_quota.total_volume = 1000;
++    urr.vol_threshold.total_volume = 800;
++    urr.rep_triggers.volume_threshold = urr.rep_triggers.volume_quota = 1;
++    urr.rep_triggers.quota_validity_time = 1;
++    urr.quota_validity_time = 60;
++    /* Update URR must decode the same network-order trigger octets as Create.
++     * Otherwise a renewal silently loses VOLTH/VOLQU/QVTI on the real UPF. */
++    {
++        ogs_pfcp_tlv_update_urr_t update = {0};
++        uint8_t cause = OGS_PFCP_CAUSE_REQUEST_ACCEPTED, offending = 0;
++        ogs_list_add(&sess.pfcp.urr_list, &urr);
++        update.presence = update.urr_id.presence = 1;
++        update.urr_id.u32 = urr.id;
++        update.reporting_triggers.presence = 1;
++        update.reporting_triggers.u24 = (urr.rep_triggers.reptri_5 << 16) |
++            (urr.rep_triggers.reptri_6 << 8) | urr.rep_triggers.reptri_7;
++        memset(&urr.rep_triggers, 0, sizeof(urr.rep_triggers));
++        CHECK(ogs_pfcp_handle_update_urr(&sess.pfcp, &update, &cause, &offending) == &urr);
++        CHECK(cause == OGS_PFCP_CAUSE_REQUEST_ACCEPTED);
++        CHECK(urr.rep_triggers.volume_threshold && urr.rep_triggers.volume_quota);
++        CHECK(urr.rep_triggers.quota_validity_time);
++        ogs_list_remove(&sess.pfcp.urr_list, &urr);
++    }
++    pdr.far = &far;
++    pdr.qer = &qer;
++    pdr.urr[0] = &urr;
++    pdr.num_of_urr = 1;
++    far.apply_action = OGS_PFCP_APPLY_ACTION_FORW;
++    far.gnode = &gnode;
++    upf_quota_install(&sess, &urr, true, true);
++    CHECK(!acc->quota.active); /* Default off preserves original behavior. */
++    CHECK(upf_quota_allow(&sess, &pdr, true));
++    upf_self()->charging_enforcement = true;
++    upf_quota_install(&sess, &urr, true, true);
++    CHECK(acc->quota.active && acc->quota.limit == 1000);
++    deadline = acc->quota.deadline;
++    CHECK(deadline > ogs_get_monotonic_time());
++    CHECK(packet(&sess, &pdr, 600, true));
++    CHECK(reports == 0 && acc->total_octets == 600);
++    CHECK(packet(&sess, &pdr, 250, false));
++    CHECK(reports == 1 && last.usage_report[0].seqn == 0);
++    CHECK(last.usage_report[0].vol_measurement.total_volume == 850);
++    CHECK(last.usage_report[0].vol_measurement.uplink_volume == 600);
++    CHECK(last.usage_report[0].vol_measurement.downlink_volume == 250);
++    CHECK(last.usage_report[0].rep_trigger.volume_threshold);
++    CHECK(!last.usage_report[0].rep_trigger.volume_quota);
++    CHECK(acc->quota.limit == 1000 && acc->quota.deadline == deadline);
++    CHECK(packet(&sess, &pdr, 200, true));
++    CHECK(reports == 2 && last.usage_report[0].seqn == 1);
++    CHECK(last.usage_report[0].vol_measurement.total_volume == 200);
++    CHECK(last.usage_report[0].rep_trigger.volume_quota);
++    CHECK(!packet(&sess, &pdr, 100, true));
++    CHECK(!packet(&sess, &pdr, 100, false));
++    CHECK(acc->total_octets == 1050 && reports == 2);
++    CHECK(acc->quota.deadline == deadline);
++    urr.vol_quota.total_volume = 500;
++    upf_quota_install(&sess, &urr, true, false);
++    CHECK(acc->quota.limit == 1550 && acc->quota.deadline == deadline);
++    CHECK(packet(&sess, &pdr, 100, true));
++    urr.vol_threshold.total_volume = 100;
++    upf_quota_report(&sess, &urr);
++    CHECK(reports == 3 && acc->last_report.total_octets == 1150);
++    CHECK(packet(&sess, &pdr, 50, false));
++    urr.vol_quota.total_volume = 100;
++    upf_quota_install(&sess, &urr, true, false);
++    CHECK(acc->quota.limit == 1250); /* 50 bytes already consumed since report. */
++    CHECK(packet(&sess, &pdr, 50, false));
++    CHECK(last.usage_report[0].vol_measurement.total_volume == 100);
++    CHECK(last.usage_report[0].rep_trigger.volume_quota);
++    CHECK(!packet(&sess, &pdr, 1, true));
++    urr.vol_quota.total_volume = 1000;
++    upf_quota_install(&sess, &urr, true, true);
++    before = reports;
++    acc->quota.deadline = ogs_get_monotonic_time() - 1;
++    CHECK(!packet(&sess, &pdr, 50, false));
++    CHECK(reports == before + 1 && last.usage_report[0].rep_trigger.quota_validity_time);
++    CHECK(last.usage_report[0].vol_measurement.total_volume == 0);
++    CHECK(last.usage_report[0].time_of_first_packet == 0 && last.usage_report[0].time_of_last_packet == 0);
++    CHECK(!packet(&sess, &pdr, 50, true) && reports == before + 1);
++    upf_quota_install(&sess, &urr, true, false);
++    CHECK(!upf_quota_allow(&sess, &pdr, true)); /* Volume alone cannot un-expire time. */
++    upf_quota_install(&sess, &urr, false, true);
++    CHECK(upf_quota_allow(&sess, &pdr, true));
++    qer.gate_status.uplink = OGS_PFCP_GATE_CLOSE;
++    CHECK(!packet(&sess, &pdr, 10, true));
++    CHECK(acc->total_octets == 1250);
++    qer.gate_status.uplink = OGS_PFCP_GATE_OPEN;
++    far.apply_action = OGS_PFCP_APPLY_ACTION_BUFF;
++    CHECK(!packet(&sess, &pdr, 10, false));
++    far.apply_action = OGS_PFCP_APPLY_ACTION_FORW;
++    far.gnode = NULL;
++    CHECK(!packet(&sess, &pdr, 10, false));
++    far.gnode = &gnode;
++    urr.vol_quota.total_volume = 0;
++    upf_quota_install(&sess, &urr, true, false);
++    CHECK(!upf_quota_allow(&sess, &pdr, true));
++    CHECK(acc->total_octets == 1250);
++    urr.vol_quota.total_volume = 100;
++    upf_quota_install(&sess, &urr, true, true);
++    transport_error = true;
++    CHECK(packet(&sess, &pdr, 100, true));
++    CHECK(acc->last_report.total_octets == 1250 && acc->total_octets == 1350);
++    CHECK(!upf_quota_allow(&sess, &pdr, false));
++    transport_error = false;
++    CHECK(!upf_quota_allow(&sess, &pdr, false));
++    CHECK(last.usage_report[0].vol_measurement.total_volume == 100);
++    CHECK(acc->last_report.total_octets == 1350);
++    CHECK(upf_quota_controlled(&sess, &pdr));
++    upf_quota_cancel_timers(&sess);
++    CHECK(acc->t_validity_time == NULL && acc->quota.expired);
++    CHECK(!upf_quota_allow(&sess, &pdr, true));
++    urr.vol_quota.flags = 0;
++    upf_quota_install(&sess, &urr, true, false);
++    CHECK(!acc->quota.active && acc->t_validity_time == NULL);
++    CHECK(!upf_quota_controlled(&sess, &pdr));
++    CHECK(upf_quota_allow(&sess, &pdr, true));
++    ogs_timer_mgr_destroy(ogs_app()->timer_mgr);
++    ogs_app()->timer_mgr = NULL;
++    ogs_core_terminate();
++    printf("Native UPF quota checks passed: %d\n", checks);
++    return 0;
++}
+diff --git a/src/upf/quota.c b/src/upf/quota.c
+new file mode 100644
+index 0000000..050c94b
+--- /dev/null
++++ b/src/upf/quota.c
+@@ -0,0 +1,163 @@
++/* SPDX-License-Identifier: AGPL-3.0-or-later
++ * Experimental total-volume quota enforcement, TS 29.244 Rel16 5.2.2.2.1.
++ * Counters measure admitted IP packets, not delivery confirmed by the receiver.
++ * The packet crossing the quota is admitted whole: overshoot < one IP packet.
++ */
++#include "context.h"
++#include "pfcp-path.h"
++
++bool upf_quota_controlled(upf_sess_t *sess, ogs_pfcp_pdr_t *pdr)
++{
++    int i;
++    if (!upf_self()->charging_enforcement) return false;
++    for (i = 0; i < pdr->num_of_urr; i++)
++        if (sess->urr_acc[pdr->urr[i]->id-1].quota.active) return true;
++    return false;
++}
++
++void upf_quota_forward_buffered(upf_sess_t *sess, ogs_pfcp_pdr_t *pdr)
++{
++    ogs_pfcp_far_t *far = pdr->far;
++    int i;
++    if (!upf_quota_controlled(sess, pdr)) {
++        ogs_pfcp_send_buffered_gtpu(pdr);
++        return;
++    }
++    /* A quota added to an existing PDR must not allow a legacy buffer flush
++     * to bypass admission. Buffered delivery is outside this initial profile. */
++    if (!far) return;
++    for (i = 0; i < far->num_of_buffered_gtpu; i++) {
++        ogs_pkbuf_free(far->buffered_gtpu[i]);
++        far->buffered_gtpu[i] = NULL;
++    }
++    far->num_of_buffered_gtpu = 0;
++}
++
++void upf_quota_cancel_timers(upf_sess_t *sess)
++{
++    int i;
++    for (i = 0; i < OGS_MAX_NUM_OF_URR; i++) {
++        upf_sess_urr_acc_t *acc = &sess->urr_acc[i];
++        if (!acc->quota.active) continue;
++        if (acc->t_validity_time) {
++            ogs_timer_delete(acc->t_validity_time);
++            acc->t_validity_time = NULL;
++        }
++        if (acc->t_time_quota) {
++            ogs_timer_delete(acc->t_time_quota);
++            acc->t_time_quota = NULL;
++        }
++        if (acc->t_time_threshold) {
++            ogs_timer_delete(acc->t_time_threshold);
++            acc->t_time_threshold = NULL;
++        }
++        acc->quota.expired = true;
++    }
++}
++
++void upf_quota_report(upf_sess_t *sess, ogs_pfcp_urr_t *urr)
++{
++    upf_sess_urr_acc_t *acc = &sess->urr_acc[urr->id-1];
++    ogs_pfcp_user_plane_report_t report;
++    bool exhausted = acc->total_octets >= acc->quota.limit;
++    bool threshold = urr->rep_triggers.volume_threshold && urr->vol_threshold.tovol &&
++        acc->total_octets - acc->last_report.total_octets >= urr->vol_threshold.total_volume;
++    if (!acc->quota.active ||
++            (!(exhausted && !acc->quota.volume_reported) &&
++             !(acc->quota.expired && !acc->quota.expiry_reported) && !threshold)) return;
++    memset(&report, 0, sizeof(report));
++    upf_sess_urr_acc_fill_usage_report(sess, urr, &report, 0);
++    report.num_of_usage_report = 1;
++    if (upf_pfcp_send_session_report_request(sess, &report) != OGS_OK) {
++        ogs_error("Quota report could not be queued; gate remains closed on exhaustion");
++        return; /* Preserve usage for a later report/final deletion report. */
++    }
++    upf_sess_urr_acc_snapshot(sess, urr);
++    acc->quota.volume_reported |= exhausted;
++    acc->quota.expiry_reported |= acc->quota.expired;
++}
++
++static void quota_expired(void *data)
++{
++    ogs_pfcp_urr_t *urr = data;
++    upf_sess_t *sess = UPF_SESS(urr->sess);
++    upf_sess_urr_acc_t *acc = &sess->urr_acc[urr->id-1];
++    acc->quota.expired = true;
++    upf_quota_report(sess, urr);
++}
++
++void upf_quota_install(upf_sess_t *sess, ogs_pfcp_urr_t *urr,
++        bool volume_changed, bool validity_changed)
++{
++    upf_sess_urr_acc_t *acc = &sess->urr_acc[urr->id-1];
++    if (!upf_self()->charging_enforcement) return;
++    if (!urr->vol_quota.tovol) {
++        if (acc->quota.active && acc->t_validity_time) {
++            ogs_timer_delete(acc->t_validity_time);
++            acc->t_validity_time = NULL;
++        }
++        memset(&acc->quota, 0, sizeof(acc->quota));
++        return;
++    }
++    if (!acc->quota.active) {
++        volume_changed = validity_changed = true;
++        acc->time_start = ogs_time_ntp32_now();
++        /* Replace the legacy report-period timer, never retain its callback. */
++        if (acc->t_validity_time) {
++            ogs_timer_delete(acc->t_validity_time);
++            acc->t_validity_time = NULL;
++        }
++    }
++    acc->quota.active = true;
++    if (volume_changed) {
++        /* A new quota applies to usage since the LAST REPORT, including packets
++         * already admitted while the SMF was obtaining this replacement quota. */
++        if (UINT64_MAX - acc->last_report.total_octets < urr->vol_quota.total_volume)
++            acc->quota.limit = acc->total_octets; /* overflow: fail closed */
++        else
++            acc->quota.limit = acc->last_report.total_octets + urr->vol_quota.total_volume;
++        acc->quota.volume_reported = false;
++    }
++    if (validity_changed) {
++        acc->quota.expired = false;
++        acc->quota.expiry_reported = false;
++        acc->quota.deadline = 0;
++        if (acc->t_validity_time) ogs_timer_stop(acc->t_validity_time);
++        if (urr->quota_validity_time) {
++            acc->quota.deadline = ogs_get_monotonic_time() + ogs_time_from_sec(urr->quota_validity_time);
++            if (!acc->t_validity_time)
++                acc->t_validity_time = ogs_timer_add(ogs_app()->timer_mgr, quota_expired, urr);
++            ogs_assert(acc->t_validity_time);
++            ogs_timer_start(acc->t_validity_time, ogs_time_from_sec(urr->quota_validity_time));
++        }
++    }
++    /* A zero or already consumed replacement quota reports outstanding usage. */
++    if (acc->total_octets >= acc->quota.limit) upf_quota_report(sess, urr);
++}
++
++bool upf_quota_allow(upf_sess_t *sess, ogs_pfcp_pdr_t *pdr, bool uplink)
++{
++    int i;
++    bool controlled = false, allowed = true;
++    if (!upf_self()->charging_enforcement) return true;
++    for (i = 0; i < pdr->num_of_urr; i++) {
++        ogs_pfcp_urr_t *urr = pdr->urr[i];
++        upf_sess_urr_acc_t *acc = &sess->urr_acc[urr->id-1];
++        if (!acc->quota.active) continue;
++        controlled = true;
++        if (acc->quota.deadline && ogs_get_monotonic_time() >= acc->quota.deadline)
++            acc->quota.expired = true;
++        if (acc->quota.expired || acc->total_octets >= acc->quota.limit) {
++            upf_quota_report(sess, urr);
++            allowed = false;
++        }
++    }
++    if (!controlled) return true;
++    /* This initial charging profile does not support buffered/idle-mode DL.
++     * Reject it before accounting; otherwise a later flush bypasses quota checks. */
++    if (!pdr->far || !(pdr->far->apply_action & OGS_PFCP_APPLY_ACTION_FORW)) return false;
++    if (!uplink && !pdr->far->gnode) return false;
++    if (pdr->qer && (uplink ? pdr->qer->gate_status.uplink :
++                pdr->qer->gate_status.downlink) != OGS_PFCP_GATE_OPEN) return false;
++    return allowed;
++}
+diff --git a/src/smf/chf-accounting.c b/src/smf/chf-accounting.c
+new file mode 100644
+--- /dev/null
++++ b/src/smf/chf-accounting.c
+@@ -0,0 +1,245 @@
++/* SPDX-License-Identifier: AGPL-3.0-or-later
++ * Bounded PFCP evidence queue and durable Nchf recovery journal.
++ * No shell/network replay here: uncertain sessions require reconciliation.
++ */
++#include "chf-path.h"
++#include <errno.h>
++#include <fcntl.h>
++#include <sys/stat.h>
++#include <sys/file.h>
++#include <unistd.h>
++
++/* Per-NF, append-only allocator: persist BEFORE exposing a chargingId.
++ * No random 32-bit collision and no reuse on normal process restarts. A torn
++ * record, exhausted range or inaccessible state blocks Create, never resets. */
++int smf_chf_allocate_id(const char *nf_id, uint32_t *value)
++{
++    ogs_uuid_t uuid;
++    struct stat st;
++    char filename[80], record[12], canonical[OGS_UUID_FORMATTED_LENGTH + 1];
++    uint64_t previous = 0;
++    int directory = -1, fd = -1, result = OGS_ERROR;
++    size_t written = 0;
++    if (!nf_id || ogs_uuid_parse(&uuid, nf_id) != OGS_OK) return OGS_ERROR;
++    ogs_uuid_format(canonical, &uuid);
++    directory = open(smf_self()->chf_config.journal_dir, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
++    if (directory < 0 || fstat(directory, &st) || st.st_uid != geteuid() || (st.st_mode & 0077)) goto done;
++    ogs_snprintf(filename, sizeof(filename), "charging-id-%s", canonical);
++    fd = openat(directory, filename, O_RDWR | O_CREAT | O_APPEND | O_NOFOLLOW, 0600);
++    if (fd < 0 || flock(fd, LOCK_EX | LOCK_NB) || fstat(fd, &st) ||
++            !S_ISREG(st.st_mode) || st.st_uid != geteuid() || (st.st_mode & 0077) ||
++            st.st_nlink != 1 || st.st_size < 0 || st.st_size % 11) goto done;
++    if (st.st_size) {
++        if (pread(fd, record, 11, st.st_size - 11) != 11 || record[10] != '\n') goto done;
++        for (int i = 0; i < 10; i++) {
++            if (record[i] < '0' || record[i] > '9') goto done;
++            previous = previous * 10 + record[i] - '0';
++        }
++        if (previous != (uint64_t)st.st_size / 11) goto done;
++    }
++    if (previous >= UINT32_MAX) goto done;
++    ogs_snprintf(record, sizeof(record), "%010" PRIu64 "\n", previous + 1);
++    while (written < 11) {
++        ssize_t n = write(fd, record + written, 11 - written);
++        if (n < 0 && errno == EINTR) continue;
++        if (n <= 0) goto done;
++        written += n;
++    }
++    if (fsync(fd) || fsync(directory)) goto done;
++    *value = (uint32_t)(previous + 1);
++    result = OGS_OK;
++done:
++    if (fd >= 0) close(fd);
++    if (directory >= 0) close(directory);
++    return result;
++}
++
++int smf_chf_journal_open(smf_chf_sess_t *chf)
++{
++    const char *directory = smf_self()->chf_config.journal_dir;
++    struct stat st;
++    ogs_uuid_t uuid;
++    char id[OGS_UUID_FORMATTED_LENGTH + 1];
++    int dir;
++    if (!directory) return OGS_ERROR;
++    if (mkdir(directory, 0700) && errno != EEXIST) return OGS_ERROR;
++    dir = open(directory, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
++    if (dir < 0) return OGS_ERROR;
++    if (fstat(dir, &st) || st.st_uid != geteuid() || (st.st_mode & 0077)) {
++        close(dir); return OGS_ERROR;
++    }
++    ogs_uuid_get(&uuid);
++    ogs_uuid_format(id, &uuid);
++    chf->journal_fd = openat(dir, id, O_WRONLY | O_CREAT | O_EXCL | O_APPEND | O_NOFOLLOW, 0600);
++    if (chf->journal_fd < 0) { close(dir); return OGS_ERROR; }
++    chf->journal_path = ogs_msprintf("%s/%s", directory, id);
++    /* Recovery may inspect/replay only after the last native owner exits. */
++    if (flock(chf->journal_fd, LOCK_EX | LOCK_NB)) { close(dir); return OGS_ERROR; }
++    if (fsync(dir)) { close(dir); return OGS_ERROR; }
++    close(dir);
++    return OGS_OK;
++}
++
++int smf_chf_journal(smf_chf_sess_t *chf, const char *event,
++        const char *uri, const char *body, int status)
++{
++    cJSON *entry;
++    char *json, *line;
++    size_t len, done = 0;
++    ssize_t n;
++    /* Unit fixtures have no journal. Live Create always opens it before I/O. */
++    if (!chf->journal_path) return OGS_OK;
++    entry = cJSON_CreateObject();
++    cJSON_AddStringToObject(entry, "event", event);
++    cJSON_AddNumberToObject(entry, "invocationSequenceNumber", chf->sequence_number);
++    cJSON_AddNumberToObject(entry, "status", status);
++    if (uri) cJSON_AddStringToObject(entry, "uri", uri);
++    if (body) cJSON_AddStringToObject(entry, "body", body);
++    json = cJSON_PrintUnformatted(entry);
++    cJSON_Delete(entry);
++    if (!json) return OGS_ERROR;
++    line = ogs_msprintf("%s\n", json);
++    cJSON_free(json);
++    len = strlen(line);
++    while (done < len) {
++        n = write(chf->journal_fd, line + done, len - done);
++        if (n < 0 && errno == EINTR) continue;
++        if (n <= 0) break;
++        done += n;
++    }
++    ogs_free(line);
++    if (done != len || fsync(chf->journal_fd)) {
++        chf->uncertain = true;
++        ogs_error("CHF durable evidence unavailable; fail closed");
++        return OGS_ERROR;
++    }
++    return OGS_OK;
++}
++
++/* NEW=1, exact retransmission=0, inconsistent/gapped/overflow=-1.
++ * Bounded RAM window: preserve every unconfirmed delta and the last 32
++ * confirmed reports for exact retransmission checks. The durable journal
++ * retains the complete evidence. Old/out-of-window reports fail closed.
++ */
++int smf_chf_record_report(smf_chf_sess_t *chf, uint32_t sequence,
++        uint64_t uplink, uint64_t downlink)
++{
++    unsigned int i;
++    char evidence[160];
++    smf_chf_report_t *report;
++    ogs_snprintf(evidence, sizeof(evidence), "{\"sequence\":%u,\"uplink\":%" PRIu64 ",\"downlink\":%" PRIu64 "}",
++            sequence, uplink, downlink);
++    if (smf_chf_journal(chf, "pfcp_usage", NULL, evidence, 0) != OGS_OK) return OGS_ERROR;
++    for (i = 0; i < chf->report_count; i++) {
++        report = &chf->reports[i];
++        if (report->sequence == sequence) {
++            if (report->uplink == uplink && report->downlink == downlink) return 0;
++            goto inconsistent;
++        }
++    }
++    if (chf->report_count >= SMF_CHF_MAX_REPORTS - 2) {
++        unsigned int confirmed = 0, discard;
++        while (confirmed < chf->report_count && chf->reports[confirmed].confirmed)
++            confirmed++;
++        discard = confirmed > 32 ? confirmed - 32 : 0;
++        if (discard) {
++            memmove(chf->reports, chf->reports + discard,
++                    (chf->report_count - discard) * sizeof(chf->reports[0]));
++            chf->report_count -= discard;
++            memset(chf->reports + chf->report_count, 0,
++                    discard * sizeof(chf->reports[0]));
++        }
++    }
++    if (chf->uncertain || chf->report_count == SMF_CHF_MAX_REPORTS ||
++            uplink > 9007199254740991ULL || downlink > 9007199254740991ULL - uplink ||
++            (!chf->report_count && sequence != 0) ||
++            (chf->report_count && (chf->reports[chf->report_count - 1].sequence == UINT32_MAX ||
++                sequence != chf->reports[chf->report_count - 1].sequence + 1))) goto inconsistent;
++    report = &chf->reports[chf->report_count++];
++    memset(report, 0, sizeof(*report));
++    report->sequence = sequence;
++    report->uplink = uplink;
++    report->downlink = downlink;
++    return 1;
++inconsistent:
++    chf->uncertain = true;
++    chf->closing = true;
++    ogs_warn("CHF usage evidence conflict/gap/limit; reconciliation required");
++    return OGS_ERROR;
++}
++
++/* Select exactly the oldest unconfirmed report. Never aggregate sequence
++ * numbers or retransmit a confirmed delta as a new charging invocation. */
++int smf_chf_next_usage(smf_chf_sess_t *chf, smf_chf_usage_t *usage)
++{
++    unsigned int i;
++    if (!chf || !usage || chf->uncertain || chf->closed || chf->closing)
++        return OGS_ERROR;
++    if (chf->pending) return OGS_DONE;
++    for (i = 0; i < chf->report_count; i++) {
++        smf_chf_report_t *report = &chf->reports[i];
++        if (report->confirmed) continue;
++        if (!report->trigger) return OGS_ERROR;
++        memset(usage, 0, sizeof(*usage));
++        usage->sequence = report->sequence;
++        usage->uplink = report->uplink;
++        usage->downlink = report->downlink;
++        usage->trigger = report->trigger;
++        return OGS_OK;
++    }
++    return OGS_DONE;
++}
++
++int smf_chf_release_body(smf_chf_sess_t *chf, ogs_sbi_request_t *request,
++        smf_chf_transaction_t *transaction)
++{
++    cJSON *root, *unit, *used, *container;
++    char *body, *timestamp;
++    unsigned int i;
++    uint64_t total = 0;
++    if (chf->uncertain || !request || chf->sequence_number == UINT32_MAX) return OGS_ERROR;
++    root = cJSON_Parse(request->http.content);
++    if (!root) return OGS_ERROR;
++    unit = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(root, "multipleUnitUsage"), 0);
++    if (!cJSON_IsObject(unit)) { cJSON_Delete(root); return OGS_ERROR; }
++    cJSON_DeleteItemFromObjectCaseSensitive(unit, "usedUnitContainer");
++    used = cJSON_AddArrayToObject(unit, "usedUnitContainer");
++    for (i = 0; i < chf->report_count; i++) {
++        smf_chf_report_t *report = &chf->reports[i];
++        if (report->confirmed) continue;
++        if (report->uplink > 9007199254740991ULL - total ||
++                report->downlink > 9007199254740991ULL - total - report->uplink) {
++            cJSON_Delete(root); return OGS_ERROR;
++        }
++        total += report->uplink + report->downlink;
++        container = cJSON_CreateObject();
++        cJSON_AddItemToArray(used, container);
++        cJSON_AddNumberToObject(container, "localSequenceNumber", report->sequence);
++        cJSON_AddNumberToObject(container, "totalVolume", report->uplink + report->downlink);
++        cJSON_AddNumberToObject(container, "uplinkVolume", report->uplink);
++        cJSON_AddNumberToObject(container, "downlinkVolume", report->downlink);
++        cJSON_AddStringToObject(container, "quotaManagementIndicator", "ONLINE_CHARGING");
++        transaction->usage_sequence = report->sequence;
++        transaction->has_usage = true;
++    }
++    if (total > 9007199254740991ULL - chf->consumed_units) { cJSON_Delete(root); return OGS_ERROR; }
++    transaction->used_units = total;
++    cJSON_SetNumberValue(cJSON_GetObjectItemCaseSensitive(root, "invocationSequenceNumber"), chf->sequence_number + 1);
++    timestamp = ogs_sbi_gmtime_string(ogs_time_now());
++    cJSON_ReplaceItemInObjectCaseSensitive(root, "invocationTimeStamp", cJSON_CreateString(timestamp));
++    ogs_free(timestamp);
++    body = cJSON_PrintUnformatted(root);
++    cJSON_Delete(root);
++    if (!body) return OGS_ERROR;
++    ogs_free(request->http.content);
++    request->http.content = ogs_strdup(body);
++    request->http.content_length = strlen(body);
++    cJSON_free(body);
++    return OGS_OK;
++}
++
++bool smf_chf_release_confirmed(int status, const ogs_sbi_response_t *response)
++{
++    return status == OGS_OK && response && response->status == 204 &&
++        response->http.content_length == 0;
++}

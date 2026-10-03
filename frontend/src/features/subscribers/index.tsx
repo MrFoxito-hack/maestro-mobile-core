@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import {
   Check,
   Copy,
   Edit,
   Eye,
-  Globe,
   Plus,
-  Radio,
   RefreshCw,
   Trash2,
   UserPlus,
@@ -16,6 +15,7 @@ import {
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
 import { api, apiErrorMessage, canOperate } from '@/lib/api'
+import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -50,10 +50,13 @@ type PduSession = {
 }
 
 type SubscriberLiveStatus = {
-  registered: boolean
-  cm_state: string
-  rm_state: string
-  mm_state: string
+  registered: boolean | null
+  cm_state: string | null
+  rm_state: string | null
+  mm_state: string | null
+  terminal_available?: boolean | null
+  observation_status?: string
+  observed_at?: string
   cell_id?: string | null
   tac?: string | null
   guti?: string | null
@@ -63,6 +66,7 @@ type SubscriberLiveStatus = {
 
 type Subscriber = {
   imsi: string
+  terminal_label?: string
   security: { k: string; opc: string; amf?: string }
   slice: {
     sst: number
@@ -71,6 +75,8 @@ type Subscriber = {
   }[]
   live_status?: SubscriberLiveStatus
 }
+
+const emptySubscribers: Subscriber[] = []
 
 const defaultCreate = {
   imsi: '999700000000002',
@@ -89,14 +95,14 @@ export function SubscribersPage() {
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<
-    'all' | 'registered' | 'offline'
+    'all' | 'terminals' | 'registered' | 'offline' | 'unknown'
   >('all')
 
   // Modals state
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState(defaultCreate)
 
-  const [detailSub, setDetailSub] = useState<Subscriber | null>(null)
+  const [detailImsi, setDetailImsi] = useState<string | null>(null)
 
   const [editSub, setEditSub] = useState<Subscriber | null>(null)
   const [editForm, setEditForm] = useState({
@@ -173,7 +179,19 @@ export function SubscribersPage() {
       }),
   })
 
-  const subscribers = query.data ?? []
+  const subscribers = query.data ?? emptySubscribers
+  const detailSub = subscribers.find((sub) => sub.imsi === detailImsi) ?? null
+  const setDetailSub = (sub: Subscriber | null) =>
+    setDetailImsi(sub?.imsi ?? null)
+  const terminalCount = subscribers.filter(
+    (s) => s.live_status?.terminal_available === true
+  ).length
+  const offlineCount = subscribers.filter(
+    (s) => s.live_status?.registered === false
+  ).length
+  const unknownCount = subscribers.filter(
+    (s) => s.live_status?.registered == null
+  ).length
 
   const registeredCount = useMemo(
     () => subscribers.filter((s) => s.live_status?.registered).length,
@@ -192,7 +210,13 @@ export function SubscribersPage() {
         return Boolean(sub.live_status?.registered)
       }
       if (statusFilter === 'offline') {
-        return !sub.live_status?.registered
+        return sub.live_status?.registered === false
+      }
+      if (statusFilter === 'unknown') {
+        return sub.live_status?.registered == null
+      }
+      if (statusFilter === 'terminals') {
+        return sub.live_status?.terminal_available === true
       }
       return true
     })
@@ -238,7 +262,7 @@ export function SubscribersPage() {
                 className='h-9 w-full sm:w-56'
                 aria-label='Buscar por IMSI o APN'
               />
-              <div className='flex rounded-md border bg-muted/30 p-0.5 text-xs'>
+              <div className='flex flex-wrap rounded-md border bg-muted/30 p-0.5 text-xs'>
                 <button
                   type='button'
                   onClick={() => setStatusFilter('all')}
@@ -248,7 +272,15 @@ export function SubscribersPage() {
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  Todos ({subscribers.length})
+                  Perfiles SIM ({subscribers.length})
+                </button>
+                <button
+                  type='button'
+                  onClick={() => setStatusFilter('terminals')}
+                  aria-pressed={statusFilter === 'terminals'}
+                  className={`rounded px-2.5 py-1 text-xs font-medium ${statusFilter === 'terminals' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground'}`}
+                >
+                  Terminales detectados ({terminalCount})
                 </button>
                 <button
                   type='button'
@@ -270,11 +302,24 @@ export function SubscribersPage() {
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  Offline ({subscribers.length - registeredCount})
+                  No registrados ({offlineCount})
+                </button>
+                <button
+                  type='button'
+                  onClick={() => setStatusFilter('unknown')}
+                  aria-pressed={statusFilter === 'unknown'}
+                  className={`rounded px-2.5 py-1 text-xs font-medium ${statusFilter === 'unknown' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground'}`}
+                >
+                  Sin observación ({unknownCount})
                 </button>
               </div>
             </div>
             <div className='flex items-center gap-2'>
+              {isOperator && (
+                <Button variant='outline' size='sm' asChild>
+                  <Link to='/charging'>Tarificación 5G</Link>
+                </Button>
+              )}
               <Button
                 variant='outline'
                 size='sm'
@@ -299,6 +344,10 @@ export function SubscribersPage() {
               )}
             </div>
           </div>
+          <p className='mt-2 text-xs text-muted-foreground'>
+            Un perfil SIM aprovisionado no implica un equipo encendido. El
+            teléfono muestra los terminales detectados en UERANSIM.
+          </p>
         </CardHeader>
         <CardContent className='p-0'>
           <div className='overflow-x-auto border-t'>
@@ -378,6 +427,16 @@ export function SubscribersPage() {
                               )}
                             </Button>
                           </div>
+                          <span className='text-[10px] font-normal text-muted-foreground'>
+                            {sub.terminal_label && sub.terminal_label !== 'UE'
+                              ? `${sub.terminal_label} · `
+                              : ''}
+                            {live?.terminal_available === true
+                              ? 'Terminal detectado'
+                              : live?.terminal_available === false
+                                ? 'Solo perfil SIM'
+                                : 'Terminal sin confirmar'}
+                          </span>
                         </TableCell>
 
                         <TableCell className='whitespace-nowrap'>
@@ -397,7 +456,9 @@ export function SubscribersPage() {
                               variant='outline'
                               className='font-mono text-[10px] text-muted-foreground'
                             >
-                              DEREGISTERED
+                              {live?.registered === false
+                                ? 'DEREGISTERED'
+                                : 'SIN OBSERVACIÓN'}
                             </Badge>
                           )}
                         </TableCell>
@@ -410,7 +471,9 @@ export function SubscribersPage() {
                                 className='w-fit gap-1 font-mono text-[10px] text-sky-600 dark:text-sky-400'
                               >
                                 <Wifi className='size-3' />
-                                {live.active_ip ?? 'PS-ACTIVE'}
+                                {live.active_ip ??
+                                  live.pdu_sessions[0].state ??
+                                  'Sin dato'}
                               </Badge>
                               <span className='text-[10px] text-muted-foreground'>
                                 {live.pdu_sessions[0].session_id} ·{' '}
@@ -419,7 +482,7 @@ export function SubscribersPage() {
                             </div>
                           ) : (
                             <span className='text-[11px] text-muted-foreground'>
-                              Sin sesión PDU
+                              Sin sesión PDU observada
                             </span>
                           )}
                         </TableCell>
@@ -490,192 +553,157 @@ export function SubscribersPage() {
         </CardContent>
       </Card>
 
-      {/* MODAL DETALLES 3GPP */}
+      {/* MODAL DETALLES 3GPP (Minimalista estilo Topology) */}
       <Dialog
         open={Boolean(detailSub)}
         onOpenChange={(o) => !o && setDetailSub(null)}
       >
-        <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-lg'>
-          <DialogHeader>
-            <DialogTitle className='flex items-center gap-2 text-base font-bold'>
-              <Radio className='size-4 text-primary' />
-              Detalles 3GPP · IMSI {detailSub?.imsi}
-            </DialogTitle>
-            <DialogDescription className='text-xs'>
-              Parámetros de contexto de movilidad (5GMM) y sesión de datos
-              (5GSM).
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className='sm:max-w-md p-5' showCloseButton={false}>
+          {detailSub && (() => {
+            const isRegistered = detailSub.live_status?.registered === true
+            const isOffline = detailSub.live_status?.registered === false
 
-          {detailSub && (
-            <div className='space-y-4 py-2 text-xs'>
-              {/* Status Banner */}
-              <div
-                className={`flex items-center justify-between rounded-lg border p-3 ${
-                  detailSub.live_status?.registered
-                    ? 'border-emerald-500/30 bg-emerald-500/10'
-                    : 'border-border bg-muted/40'
-                }`}
-              >
-                <div>
-                  <p className='text-sm font-semibold'>
-                    {detailSub.live_status?.registered
-                      ? 'Registrado en la Red 5G'
-                      : 'Desconectado / Idle'}
-                  </p>
-                  <p className='mt-0.5 text-[11px] text-muted-foreground'>
-                    Estado NAS:{' '}
-                    {detailSub.live_status?.rm_state ?? 'RM-DEREGISTERED'} (
-                    {detailSub.live_status?.cm_state ?? 'CM-IDLE'})
-                  </p>
-                </div>
-                <Badge
-                  className={
-                    detailSub.live_status?.registered
-                      ? 'bg-emerald-600 text-white'
-                      : ''
-                  }
-                >
-                  {detailSub.live_status?.registered ? 'EN LÍNEA' : 'OFFLINE'}
-                </Badge>
-              </div>
+            const alias =
+              detailSub.terminal_label && detailSub.terminal_label !== 'UE'
+                ? detailSub.terminal_label
+                : null
 
-              {/* Grid 3GPP */}
-              <div className='grid grid-cols-2 gap-3 rounded-lg border bg-muted/10 p-3 font-mono'>
-                <div>
-                  <span className='block text-[10px] text-muted-foreground uppercase'>
-                    GUTI / TMSI
-                  </span>
-                  <span className='text-xs font-semibold'>
-                    {detailSub.live_status?.guti || 'No asignado'}
-                  </span>
-                </div>
-                <div>
-                  <span className='block text-[10px] text-muted-foreground uppercase'>
-                    Celda Conectada (Cell ID)
-                  </span>
-                  <span className='text-xs font-semibold'>
-                    {detailSub.live_status?.cell_id ?? 'Ninguna'}
-                  </span>
-                </div>
-                <div>
-                  <span className='block text-[10px] text-muted-foreground uppercase'>
-                    Tracking Area Code (TAC)
-                  </span>
-                  <span className='text-xs font-semibold'>
-                    {detailSub.live_status?.tac ?? '—'}
-                  </span>
-                </div>
-                <div>
-                  <span className='block text-[10px] text-muted-foreground uppercase'>
-                    Estado MM
-                  </span>
-                  <span className='text-xs font-semibold'>
-                    {detailSub.live_status?.mm_state ?? '—'}
-                  </span>
-                </div>
-              </div>
+            const activeIp =
+              detailSub.live_status?.active_ip ||
+              detailSub.live_status?.pdu_sessions?.[0]?.address ||
+              'Sin sesión PDU'
 
-              {/* PDU Session Details */}
-              <div>
-                <h4 className='mb-2 flex items-center gap-1.5 font-semibold'>
-                  <Globe className='size-3.5 text-sky-500' />
-                  Sesión de Plano de Usuario (PDU Session)
-                </h4>
-                {detailSub.live_status?.pdu_sessions?.length ? (
-                  detailSub.live_status.pdu_sessions.map((ps, idx) => (
-                    <div
-                      key={idx}
-                      className='space-y-1.5 rounded-lg border bg-muted/10 p-3 font-mono text-xs'
+            const dnn =
+              detailSub.slice?.[0]?.session?.[0]?.name ?? 'internet'
+
+            const sst = detailSub.slice?.[0]?.sst ?? 1
+            const sd = detailSub.slice?.[0]?.sd
+
+            return (
+              <div className='space-y-4'>
+                <DialogHeader className='space-y-1 text-left'>
+                  <div className='flex items-center justify-between gap-2'>
+                    <DialogTitle className='text-lg font-bold tracking-tight'>
+                      {alias ? `${alias} · IMSI ${detailSub.imsi}` : `IMSI ${detailSub.imsi}`}
+                    </DialogTitle>
+                    <Badge
+                      variant={isRegistered ? 'default' : 'destructive'}
+                      className={cn(
+                        'text-[10px] font-semibold uppercase font-mono px-2 py-0.5 rounded-full',
+                        isRegistered
+                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                          : isOffline
+                            ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                            : 'text-muted-foreground border-border bg-muted/30'
+                      )}
                     >
-                      <div className='flex justify-between font-bold'>
-                        <span>{ps.session_id || `Sesión ${idx + 1}`}</span>
-                        <Badge
-                          variant='outline'
-                          className='font-semibold text-sky-600 dark:text-sky-400'
-                        >
-                          {ps.state || 'PS-ACTIVE'}
-                        </Badge>
-                      </div>
-                      <div className='grid grid-cols-2 gap-2 pt-1'>
-                        <div>
-                          <span className='block text-[10px] text-muted-foreground'>
-                            IP Asignada
-                          </span>
-                          <span className='text-sm font-bold text-foreground'>
-                            {ps.address || '10.45.0.2'}
-                          </span>
-                        </div>
-                        <div>
-                          <span className='block text-[10px] text-muted-foreground'>
-                            Tipo de Sesión
-                          </span>
-                          <span>{ps.type || 'IPv4'}</span>
-                        </div>
-                        <div>
-                          <span className='block text-[10px] text-muted-foreground'>
-                            APN / Data Network Name
-                          </span>
-                          <span>{ps.apn || 'internet'}</span>
-                        </div>
-                        <div>
-                          <span className='block text-[10px] text-muted-foreground'>
-                            Velocidad Máxima (AMBR)
-                          </span>
-                          <span>{ps.ambr || '1 Gbps'}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className='rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground'>
-                    El equipo de usuario no tiene túneles GTP-U ni sesiones PDU
-                    activas en este momento.
+                      {isRegistered
+                        ? 'Activo'
+                        : isOffline
+                          ? 'Inactivo'
+                          : 'Sin observación'}
+                    </Badge>
+                  </div>
+                  <p className='text-xs text-muted-foreground font-mono'>
+                    {isRegistered
+                      ? 'Registrado en la Red 5G'
+                      : isOffline
+                        ? 'No registrado en la Red 5G'
+                        : 'Estado de registro desconocido'}
                   </p>
-                )}
-              </div>
+                  <DialogDescription className='sr-only'>
+                    Detalles y telemetría del suscriptor {detailSub.imsi}
+                  </DialogDescription>
+                </DialogHeader>
 
-              {/* Slice & Security */}
-              <div className='space-y-2 rounded-lg border bg-muted/10 p-3 text-xs'>
-                <h4 className='font-semibold'>Parámetros SIM y Slice</h4>
-                <div className='grid grid-cols-2 gap-2 font-mono'>
-                  <div>
-                    <span className='block text-[10px] text-muted-foreground'>
-                      Slice SST / SD
-                    </span>
-                    <span>
-                      SST: {detailSub.slice?.[0]?.sst ?? 1} / SD:{' '}
-                      {detailSub.slice?.[0]?.sd ?? '—'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className='block text-[10px] text-muted-foreground'>
-                      Clave de Autenticación K
-                    </span>
-                    <span>{detailSub.security.k}</span>
-                  </div>
-                  <div>
-                    <span className='block text-[10px] text-muted-foreground'>
-                      Operador OPc
-                    </span>
-                    <span>{detailSub.security.opc}</span>
-                  </div>
-                  <div>
-                    <span className='block text-[10px] text-muted-foreground'>
-                      AMF Vector
-                    </span>
-                    <span>{detailSub.security.amf ?? '8000'}</span>
+                {/* Telemetría esencial minimalista */}
+                <div className='rounded-xl border border-border/60 bg-muted/20 p-3'>
+                  <div className='grid grid-cols-2 gap-3 text-xs font-mono'>
+                    <div>
+                      <span className='block text-[10px] uppercase tracking-wider text-muted-foreground font-sans font-medium'>
+                        IP de Sesión
+                      </span>
+                      <span className='font-bold text-foreground text-sm'>
+                        {activeIp}
+                      </span>
+                    </div>
+                    <div>
+                      <span className='block text-[10px] uppercase tracking-wider text-muted-foreground font-sans font-medium'>
+                        Red de Datos (DNN)
+                      </span>
+                      <span className='font-bold text-foreground text-sm'>
+                        {dnn}
+                      </span>
+                    </div>
+                    <div>
+                      <span className='block text-[10px] uppercase tracking-wider text-muted-foreground font-sans font-medium'>
+                        Slice 5G
+                      </span>
+                      <span className='text-muted-foreground'>
+                        SST {sst}{sd ? ` · SD ${sd}` : ''}
+                      </span>
+                    </div>
+                    <div>
+                      <span className='block text-[10px] uppercase tracking-wider text-muted-foreground font-sans font-medium'>
+                        Estado NAS
+                      </span>
+                      <span className='text-muted-foreground'>
+                        {detailSub.live_status?.rm_state ?? (isRegistered ? 'RM-REGISTERED' : 'Sin observación')}
+                        {detailSub.live_status?.cm_state ? ` (${detailSub.live_status.cm_state})` : ''}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
 
-          <DialogFooter>
-            <Button variant='outline' onClick={() => setDetailSub(null)}>
-              Cerrar
-            </Button>
-          </DialogFooter>
+
+                {/* Footer: Cerrar / Operaciones */}
+                <DialogFooter className='flex items-center justify-between sm:justify-between pt-3 border-t border-border/40 w-full gap-2'>
+                  <Button
+                    type='button'
+                    variant='ghost'
+                    size='sm'
+                    onClick={() => setDetailSub(null)}
+                    className='text-xs text-muted-foreground hover:text-foreground cursor-pointer h-7 px-2'
+                  >
+                    Cerrar
+                  </Button>
+
+                  {isOperator && (
+                    <div className='flex items-center gap-1.5'>
+                      <Button
+                        type='button'
+                        variant='outline'
+                        size='sm'
+                        onClick={() => {
+                          const sub = detailSub
+                          setDetailSub(null)
+                          openEdit(sub)
+                        }}
+                        className='h-7 px-2.5 text-[11px] font-medium rounded-lg border-border/70 hover:bg-accent text-foreground cursor-pointer transition-colors'
+                        title='Editar suscriptor'
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        type='button'
+                        variant='outline'
+                        size='sm'
+                        onClick={() => {
+                          const imsi = detailSub.imsi
+                          setDetailSub(null)
+                          setDeleteTarget(imsi)
+                        }}
+                        className='h-7 px-2.5 text-[11px] font-medium rounded-lg border-rose-500/25 bg-rose-500/5 text-rose-400 hover:bg-rose-500/15 hover:text-rose-300 cursor-pointer transition-colors'
+                        title='Eliminar suscriptor'
+                      >
+                        Eliminar
+                      </Button>
+                    </div>
+                  )}
+                </DialogFooter>
+              </div>
+            )
+          })()}
         </DialogContent>
       </Dialog>
 

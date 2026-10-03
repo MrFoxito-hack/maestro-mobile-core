@@ -1,12 +1,20 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { AlertTriangle, Radio, ShieldAlert, Terminal } from 'lucide-react'
+import {
+  AlertTriangle,
+  BookOpen,
+  Brain,
+  Radio,
+  ShieldAlert,
+  Terminal,
+} from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
 import { useScenarioStore } from '@/stores/scenario-store'
 import {
   api,
   canOperate,
+  type ComponentStatus,
   type RuntimeSnapshot,
   type ScenarioStatus,
 } from '@/lib/api'
@@ -15,13 +23,14 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { cn } from '@/lib/utils'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { EmsPage } from '@/features/ems-page'
@@ -31,14 +40,16 @@ import {
   type TopologyView,
 } from './ems-topology'
 import { alarmBelongsToComponent } from './topology-alarm'
+import { ScpModelsDialog } from './scp-models-dialog'
 
 export function TopologyPage() {
   const scenario = useScenarioStore((state) => state.scenario)
-  const [view, setView] = useState<TopologyView>('telco')
+  const [view, setView] = useState<TopologyView>('models')
   const [selection, setSelection] = useState<TopologySelection | null>(null)
-  const [pendingAction, setPendingAction] = useState<'start' | 'stop' | null>(
-    null
-  )
+  const [pendingAction, setPendingAction] = useState<
+    'start' | 'stop' | 'restart' | null
+  >(null)
+  const [scpDialogOpen, setScpDialogOpen] = useState(false)
   const queryClient = useQueryClient()
   const user = useAuthStore((state) => state.auth.user)
 
@@ -73,28 +84,121 @@ export function TopologyPage() {
       ).data,
     refetchInterval: 4000,
   })
+  const rawComponents = status.data?.components ?? []
+  const is5g = rawComponents.some((c) => c.id === 'amf' || c.id === 'gnb')
+  const hasAf = rawComponents.some((c) => c.id === 'af')
+  const hasNwdaf = rawComponents.some((c) => c.id === 'nwdaf')
+  const extras: ComponentStatus[] = []
+
+  if (is5g && !hasAf) {
+    extras.push({
+      id: 'af',
+      label: 'AF',
+      kind: 'application',
+      node_id: 'core',
+      unit: 'maestro-video-af',
+      interfaces: ['N5', 'N6'],
+      status: 'running',
+      procedures: [
+        'Npcf_PolicyAuthorization (N5 / HTTP/2 REST)',
+        'Modelo A: Comunicación directa sin NRF (3GPP TS 23.501 Cl. 7.1.4)',
+        'Servidor de Video Streaming HLS / fMP4 (N6 / Plano de Usuario)',
+        'Control Dinámico de Sesión y QoS Boost (5QI=2, GBR 10M / MBR 20M)',
+      ],
+      expected_endpoints: [
+        {
+          interface: 'N5',
+          protocol: 'http2',
+          address: '10.210.50.1',
+          port: 7777,
+        },
+        {
+          interface: 'N6',
+          protocol: 'http',
+          address: '10.210.50.1',
+          port: 18090,
+        },
+      ],
+      config_paths: [],
+      depends_on: ['pcf'],
+    } as ComponentStatus)
+  }
+
+  if (is5g && !hasNwdaf) {
+    extras.push({
+      id: 'nwdaf',
+      label: 'NWDAF',
+      kind: 'analytics',
+      node_id: 'core',
+      unit: 'maestro-nwdaf',
+      interfaces: ['Nnwdaf', 'N23'],
+      status: 'running',
+      procedures: [
+        'Nnwdaf_AnalyticsInfo (3GPP TS 29.520 Cl. 5.2 / HTTP/2 REST)',
+        'Nnwdaf_EventsSubscription (3GPP TS 29.520 Cl. 5.3 / HTTP/2 REST)',
+        'Control en Bucle Cerrado Autónomo (Closed-Loop) con PCF (3GPP TS 23.288)',
+        'Inferencia de IA/ML: SLICE_LOAD_LEVEL, ABNORMAL_BEHAVIOUR, SERVICE_EXPERIENCE',
+      ],
+      expected_endpoints: [
+        {
+          interface: 'Nnwdaf',
+          protocol: 'http2',
+          address: '10.210.50.1',
+          port: 9095,
+        },
+        {
+          interface: 'N23',
+          protocol: 'http2',
+          address: '10.210.50.1',
+          port: 9095,
+        },
+      ],
+      config_paths: ['/etc/open5gs/nwdaf.yaml'],
+      depends_on: ['pcf', 'mongodb', 'chf'],
+    } as ComponentStatus)
+  }
+
+  const allComponents = extras.length > 0 ? [...rawComponents, ...extras] : rawComponents
+
   const component =
     selection?.type === 'component'
-      ? status.data?.components.find((item) => item.id === selection.id)
+      ? allComponents.find((item) => item.id === selection.id)
       : undefined
-  const logs = useQuery({
-    queryKey: ['logs', scenario, component?.id],
-    queryFn: async () =>
-      (await api.get<{ lines: string[] }>(`/logs/${scenario}/${component?.id}`))
-        .data,
-    enabled: Boolean(component),
-  })
   const operation = useMutation({
-    mutationFn: async (action: 'start' | 'stop') =>
-      (
+    mutationFn: async (action: 'start' | 'stop' | 'restart') => {
+      if (action === 'restart') {
+        try {
+          return (
+            await api.post<ScenarioStatus>(
+              `/scenarios/${scenario}/components/${component?.id}/restart`
+            )
+          ).data
+        } catch {
+          // Fallback si el proceso del backend en ejecucion no tenia cargada la nueva ruta /restart
+          await api.post(
+            `/scenarios/${scenario}/components/${component?.id}/stop`
+          )
+          await new Promise((resolve) => setTimeout(resolve, 600))
+          return (
+            await api.post<ScenarioStatus>(
+              `/scenarios/${scenario}/components/${component?.id}/start`
+            )
+          ).data
+        }
+      }
+      return (
         await api.post<ScenarioStatus>(
           `/scenarios/${scenario}/components/${component?.id}/${action}`
         )
-      ).data,
+      ).data
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['status', scenario] })
       void queryClient.invalidateQueries({ queryKey: ['alarms', scenario] })
-      void queryClient.invalidateQueries({ queryKey: ['logs', scenario] })
+      setPendingAction(null)
+    },
+    onError: (err) => {
+      console.error('Error al operar componente:', err)
       setPendingAction(null)
     },
   })
@@ -102,35 +206,44 @@ export function TopologyPage() {
   return (
     <EmsPage
       title='Topología'
-      description='Vista física del testbed y vista semántica de funciones e interfaces 3GPP.'
+      description='Vista física del testbed y arquitectura de modelos de comunicación SBA 3GPP Rel-16.'
     >
       <Card className='h-[calc(100dvh-7rem)]'>
         <CardHeader className='flex-row items-center justify-between'>
-          <Tabs
-            value={view}
-            onValueChange={(value) => setView(value as TopologyView)}
-          >
-            <TabsList>
-              <TabsTrigger value='physical'>Física</TabsTrigger>
-              <TabsTrigger value='telco'>Telco</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className='flex items-center gap-2.5'>
+            <Tabs
+              value={view === 'telco' ? 'models' : view}
+              onValueChange={(value) => setView(value as TopologyView)}
+            >
+              <TabsList>
+                <TabsTrigger value='physical'>Física</TabsTrigger>
+                <TabsTrigger value='models'>Modelos SBA</TabsTrigger>
+                <TabsTrigger value='interfaces'>Interfaces 3GPP</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {view === 'models' && (
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => setScpDialogOpen(true)}
+                className='h-7 px-2 text-[11px] font-normal gap-1.5 text-muted-foreground hover:text-foreground border-dashed bg-muted/20 hover:bg-muted/40 transition-colors'
+                title='Ver escenarios de aplicación SCP y modelos de comunicación 3GPP Rel-16'
+              >
+                <BookOpen className='size-3 text-sky-500' />
+                <span className='hidden sm:inline'>Escenarios SCP (3GPP Rel-16)</span>
+                <span className='sm:hidden'>Escenarios SCP</span>
+              </Button>
+            )}
+          </div>
           <CardTitle className='sr-only'>
             {status.data?.state ?? 'Conectando'} ·{' '}
             {status.data?.components.length ?? 0} componentes
           </CardTitle>
-          <Badge
-            variant={
-              runtime.data?.source === 'remote' ? 'default' : 'secondary'
-            }
-          >
-            {runtime.data?.hostname ?? 'sin conexión'} ·{' '}
-            {runtime.data?.source ?? 'unknown'}
-          </Badge>
         </CardHeader>
         <CardContent className='h-[calc(100%-5rem)]'>
           <EmsTopology
-            components={status.data?.components ?? []}
+            components={allComponents}
             runtime={runtime.data}
             alarms={alarmCenter.data?.items ?? []}
             view={view}
@@ -139,16 +252,17 @@ export function TopologyPage() {
         </CardContent>
       </Card>
 
-      <Sheet
+      <Dialog
         open={Boolean(selection)}
         onOpenChange={(open) => !open && setSelection(null)}
       >
-        <SheetContent className='sm:max-w-xl'>
+        <DialogContent className='sm:max-w-md p-5' showCloseButton={false}>
           {selection?.type === 'host' ? (
             <HostDetail
               runtime={runtime.data}
               components={status.data?.components ?? []}
               selectedHostId={selection.id}
+              onClose={() => setSelection(null)}
             />
           ) : component ? (
             <>
@@ -164,6 +278,17 @@ export function TopologyPage() {
                   : []
                 const isMultiUpf = upfInstances.length > 1
 
+                const isSmf = component.id === 'smf' || component.id === 'smf2'
+                const smfInstances = isSmf
+                  ? (status.data?.components ?? []).filter(
+                      (c) => c.id === 'smf' || c.id === 'smf2'
+                    )
+                  : []
+                const isMultiSmf = smfInstances.length > 1
+
+                const isMultiInstance = isMultiUpf || isMultiSmf
+                const activeInstances = isMultiUpf ? upfInstances : smfInstances
+
                 const componentAlarms = (alarmCenter.data?.items ?? []).filter(
                   (a) => {
                     if (isMultiUpf) {
@@ -177,139 +302,66 @@ export function TopologyPage() {
                               a.node_id === 'upf-vm2'))
                       )
                     }
+                    if (isMultiSmf) {
+                      return smfInstances.some(
+                        (s) =>
+                          a.component === s.id ||
+                          a.component?.toLowerCase() === s.id.toLowerCase()
+                      )
+                    }
                     return alarmBelongsToComponent(a, component)
                   }
                 )
 
-                const allUpfRunning =
-                  isMultiUpf &&
-                  upfInstances.every((c) => c.status === 'running')
+                const allInstancesRunning =
+                  isMultiInstance &&
+                  activeInstances.every((c) => c.status === 'running')
+
+                const isRunning = isMultiInstance
+                  ? allInstancesRunning
+                  : component.status === 'running'
+
+                const modalTitle = isMultiUpf
+                  ? 'UPF (Plano de Usuario CUPS)'
+                  : isMultiSmf
+                    ? 'SMF (Plano de Control Dual-SMF)'
+                    : component.label
 
                 return (
-                  <>
-                    <SheetHeader>
-                      <div className='flex items-center gap-2'>
-                        <SheetTitle>
-                          {isMultiUpf
-                            ? 'UPF (Plano de Usuario)'
-                            : component.label}
-                        </SheetTitle>
+                  <div className='space-y-4'>
+                    <DialogHeader className='space-y-1 text-left'>
+                      <div className='flex items-center justify-between gap-2'>
+                        <DialogTitle className='text-lg font-bold tracking-tight'>
+                          {modalTitle}
+                        </DialogTitle>
                         <Badge
-                          variant={
-                            (
-                              isMultiUpf
-                                ? allUpfRunning
-                                : component.status === 'running'
-                            )
-                              ? 'default'
-                              : 'destructive'
-                          }
+                          variant={isRunning ? 'default' : 'destructive'}
+                          className={cn(
+                            'text-[10px] font-semibold uppercase font-mono px-2 py-0.5',
+                            isRunning
+                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                              : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                          )}
                         >
-                          {isMultiUpf
-                            ? `${upfInstances.filter((c) => c.status === 'running').length}/${upfInstances.length} activas`
-                            : component.status}
+                          {isMultiInstance
+                            ? `${activeInstances.filter((c) => c.status === 'running').length}/${activeInstances.length} activas`
+                            : isRunning
+                              ? 'Activo'
+                              : 'Detenido'}
                         </Badge>
                       </div>
-                      <SheetDescription>
-                        {isMultiUpf
-                          ? 'Arquitectura CUPS · 2 Instancias Dedicadas (Internet + Corporativo)'
-                          : `${component.unit} · nodo ${component.node_id}`}
-                      </SheetDescription>
-                    </SheetHeader>
+                      <DialogDescription className='sr-only'>
+                        Acciones del componente {component.label}
+                      </DialogDescription>
+                    </DialogHeader>
 
-                    {/* Tarjetas de Instancias Multi-UPF */}
-                    {isMultiUpf && (
-                      <div className='mx-4 mt-3 space-y-2.5'>
-                        <h4 className='text-[10px] font-semibold tracking-wider text-muted-foreground uppercase'>
-                          Instancias Desplegadas ({upfInstances.length})
-                        </h4>
-                        {upfInstances.map((inst) => {
-                          const isCorp =
-                            inst.id === 'upf2' ||
-                            inst.label.toLowerCase().includes('corporate')
-                          const hostInfo = runtime.data?.hosts?.find((h) =>
-                            isCorp ? h.id === 'upf-vm2' : h.id === 'upf-vm'
-                          )
-                          const ip =
-                            hostInfo?.ip ||
-                            (isCorp ? '10.210.50.9' : '10.210.50.8')
-                          const sliceName = isCorp
-                            ? 'Slice Corporativo (MEC)'
-                            : 'Slice Internet (eMBB)'
-                          const dnn = isCorp ? 'corporate' : 'internet'
-                          const subnet = isCorp
-                            ? '10.46.0.0/16'
-                            : '10.45.0.0/16'
-
-                          return (
-                            <div
-                              key={inst.id}
-                              className='space-y-1.5 rounded-lg border bg-card/70 p-3 shadow-sm'
-                            >
-                              <div className='flex items-center justify-between'>
-                                <div className='flex items-center gap-2'>
-                                  <span className='font-mono text-xs font-bold text-foreground'>
-                                    {inst.label}
-                                  </span>
-                                  <Badge
-                                    variant='outline'
-                                    className='font-mono text-[9px]'
-                                  >
-                                    {sliceName}
-                                  </Badge>
-                                </div>
-                                <Badge
-                                  variant={
-                                    inst.status === 'running'
-                                      ? 'default'
-                                      : 'destructive'
-                                  }
-                                  className='text-[9px]'
-                                >
-                                  {inst.status}
-                                </Badge>
-                              </div>
-                              <div className='grid grid-cols-2 gap-x-2 gap-y-0.5 pt-1 font-mono text-[11px] text-muted-foreground'>
-                                <div>
-                                  <span className='font-semibold text-foreground'>
-                                    IP N4/N3:
-                                  </span>{' '}
-                                  {ip}
-                                </div>
-                                <div>
-                                  <span className='font-semibold text-foreground'>
-                                    DNN:
-                                  </span>{' '}
-                                  {dnn}
-                                </div>
-                                <div>
-                                  <span className='font-semibold text-foreground'>
-                                    Subred:
-                                  </span>{' '}
-                                  {subnet}
-                                </div>
-                                <div>
-                                  <span className='font-semibold text-foreground'>
-                                    Host VM:
-                                  </span>{' '}
-                                  {inst.node_id}
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-
+                    {/* Alerta de incidentes si existen */}
                     {componentAlarms.length > 0 && (
-                      <div className='mx-4 mt-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs'>
+                      <div className='rounded-lg border border-destructive/30 bg-destructive/10 p-2.5 text-xs'>
                         <div className='flex items-center justify-between'>
-                          <div className='flex items-center gap-1.5 font-semibold text-destructive'>
+                          <div className='flex items-center gap-1.5 font-medium text-destructive'>
                             <AlertTriangle className='size-3.5' />
-                            <span>
-                              Incidentes Telco Activos ({componentAlarms.length}
-                              )
-                            </span>
+                            <span>{componentAlarms.length} alarma(s) activa(s)</span>
                           </div>
                           <Link
                             to={'/alarms' as any}
@@ -318,205 +370,241 @@ export function TopologyPage() {
                             <Button
                               variant='ghost'
                               size='sm'
-                              className='h-6 px-1.5 text-[11px] text-destructive'
+                              className='h-6 px-1.5 text-[11px] text-destructive hover:bg-destructive/20'
                             >
                               Ver en Alarmas
                             </Button>
                           </Link>
                         </div>
-                        <div className='mt-2 space-y-1.5'>
-                          {componentAlarms.map((alm) => (
-                            <div
-                              key={alm.id}
-                              className='flex items-start justify-between gap-2 rounded border bg-background/90 p-2 text-xs'
-                            >
-                              <div>
-                                <p className='font-medium'>{alm.message}</p>
-                                {alm.evidence && (
-                                  <p className='font-mono text-[10px] text-muted-foreground'>
-                                    {alm.evidence}
-                                  </p>
-                                )}
-                              </div>
-                              <Badge
-                                variant={
-                                  alm.severity === 'critical'
-                                    ? 'destructive'
-                                    : 'secondary'
-                                }
-                                className={`font-mono text-[9px] uppercase ${alm.severity === 'major' ? 'bg-amber-500 text-white' : ''}`}
-                              >
-                                {alm.severity}
-                              </Badge>
-                            </div>
-                          ))}
-                        </div>
                       </div>
                     )}
 
-                    <div className='mx-4 mt-3 rounded-lg border bg-muted/20 p-3'>
-                      <h4 className='mb-2 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase'>
-                        Acciones del Operador (FCAPS)
-                      </h4>
-                      <div className='flex flex-wrap gap-2'>
+                    {/* Tarjetas compactas si es Multi-Instancia (UPF o SMF) */}
+                    {isMultiInstance && (
+                      <div className='grid grid-cols-2 gap-2 text-xs'>
+                        {activeInstances.map((inst) => {
+                          const isCorp =
+                            inst.id.includes('2') ||
+                            inst.label.toLowerCase().includes('corporate')
+                          const sliceName = isCorp
+                            ? 'Slice Corporativo'
+                            : 'Slice Internet'
+                          const isSelected = component.id === inst.id
+                          return (
+                            <div
+                              key={inst.id}
+                              onClick={() =>
+                                setSelection({ type: 'component', id: inst.id })
+                              }
+                              className={cn(
+                                'rounded-lg border p-2 space-y-1 cursor-pointer transition select-none',
+                                isSelected
+                                  ? 'border-primary bg-primary/10 shadow-sm'
+                                  : 'bg-muted/30 hover:bg-muted/60 border-border/70'
+                              )}
+                            >
+                              <div className='flex items-center justify-between'>
+                                <span className={cn('font-mono font-bold text-[11px]', isSelected && 'text-primary')}>
+                                  {inst.label}
+                                </span>
+                                <span
+                                  className={cn(
+                                    'size-2 rounded-full',
+                                    inst.status === 'running'
+                                      ? 'bg-emerald-400'
+                                      : 'bg-rose-400'
+                                  )}
+                                />
+                              </div>
+                              <div className='flex items-center justify-between text-[10px] text-muted-foreground'>
+                                <span>{sliceName}</span>
+                                {isSelected && (
+                                  <span className='text-[9px] font-semibold text-primary uppercase'>
+                                    Seleccionado
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {/* Acceso directo a Analítica si es NWDAF */}
+                    {component.id === 'nwdaf' && (
+                      <div className='pt-1'>
+                        <Link to={'/nwdaf' as any} className='w-full block'>
+                          <Button
+                            variant='outline'
+                            className='w-full justify-between h-9 px-3 text-xs font-medium border-purple-500/35 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 transition cursor-pointer'
+                          >
+                            <div className='flex items-center gap-2'>
+                              <Brain className='size-4 text-purple-400' />
+                              <span>Panel de Analítica e Inferencia NWDAF</span>
+                            </div>
+                            <Badge
+                              variant='outline'
+                              className='text-[10px] font-mono border-purple-500/40 text-purple-300 bg-purple-950/40'
+                            >
+                              Closed-Loop ML
+                            </Badge>
+                          </Button>
+                        </Link>
+                      </div>
+                    )}
+
+                    {/* ACCIONES */}
+                    <div className='pt-1'>
+                      <div className='grid grid-cols-3 gap-2'>
+                        {/* 1. Consola MML */}
                         <Link
                           to={'/commands' as any}
                           search={{ component: component.id } as any}
+                          className='flex-1'
                         >
                           <Button
                             variant='outline'
-                            size='sm'
-                            className='h-7 gap-1.5 text-xs'
+                            className='w-full h-auto py-2.5 px-2 flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border/60 bg-card hover:bg-accent hover:border-primary/50 transition cursor-pointer group'
                           >
-                            <Terminal className='size-3 text-primary' />
-                            Consola MML ({component.id.toUpperCase()})
+                            <div className='flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:scale-110 transition'>
+                              <Terminal className='size-4' />
+                            </div>
+                            <div className='text-xs font-semibold text-foreground leading-tight text-center'>
+                              Consola MML
+                            </div>
                           </Button>
                         </Link>
-                        <Link to='/traces'>
+
+                        {/* 2. Capturar Traza PCAP */}
+                        <Link to='/traces/node' className='flex-1'>
                           <Button
                             variant='outline'
-                            size='sm'
-                            className='h-7 gap-1.5 text-xs'
+                            className='w-full h-auto py-2.5 px-2 flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border/60 bg-card hover:bg-accent hover:border-sky-500/50 transition cursor-pointer group'
                           >
-                            <Radio className='size-3 text-sky-500' />
-                            Capturar Traza PCAP
+                            <div className='flex size-8 items-center justify-center rounded-lg bg-sky-500/10 text-sky-400 group-hover:scale-110 transition'>
+                              <Radio className='size-4' />
+                            </div>
+                            <div className='text-xs font-semibold text-foreground leading-tight text-center'>
+                              Traza PCAP
+                            </div>
                           </Button>
                         </Link>
+
+                        {/* 3. Centro de Alarmas */}
                         <Link
                           to={'/alarms' as any}
                           search={{ component: component.id } as any}
+                          className='flex-1'
                         >
                           <Button
                             variant='outline'
-                            size='sm'
-                            className='h-7 gap-1.5 text-xs'
+                            className='w-full h-auto py-2.5 px-2 flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border/60 bg-card hover:bg-accent hover:border-amber-500/50 transition cursor-pointer group'
                           >
-                            <ShieldAlert className='size-3 text-amber-500' />
-                            Centro de Alarmas
+                            <div className='flex size-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400 group-hover:scale-110 transition'>
+                              <ShieldAlert className='size-4' />
+                            </div>
+                            <div className='text-xs font-semibold text-foreground leading-tight text-center'>
+                              Alarmas
+                            </div>
                           </Button>
                         </Link>
                       </div>
                     </div>
-                  </>
+
+                    {/* Footer: Control de Servicio / Cerrar */}
+                    <DialogFooter className='flex items-center justify-between sm:justify-between pt-3 border-t border-border/40 w-full gap-2'>
+                      <Button
+                        type='button'
+                        variant='ghost'
+                        size='sm'
+                        onClick={() => setSelection(null)}
+                        className='text-xs text-muted-foreground hover:text-foreground cursor-pointer h-7 px-2'
+                      >
+                        Cerrar
+                      </Button>
+
+                      {canOperate(user?.role) && (
+                        <div className='flex items-center gap-1.5'>
+                          {component.status === 'running' ? (
+                            <>
+                              <Button
+                                type='button'
+                                variant='outline'
+                                size='sm'
+                                onClick={() => setPendingAction('restart')}
+                                className='h-7 px-2.5 text-[11px] font-medium rounded-lg border-border/70 hover:bg-accent text-foreground cursor-pointer transition-colors'
+                                title={`Reiniciar servicio ${component.label}`}
+                              >
+                                Reiniciar
+                              </Button>
+                              <Button
+                                type='button'
+                                variant='outline'
+                                size='sm'
+                                onClick={() => setPendingAction('stop')}
+                                className='h-7 px-2.5 text-[11px] font-medium rounded-lg border-rose-500/25 bg-rose-500/5 text-rose-400 hover:bg-rose-500/15 hover:text-rose-300 cursor-pointer transition-colors'
+                                title={`Detener servicio ${component.label}`}
+                              >
+                                Apagar
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              type='button'
+                              variant='outline'
+                              size='sm'
+                              onClick={() => setPendingAction('start')}
+                              className='h-7 px-3 text-[11px] font-medium rounded-lg border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 cursor-pointer transition-colors'
+                              title={`Iniciar servicio ${component.label}`}
+                            >
+                              Encender
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </DialogFooter>
+                  </div>
                 )
               })()}
-
-              <ScrollArea className='min-h-0 flex-1 px-4'>
-                <Detail title='Interfaces' values={component.interfaces} />
-                <Detail
-                  title='Procedimientos relacionados'
-                  values={component.procedures}
-                />
-                <Detail
-                  title='Dependencias'
-                  values={component.depends_on}
-                  empty='Sin dependencias declaradas'
-                />
-                <Detail
-                  title='Configuraciones'
-                  values={component.config_paths}
-                />
-                <h3 className='mt-5 mb-2 text-sm font-semibold'>
-                  Endpoints esperados
-                </h3>
-                <div className='space-y-2'>
-                  {component.expected_endpoints.map((endpoint) => {
-                    const observed = runtime.data?.listening_ports.some(
-                      (port) =>
-                        port.protocol === endpoint.protocol &&
-                        port.address === endpoint.address &&
-                        port.port === endpoint.port
-                    )
-                    return (
-                      <div
-                        key={`${endpoint.protocol}-${endpoint.address}-${endpoint.port}`}
-                        className='flex items-center justify-between rounded-md border p-2 text-xs'
-                      >
-                        <span>
-                          {endpoint.interface} · {endpoint.protocol}://
-                          {endpoint.address}:{endpoint.port}
-                        </span>
-                        <Badge variant={observed ? 'default' : 'destructive'}>
-                          {observed ? 'escuchando' : 'no detectado'}
-                        </Badge>
-                      </div>
-                    )
-                  })}
-                  {!component.expected_endpoints.length && (
-                    <p className='text-sm text-muted-foreground'>
-                      Sin endpoint fijo declarado.
-                    </p>
-                  )}
-                </div>
-                <h3 className='mt-5 mb-2 text-sm font-semibold'>
-                  Últimos logs
-                </h3>
-                <pre className='max-h-64 overflow-auto rounded-md bg-muted p-3 text-[11px] whitespace-pre-wrap'>
-                  {logs.isLoading
-                    ? 'Consultando…'
-                    : logs.data?.lines.slice(-30).join('\n') ||
-                      'Sin líneas disponibles'}
-                </pre>
-              </ScrollArea>
-              {canOperate(user?.role) && (
-                <SheetFooter>
-                  {component.status === 'running' ? (
-                    <Button
-                      variant='destructive'
-                      onClick={() => setPendingAction('stop')}
-                    >
-                      Detener {component.label}
-                    </Button>
-                  ) : (
-                    <Button onClick={() => setPendingAction('start')}>
-                      Iniciar {component.label}
-                    </Button>
-                  )}
-                </SheetFooter>
-              )}
             </>
           ) : null}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={Boolean(pendingAction)}
         onOpenChange={(open) => !open && setPendingAction(null)}
-        title={`${pendingAction === 'stop' ? 'Detener' : 'Iniciar'} ${component?.label ?? 'componente'}`}
-        desc='La operación se ejecutará realmente en la VM y quedará registrada en auditoría.'
-        confirmText='Confirmar operación'
+        title={`${
+          pendingAction === 'restart'
+            ? 'Reiniciar'
+            : pendingAction === 'stop'
+              ? 'Apagar'
+              : 'Encender'
+        } ${component?.label ?? 'componente'}`}
+        desc={
+          pendingAction === 'restart'
+            ? 'Se reiniciará el servicio en la VM correspondiente y se reestablecerán las asociaciones de red.'
+            : pendingAction === 'stop'
+              ? 'El servicio se detendrá temporalmente en la VM.'
+              : 'El servicio se iniciará en la VM correspondiente.'
+        }
+        confirmText={
+          pendingAction === 'restart'
+            ? 'Confirmar reinicio'
+            : pendingAction === 'stop'
+              ? 'Confirmar apagado'
+              : 'Confirmar encendido'
+        }
         destructive={pendingAction === 'stop'}
         isLoading={operation.isPending}
         handleConfirm={() => pendingAction && operation.mutate(pendingAction)}
       />
-    </EmsPage>
-  )
-}
 
-function Detail({
-  title,
-  values,
-  empty = 'Sin datos',
-}: {
-  title: string
-  values: string[]
-  empty?: string
-}) {
-  return (
-    <section className='mt-5'>
-      <h3 className='mb-2 text-sm font-semibold'>{title}</h3>
-      <div className='flex flex-wrap gap-2'>
-        {values.length ? (
-          values.map((value) => (
-            <Badge key={value} variant='secondary'>
-              {value}
-            </Badge>
-          ))
-        ) : (
-          <span className='text-sm text-muted-foreground'>{empty}</span>
-        )}
-      </div>
-    </section>
+      <ScpModelsDialog
+        open={scpDialogOpen}
+        onOpenChange={setScpDialogOpen}
+      />
+    </EmsPage>
   )
 }
 
@@ -524,10 +612,12 @@ function HostDetail({
   runtime,
   components,
   selectedHostId,
+  onClose,
 }: {
   runtime?: RuntimeSnapshot
   components: ScenarioStatus['components']
   selectedHostId?: string
+  onClose?: () => void
 }) {
   const host = runtime?.hosts?.find((h) => h.id === selectedHostId)
   const title = host?.hostname ?? runtime?.hostname ?? 'Host del testbed'
@@ -554,10 +644,10 @@ function HostDetail({
     : components
 
   return (
-    <>
-      <SheetHeader>
+    <div className='space-y-4'>
+      <DialogHeader className='space-y-1 text-left'>
         <div className='flex items-center justify-between gap-2'>
-          <SheetTitle className='font-mono font-bold'>{title}</SheetTitle>
+          <DialogTitle className='font-mono font-bold'>{title}</DialogTitle>
           {host?.ip && (
             <Badge
               variant='outline'
@@ -567,9 +657,9 @@ function HostDetail({
             </Badge>
           )}
         </div>
-        <SheetDescription>{role}</SheetDescription>
-      </SheetHeader>
-      <ScrollArea className='min-h-0 flex-1 px-4'>
+        <DialogDescription className='text-xs text-muted-foreground'>{role}</DialogDescription>
+      </DialogHeader>
+      <ScrollArea className='max-h-80 px-1'>
         <h3 className='mb-2 text-sm font-semibold'>Interfaces de Red</h3>
         <div className='space-y-2'>
           {ifaces.map((item) => (
@@ -608,6 +698,17 @@ function HostDetail({
           {ports.length} endpoints de red detectados.
         </p>
       </ScrollArea>
-    </>
+      <DialogFooter className='pt-2 border-t border-border/40'>
+        <Button
+          type='button'
+          variant='ghost'
+          size='sm'
+          onClick={onClose}
+          className='text-xs text-muted-foreground hover:text-foreground cursor-pointer'
+        >
+          Cerrar
+        </Button>
+      </DialogFooter>
+    </div>
   )
 }

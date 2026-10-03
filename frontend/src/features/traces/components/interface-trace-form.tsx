@@ -65,11 +65,11 @@ export function InterfaceTraceForm({
     : (preferredTarget?.id ?? '')
   const target = targets.find((item) => item.id === targetId)
   const limit = capabilities?.limits
-  const durationOptions = [30, 60, 120, 300].filter(
-    (value) => value <= (limit?.max_duration_seconds ?? 300)
+  const durationOptions = [30, 60, 120, 300, 600, 900].filter(
+    (value) => value <= (limit?.max_duration_seconds ?? 900)
   )
-  const sizeOptions = [10, 25, 50, 100].filter(
-    (value) => value <= (limit?.max_megabytes ?? 100)
+  const sizeOptions = [25, 50, 100, 250, 500].filter(
+    (value) => value <= (limit?.max_megabytes ?? 500)
   )
 
   const submit = (event: FormEvent<HTMLFormElement>) => {

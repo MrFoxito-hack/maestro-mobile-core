@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     profiles_path: Path = Path(__file__).resolve().parents[1] / "catalog" / "component_profiles.json"
     mock_state_path: Path = Path(__file__).resolve().parents[1] / "catalog" / "mock_states.json"
     database_path: Path = Path("./data/ems.db")
+    laboratory_database_path: Path | None = None
+    laboratory_ai_enabled: bool = False
     capture_dir: Path = Path("./data/captures")
     backup_dir: Path = Path("./data/backups")
     allowed_config_roots: list[Path] = [Path("./data/testbed-config")]
@@ -28,6 +30,14 @@ class Settings(BaseSettings):
     metrics_retention_days: int = 30
     open5gs_info_port: int = 9090
     operation_output_limit: int = 100_000
+    chf_management_enabled: bool = False
+    chf_management_port: int = 8082
+    # Management stays on the core loopback; credentials never reach the browser.
+    chf_reader_token_file: str = "/home/emsadmin/maestro-charging/management/reader.token"
+    chf_admin_environment_file: str = "/home/emsadmin/maestro-charging/management/management.env"
+    nwdaf_enabled: bool = False
+    nwdaf_port: int = 8085
+    nwdaf_token_file: str = "/home/emsadmin/maestro-charging/nwdaf/nwdaf.token"
     testbed_host: str | None = None
     ssh_port: int = 22
     upf_ssh_port: int = 2223

@@ -1,0 +1,5 @@
+.venv
+data
+evidence
+__pycache__
+.pytest_cache

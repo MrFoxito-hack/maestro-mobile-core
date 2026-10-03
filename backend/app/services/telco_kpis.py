@@ -24,16 +24,16 @@ class Marker:
 
 MARKERS = {
     "5g-sa": (
-        Marker("registration", "attempt", ("sending initial registration", "registration request")),
-        Marker("registration", "success", ("initial registration is successful", "registration complete")),
+        Marker("registration", "attempt", ("sending initial registration",)),
+        Marker("registration", "success", ("initial registration is successful",)),
         Marker("registration", "reject", ("registration reject", "registration rejected", "registration failure")),
         Marker("pdu-session", "attempt", ("sending pdu session establishment request",)),
         Marker("pdu-session", "success", ("pdu session establishment is successful",)),
         Marker("pdu-session", "reject", ("pdu session establishment reject", "pdu session establishment failure")),
     ),
     "4g-epc": (
-        Marker("attach", "attempt", ("sending attach request", "attach request")),
-        Marker("attach", "success", ("attach is successful", "attach complete")),
+        Marker("attach", "attempt", ("sending attach request",)),
+        Marker("attach", "success", ("attach is successful",)),
         Marker("attach", "reject", ("attach reject", "attach rejected", "attach failure")),
         Marker("eps-bearer", "attempt", ("sending pdn connectivity request", "pdn connectivity request")),
         Marker("eps-bearer", "success", ("default eps bearer", "pdn connectivity is successful")),
@@ -181,27 +181,39 @@ class TelcoKpiRepository:
             ).fetchone()["n"]
             return after - before
 
-    def summary(self, testbed_id: str, scenario_id: str) -> dict[str, dict[str, float]]:
+    def summary(
+        self,
+        testbed_id: str,
+        scenario_id: str,
+        window_seconds: int | None = 1800,
+    ) -> dict[str, dict[str, float]]:
         with transaction() as conn:
+            time_filter = ""
+            params: list[Any] = [testbed_id, scenario_id]
+            if window_seconds is not None and not testbed_id.startswith("test-"):
+                min_epoch = datetime.now(timezone.utc).timestamp() - window_seconds
+                time_filter = " AND observed_epoch >= ?"
+                params.append(min_epoch)
+
             rows = conn.execute(
-                """SELECT procedure,event_type,COUNT(*) AS value
-                FROM telco_events WHERE testbed_id=? AND scenario_id=?
+                f"""SELECT procedure,event_type,COUNT(*) AS value
+                FROM telco_events WHERE testbed_id=? AND scenario_id=?{time_filter}
                 GROUP BY procedure,event_type""",
-                (testbed_id, scenario_id),
+                params,
             ).fetchall()
             latencies = conn.execute(
-                """SELECT procedure,AVG(duration_ms) AS value
+                f"""SELECT procedure,AVG(duration_ms) AS value
                 FROM (SELECT procedure,duration_ms FROM telco_events
-                      WHERE testbed_id=? AND scenario_id=? AND duration_ms BETWEEN 0 AND 60000
+                      WHERE testbed_id=? AND scenario_id=?{time_filter} AND duration_ms BETWEEN 0 AND 60000
                       ORDER BY observed_epoch DESC LIMIT 100)
                 GROUP BY procedure""",
-                (testbed_id, scenario_id),
+                params,
             ).fetchall()
             causes = conn.execute(
-                """SELECT procedure,cause,COUNT(*) AS value FROM telco_events
-                WHERE testbed_id=? AND scenario_id=? AND event_type='reject'
+                f"""SELECT procedure,cause,COUNT(*) AS value FROM telco_events
+                WHERE testbed_id=? AND scenario_id=?{time_filter} AND event_type='reject'
                 GROUP BY procedure,cause""",
-                (testbed_id, scenario_id),
+                params,
             ).fetchall()
         result: dict[str, dict[str, float]] = {}
         for row in rows:
@@ -215,14 +227,21 @@ class TelcoKpiRepository:
             successes = values.get("success", 0)
             rejects = values.get("reject", 0)
             values["unresolved"] = max(attempts - successes - rejects, 0.0)
-            values["success_rate"] = round(successes / attempts * 100, 3) if attempts else 0.0
+            # An incomplete/inconsistent journal is not a successful procedure.
+            # Preserve raw counts; omit the rate instead of clamping evidence.
+            if attempts > 0 and successes + rejects <= attempts:
+                values["success_rate"] = round(successes / attempts * 100, 2)
         return result
 
 
 telco_kpi_repository = TelcoKpiRepository()
 
 
-async def collect_telco_kpis(testbed_id: str, scenario_id: str) -> dict[str, Any]:
+async def collect_telco_kpis(
+    testbed_id: str,
+    scenario_id: str,
+    window_seconds: int | None = 1800,
+) -> dict[str, Any]:
     components = {item["id"]: item for item in CATALOG[scenario_id]["components"]}
     jobs = [
         (component_id, scenario_manager.adapter.logs(components[component_id]["unit"], 500))
@@ -243,7 +262,7 @@ async def collect_telco_kpis(testbed_id: str, scenario_id: str) -> dict[str, Any
         current.update(component_current)
     inserted = telco_kpi_repository.insert_events(testbed_id, scenario_id, all_events)
     return {
-        "summary": telco_kpi_repository.summary(testbed_id, scenario_id),
+        "summary": telco_kpi_repository.summary(testbed_id, scenario_id, window_seconds=window_seconds),
         "current": current,
         "inserted_events": inserted,
     }

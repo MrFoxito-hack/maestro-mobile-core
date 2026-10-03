@@ -52,7 +52,6 @@ const FALLBACK_PROCEDURES: TraceOption[] = [
   { id: 'registration', label: 'Registration' },
   { id: 'authentication', label: '5G-AKA Authentication' },
   { id: 'pdu-session', label: 'PDU Session Establishment' },
-  { id: 'user-plane', label: 'Tráfico de usuario' },
 ]
 
 export function SubscriberTraceForm({
@@ -73,7 +72,6 @@ export function SubscriberTraceForm({
   const [proceduresTouched, setProceduresTouched] = useState(false)
   const [includeUserPlane, setIncludeUserPlane] = useState(true)
   const [includeSbi, setIncludeSbi] = useState(true)
-  const [autoTrigger, setAutoTrigger] = useState(true)
   const [duration, setDuration] = useState('60')
   const [maxMegabytes, setMaxMegabytes] = useState('50')
 
@@ -84,8 +82,9 @@ export function SubscriberTraceForm({
     enabled: identifierType === 'imsi' || identifierType === 'supi',
   })
 
-  const procedureOptions =
+  const procedureOptions = (
     subscriberCapabilities?.procedures?.map(optionFrom) ?? FALLBACK_PROCEDURES
+  ).filter((item) => item.id !== 'user-plane')
   const defaults =
     subscriberCapabilities?.default_procedures ??
     procedureOptions
@@ -104,17 +103,13 @@ export function SubscriberTraceForm({
   const maxDuration =
     capabilities?.quota?.max_duration_seconds ??
     capabilities?.limits?.max_duration_seconds ??
-    300
+    900
   const maxSize =
     capabilities?.quota?.max_megabytes ??
     capabilities?.limits?.max_megabytes ??
-    100
-  const durationOptions = [60, 120, 300].filter((value) => value <= maxDuration)
-  const sizeOptions = [25, 50, 100].filter((value) => value <= maxSize)
-  const autoTriggerAllowed =
-    subscriberCapabilities?.supports_auto_trigger !== false &&
-    capabilities?.quota?.auto_trigger_allowed !== false
-  const effectiveAutoTrigger = autoTriggerAllowed && autoTrigger
+    500
+  const durationOptions = [60, 120, 300, 600, 900].filter((value) => value <= maxDuration)
+  const sizeOptions = [25, 50, 100, 250, 500].filter((value) => value <= maxSize)
 
   const toggleProcedure = (id: string, checked: boolean) => {
     setProceduresTouched(true)
@@ -139,7 +134,7 @@ export function SubscriberTraceForm({
       procedures,
       include_user_plane: includeUserPlane,
       include_sbi: includeSbi,
-      auto_trigger: effectiveAutoTrigger,
+      auto_trigger: false,
       duration_seconds: Number(duration),
       max_megabytes: Number(maxMegabytes),
     })
@@ -308,24 +303,18 @@ export function SubscriberTraceForm({
               </p>
             )}
 
-            <div className='grid gap-3 sm:grid-cols-3'>
+            <div className='grid gap-3 sm:grid-cols-2'>
               <ToggleOption
-                label='Plano de usuario'
+                label='Plano de usuario (GTP-U / N3 / N6)'
                 checked={includeUserPlane}
                 disabled={subscriberCapabilities?.supports_user_plane === false}
                 onCheckedChange={setIncludeUserPlane}
               />
               <ToggleOption
-                label='Mensajes SBI'
+                label='Mensajes SBI (HTTP/2 REST)'
                 checked={includeSbi}
                 disabled={subscriberCapabilities?.supports_sbi === false}
                 onCheckedChange={setIncludeSbi}
-              />
-              <ToggleOption
-                label='Reiniciar UE al iniciar'
-                checked={effectiveAutoTrigger}
-                disabled={!autoTriggerAllowed}
-                onCheckedChange={setAutoTrigger}
               />
             </div>
           </div>
@@ -369,9 +358,7 @@ export function SubscriberTraceForm({
 
       <div className='flex flex-wrap items-center justify-end gap-3 border-t bg-muted/20 px-5 py-3'>
         <p className='mr-auto text-xs text-muted-foreground'>
-          {effectiveAutoTrigger
-            ? 'Se reiniciará el UE al iniciar la captura.'
-            : 'Inicio del procedimiento: manual.'}
+          Captura pasiva de señalización en tiempo real.
         </p>
         {!canCreate && (
           <p className='mr-auto text-xs text-muted-foreground'>

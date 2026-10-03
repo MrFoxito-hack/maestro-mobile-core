@@ -1,0 +1,26 @@
+{
+  "execution": {
+    "id": "a1d2ec58803f4de089f2ac716ebaf8f6",
+    "campaign_id": "d89da0699a084f609fd968ed37d1824e",
+    "assignment_id": "7d8f60878fa640d1a812b9395b4c83fc",
+    "owner": "laboratory-validator",
+    "testbed": "isolated-acceptance",
+    "mode": "real",
+    "status": "failed",
+    "cursor": 2,
+    "cancel_requested": 0,
+    "error_code": "real_actuator_not_accepted",
+    "created_at": "2026-09-30T09:06:09.224535+00:00",
+    "updated_at": "2026-09-30T09:06:11.343160+00:00",
+    "finished_at": "2026-09-30T09:06:11.343160+00:00",
+    "execution_status": "failed",
+    "source": "live_campaign",
+    "network_measurements": false,
+    "metrics": null,
+    "validity_status": "inconclusive",
+    "hypothesis_outcome": "not_evaluated",
+    "recovery_verified": true
+  },
+  "core_mutation_attempted": false,
+  "production_queue_used": false
+}

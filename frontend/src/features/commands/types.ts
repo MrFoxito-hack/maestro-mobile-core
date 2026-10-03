@@ -13,6 +13,9 @@ export type OperationParameter = {
   options?: ParameterOption[]
   minimum?: number
   maximum?: number
+  integer?: boolean
+  pattern?: string
+  secret?: boolean
 }
 
 export type OperationDefinition = {
@@ -53,6 +56,7 @@ export type OperationExecutePayload = {
   component_id: string
   operation_id: string
   parameters: Record<string, unknown>
+  original_command?: string
 }
 
 export type OperationResult = {

@@ -1,0 +1,282 @@
+{
+  "created_at": "2026-09-30T09:15:39.463175+00:00",
+  "scope": "delivery_04_current_source_snapshot_including_inherited_work",
+  "deployment": false,
+  "files": [
+    {
+      "path": "backend/app/api/v1/endpoints/laboratory.py",
+      "bytes": 7226,
+      "sha256": "ca50fdc5f4a669188dee94db81a40b32b887415be80bccddcb79921f5ab58f7d"
+    },
+    {
+      "path": "backend/app/laboratory/__init__.py",
+      "bytes": 78,
+      "sha256": "77b9027ea607b9b6e49125a0e8dab270fe7bec55fc7438bd84e5b6710116eaa5"
+    },
+    {
+      "path": "backend/app/laboratory/acceptance.py",
+      "bytes": 916,
+      "sha256": "978cde21e76e77781e70366a4f94084c3ebf1bb9c24f8bfa17dc3f69f33dc990"
+    },
+    {
+      "path": "backend/app/laboratory/adapters.py",
+      "bytes": 2411,
+      "sha256": "c2df5164ab6c3409601917ba7de96d10ee07f8acf1edc4ca7777a4f9f3220951"
+    },
+    {
+      "path": "backend/app/laboratory/analysis.py",
+      "bytes": 3624,
+      "sha256": "ae96ee3794ecd733db8858d35fcb38dff4861f2d4bf0e3a94effbaa651ebf57d"
+    },
+    {
+      "path": "backend/app/laboratory/analyze_export.py",
+      "bytes": 3504,
+      "sha256": "ddf00ffc6ab9aa2a37c9fd872f90dcfbce4acb5c5a512835b540334e97d7f298"
+    },
+    {
+      "path": "backend/app/laboratory/capabilities.py",
+      "bytes": 2069,
+      "sha256": "fd997fb8c34ce903b7c2d06a348515667ae604721fd86820f753ff22bdba2d33"
+    },
+    {
+      "path": "backend/app/laboratory/commissioning.py",
+      "bytes": 6411,
+      "sha256": "00b29fb7295386a839b5b192af9fe8758b562fb9e7f9bc0e0ccbf30e3acd53a3"
+    },
+    {
+      "path": "backend/app/laboratory/evidence_validation.py",
+      "bytes": 757,
+      "sha256": "78089b02043ad7484870c785b98c6eedcbf719c739fb9d5ce4f72cf6776a4dbe"
+    },
+    {
+      "path": "backend/app/laboratory/import_archive.py",
+      "bytes": 5092,
+      "sha256": "2d23cf6f501cde77a4db6cce6eb43aa8aeab330f4fc0112bf7951bc31a85c00c"
+    },
+    {
+      "path": "backend/app/laboratory/live.py",
+      "bytes": 10567,
+      "sha256": "85777eaed2769f34210bab5deee6e7ed0da19d65eb786f6528da50d89d4f4ebd"
+    },
+    {
+      "path": "backend/app/laboratory/measurements.py",
+      "bytes": 7336,
+      "sha256": "b5580194993837c518a8e30740ee87cea3710800e782aa5b10f76632e67d30d7"
+    },
+    {
+      "path": "backend/app/laboratory/migrations.py",
+      "bytes": 6910,
+      "sha256": "dc9898e3d1e7083772c0f0d1083d84f5b366270cef139e4c4c8320803fa60bcc"
+    },
+    {
+      "path": "backend/app/laboratory/planner.py",
+      "bytes": 3330,
+      "sha256": "36c2077084fceabf1610ed7609dbc614e75483a002560df754f8ca1a9dbc2659"
+    },
+    {
+      "path": "backend/app/laboratory/player_observation.py",
+      "bytes": 1567,
+      "sha256": "107f1f74eb375819e67b21249d6be75b8e34354a5b2f71c4fc10269e863b2176"
+    },
+    {
+      "path": "backend/app/laboratory/policy_observer.py",
+      "bytes": 4402,
+      "sha256": "1295e3075ba013b599e20a69c3301d37f64119db11ecf1e563cf259a9e89bbf4"
+    },
+    {
+      "path": "backend/app/laboratory/preflight.py",
+      "bytes": 3326,
+      "sha256": "1900ea4ff271974fbe965b981302692f2c732536d364e7f59ef69e3be5a942f8"
+    },
+    {
+      "path": "backend/app/laboratory/qoe_adapter.py",
+      "bytes": 22285,
+      "sha256": "5902509e87b916fb91bfed5d5b4953d1ef410752222d19fd7cb69301d75aabb4"
+    },
+    {
+      "path": "backend/app/laboratory/qoe_metrics.py",
+      "bytes": 3443,
+      "sha256": "8dc09e4f4b42ed44aa9af6b665e01e957da3a900bedeb26680dfac2a256ef377"
+    },
+    {
+      "path": "backend/app/laboratory/qoe_session.py",
+      "bytes": 17325,
+      "sha256": "25ac4636842a2769d15a28f10eef5265c3de18fe84b2ef2dc90abfe70ee7ccb1"
+    },
+    {
+      "path": "backend/app/laboratory/qoe_transport.py",
+      "bytes": 3856,
+      "sha256": "a26b15a33a9e9e66f09acb047055e3d0aaf84edf3ef63d67caed23b9c007e1f8"
+    },
+    {
+      "path": "backend/app/laboratory/real_readiness.py",
+      "bytes": 5951,
+      "sha256": "04f98806ae9bebe1f35d64d0e46626646984e8b238e53142827dff61ac8a1567"
+    },
+    {
+      "path": "backend/app/laboratory/receiver_probe.py",
+      "bytes": 6858,
+      "sha256": "44b552bf9a71268330718ba5142a42924d7f5e190767e69b67dd47a67d31061c"
+    },
+    {
+      "path": "backend/app/laboratory/remote_probe_guard.py",
+      "bytes": 6167,
+      "sha256": "6c54745293dcd08921ea23e6a825899aebf10d80d1c648cf2f096db18df72b33"
+    },
+    {
+      "path": "backend/app/laboratory/repository.py",
+      "bytes": 9709,
+      "sha256": "98fac91fc267eddfa01d411444646d3136e8eebaaa0a3d67743f0bb5bac07339"
+    },
+    {
+      "path": "backend/app/laboratory/research.py",
+      "bytes": 14185,
+      "sha256": "1e8b855e1f6b16726defe441d95ab726180c2a0d7fff6db2c7b1228a6d9f8b33"
+    },
+    {
+      "path": "backend/app/laboratory/runtime.py",
+      "bytes": 24914,
+      "sha256": "259eaed4d9907a04f5d361cdac7275617ec239fce8792817f74aed6c9b618327"
+    },
+    {
+      "path": "backend/app/laboratory/schemas.py",
+      "bytes": 3983,
+      "sha256": "6cb57f689be03a36f6754e77df03c5df995a9c58ada3a41a88777084e713bd7e"
+    },
+    {
+      "path": "backend/app/laboratory/storage.py",
+      "bytes": 419,
+      "sha256": "d164dbb56391c2e747a465eb686d422103c203a96985487d515147547ed47c99"
+    },
+    {
+      "path": "backend/app/laboratory/worker.py",
+      "bytes": 6585,
+      "sha256": "d12246cfe4e81f53ddf80a7a69302e9c9f89532f37edd8695ce129eedfab0e4c"
+    },
+    {
+      "path": "backend/app/services/trace_analysis.py",
+      "bytes": 32216,
+      "sha256": "f84d4fae45bf36ca3132017058f0db79671202ffacb32362e4ee6c2f70309c72"
+    },
+    {
+      "path": "backend/tests/test_api.py",
+      "bytes": 24018,
+      "sha256": "fd878ef832f8eb453f482263fe68e655d3df874ed75b31e158f3b1f5b811381f"
+    },
+    {
+      "path": "backend/tests/test_dual_smf.py",
+      "bytes": 2002,
+      "sha256": "f63d77500fc9819c68cf9d5a5d02cf7f406c9f3c76ff1109cf46bd11abc1f12b"
+    },
+    {
+      "path": "backend/tests/test_laboratory.py",
+      "bytes": 8566,
+      "sha256": "ccafe2c7c92c65c98f93f8bbac0acc3c77817fa2dfa1829235d3c4f2ed3f7151"
+    },
+    {
+      "path": "backend/tests/test_laboratory_commissioning.py",
+      "bytes": 9086,
+      "sha256": "a0b8a7b231bb031f33b63e3e281722545daba63fd4430b385845fa5de34b5d51"
+    },
+    {
+      "path": "backend/tests/test_laboratory_measurements.py",
+      "bytes": 8071,
+      "sha256": "3798c59bc4702d4b5b817df7e67971c303f0591f684ab6ea09ae963830e37be4"
+    },
+    {
+      "path": "backend/tests/test_laboratory_policy_observer.py",
+      "bytes": 2168,
+      "sha256": "5f3105991372d53f0c929a3a65439a70080599aebf1063e74156103104adbbb6"
+    },
+    {
+      "path": "backend/tests/test_laboratory_preflight.py",
+      "bytes": 1811,
+      "sha256": "49148627a652ea49e6001467cceefa18ccd25c57c82b61c0a8ef35f2f3859ffe"
+    },
+    {
+      "path": "backend/tests/test_laboratory_qoe_metrics.py",
+      "bytes": 2773,
+      "sha256": "549666f41d86969319185dc58f53feb5138ec4c28b8af080cddf304473b9869a"
+    },
+    {
+      "path": "backend/tests/test_laboratory_real.py",
+      "bytes": 12808,
+      "sha256": "725f95726056a9d7bf4c577ac56794650b7518e38be42cfec0592ced2db1cb52"
+    },
+    {
+      "path": "backend/tests/test_laboratory_receiver.py",
+      "bytes": 4462,
+      "sha256": "e2ae76252f69a24c3f0949715cfa8c2b51880d9d3a204587f40cd1ebc8e1ac0a"
+    },
+    {
+      "path": "backend/tests/test_laboratory_research.py",
+      "bytes": 9317,
+      "sha256": "f3d21445805b05cf4e70a21c35bdfe3d208d79f8aecc0501210a91e6f4edf7c2"
+    },
+    {
+      "path": "backend/tests/test_laboratory_runtime.py",
+      "bytes": 22749,
+      "sha256": "6bcc6bab86713d26a381f88007467ac23ca355296af9c1ca565623166b96f23c"
+    },
+    {
+      "path": "docs/laboratory/DICCIONARIO_MEDICIONES.md",
+      "bytes": 5517,
+      "sha256": "9f38d8d5b770c18370e6257302de25d8079856331a28002b0475188558c6f87f"
+    },
+    {
+      "path": "docs/laboratory/ENTREGA_04_EVIDENCIA_Y_ADMISION.md",
+      "bytes": 9234,
+      "sha256": "0cda6db5e580d4037a4259e045d7c0cbca3b7e7682ad86a101000e4d2f1cc3d3"
+    },
+    {
+      "path": "docs/PLAN_LABORATORIO_INVESTIGACION_5G.md",
+      "bytes": 55883,
+      "sha256": "4073cf8fe7386fe23fa4944906978396231b45c0a140474644891b9d8849094f"
+    },
+    {
+      "path": "frontend/src/features/laboratory/index.test.tsx",
+      "bytes": 15449,
+      "sha256": "21281c4a2fab8f3ae84482e36bcf809c3eb3011751f724cb2c8d3b24cbdfe8f8"
+    },
+    {
+      "path": "frontend/src/features/laboratory/index.tsx",
+      "bytes": 18560,
+      "sha256": "7ab85730c85f5e8ac3b36a4f8a00fd665e0e25cf33eebabf4fbafd0f06de34f1"
+    },
+    {
+      "path": "frontend/src/features/laboratory/requests.ts",
+      "bytes": 655,
+      "sha256": "7b8d7b1fbcac4a0cde64716e75094ab80d2dc5dbe643ca8117775486da442829"
+    },
+    {
+      "path": "frontend/src/features/laboratory/research.test.tsx",
+      "bytes": 6252,
+      "sha256": "71f49afcdf606d2dc1205708d962c706cad69f70e8766ce21ef5f48d99de87a5"
+    },
+    {
+      "path": "frontend/src/features/laboratory/research.tsx",
+      "bytes": 15673,
+      "sha256": "ca4f22def1d039805ecc6af0cb8d3b9b8f66ee09a57331285cb70c57a0a7fd46"
+    },
+    {
+      "path": "frontend/src/features/laboratory/runtime.tsx",
+      "bytes": 19730,
+      "sha256": "3bbf4034a4f03561b11041ed2b0c7f4026d40cfd5cd1a4d0476b96a9edc687ed"
+    },
+    {
+      "path": "infra/check_laboratory_native.py",
+      "bytes": 2409,
+      "sha256": "8eeb6ea255291c4fd1821c9d9fa46e65ffe253b9f8b43180bfe8db29c7b7eff9"
+    },
+    {
+      "path": "nwdaf/native/mml-control.inc",
+      "bytes": 9734,
+      "sha256": "0eea0f28928f3d2cc395d933e55495177ff8f27405a5232d2b3f90b55e90f4a8"
+    },
+    {
+      "path": "nwdaf/native/nwdaf-handler.c",
+      "bytes": 16986,
+      "sha256": "287396f978987449c9b886a31d3eb299e057e50b7f73c7be949a7a303d41846d"
+    }
+  ]
+}

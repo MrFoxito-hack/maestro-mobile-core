@@ -1,4 +1,6 @@
+import asyncio
 import json
+import math
 import re
 import time
 import uuid
@@ -11,6 +13,7 @@ from app.db import connection, transaction
 from app.models import Role, UserPublic
 from app.services.execution import ExecutionError
 from app.services.scenarios import CATALOG, scenario_manager
+from app.services.operation_mutations import mutation_definitions, execute_mutation
 
 
 class OperationError(RuntimeError):
@@ -45,7 +48,7 @@ class OperationDefinition:
             "description": self.description,
             "category": self.category,
             "mutating": self.mutating,
-            "allowed": not self.mutating or role in {Role.admin, Role.teacher},
+            "allowed": (not self.mutating and self.executor != "charging" and not self.id.startswith(("chf.", "nwdaf."))) or role in {Role.admin, Role.teacher},
             "parameters": parameters,
         }
 
@@ -93,14 +96,14 @@ COMMON_OPERATIONS = [
         "system.status",
         "Consultar estado",
         "Obtiene el estado real de la unidad systemd asociada.",
-        "Estado y diagnóstico",
+        "O&M Infraestructura",
         "status",
     ),
     OperationDefinition(
         "system.logs",
         "Ver logs recientes",
         "Consulta journalctl sin abrir una terminal en el nodo.",
-        "Estado y diagnóstico",
+        "O&M Infraestructura",
         "logs",
         parameters=[LINES_PARAMETER],
     ),
@@ -108,14 +111,14 @@ COMMON_OPERATIONS = [
         "network.endpoints",
         "Verificar interfaces y puertos",
         "Compara los endpoints declarados para la NF con los sockets del host.",
-        "Estado y diagnóstico",
+        "O&M Infraestructura",
         "endpoints",
     ),
     OperationDefinition(
         "system.restart",
         "Reiniciar función de red",
         "Reinicia únicamente la unidad declarada en el inventario y verifica su estado final.",
-        "Acciones controladas",
+        "O&M Infraestructura",
         "restart",
         mutating=True,
     ),
@@ -180,6 +183,15 @@ UE_OPERATIONS = [
         "deregister",
         mutating=True,
     ),
+    OperationDefinition(
+        "ue.attach",
+        "Conectar y registrar UE (Attach)",
+        "Fuerza el registro 5G del UE y negociación de sesión PDU, garantizando estado NORMAL-SERVICE y túnel de datos activo.",
+        "Acciones controladas",
+        "ue-recover",
+        mutating=True,
+        parameters=[NODE_PARAMETER],
+    ),
 ]
 
 INFO_OPERATIONS = {
@@ -190,22 +202,27 @@ INFO_OPERATIONS = {
     "smf": [
         OperationDefinition("smf.pdu-info", "Sesiones PDU", "SUPI, DNN, dirección, S-NSSAI, QoS y estado de sesión.", "Open5GS InfoAPI", "info", endpoint="pdu-info"),
     ],
-    "mme": [
-        OperationDefinition("mme.ue-info", "UE LTE conectados", "Contextos EPS activos en el MME.", "Open5GS InfoAPI", "info", endpoint="ue-info"),
-        OperationDefinition("mme.enb-info", "eNodeB conectados", "Asociaciones S1, PLMN, TAC y UE por eNodeB.", "Open5GS InfoAPI", "info", endpoint="enb-info"),
+    "smf2": [
+        OperationDefinition("smf2.pdu-info", "Sesiones PDU Corporate", "Sesiones de SMF-02: SUPI, DNN, dirección, S-NSSAI y QoS.", "Open5GS InfoAPI", "info", endpoint="pdu-info"),
     ],
 }
 
 
 def operations_for(component: dict) -> list[OperationDefinition]:
-    operations = list(COMMON_OPERATIONS)
-    if component["unit"].startswith("open5gs-") or component["unit"].startswith("ueransim-"):
+    operations = [OperationDefinition(**item) for item in mutation_definitions(component["id"])]
+    if component["id"] == "chf":
+        for kind, label in (("accounts", "Cuentas de cobro"), ("sessions", "Sesiones de cobro"), ("cdrs", "CDR educativos")):
+            operations.append(OperationDefinition(
+                "chf." + kind, label,
+                "Consulta los primeros 25 registros reales del CHF; listado completo en Tarificación 5G.",
+                "Tarificación (solo lectura)", "charging", endpoint=kind))
+    elif component["unit"].startswith("open5gs-") or component["unit"].startswith("ueransim-"):
         operations.append(
             OperationDefinition(
                 "software.version",
                 "Consultar versión",
                 "Versión del binario correspondiente a la función de red.",
-                "Estado y diagnóstico",
+                "O&M Infraestructura",
                 "version",
             )
         )
@@ -214,7 +231,8 @@ def operations_for(component: dict) -> list[OperationDefinition]:
         operations.extend(GNB_OPERATIONS)
     if component["id"] == "ue" and component["unit"].startswith("ueransim-"):
         operations.extend(UE_OPERATIONS)
-    return operations
+    operations.extend(COMMON_OPERATIONS)
+    return sorted(operations, key=lambda item: item.category == "O&M Infraestructura")
 
 
 def _validate_parameters(definition: OperationDefinition, raw: dict[str, Any]) -> dict[str, Any]:
@@ -233,13 +251,22 @@ def _validate_parameters(definition: OperationDefinition, raw: dict[str, Any]) -
             if isinstance(value, bool):
                 raise OperationError(f"{schema['label']} debe ser numérico")
             try:
-                value = int(value)
+                value = float(value)
             except (TypeError, ValueError) as exc:
                 raise OperationError(f"{schema['label']} debe ser numérico") from exc
-            if value < schema.get("minimum", value) or value > schema.get("maximum", value):
+            if not math.isfinite(value) or value < schema.get("minimum", value) or value > schema.get("maximum", value):
                 raise OperationError(f"{schema['label']} está fuera del rango permitido")
+            if schema.get("integer", True):
+                if not value.is_integer():
+                    raise OperationError(f"{schema['label']} debe ser entero")
+                value = int(value)
+        elif schema["type"] == "text":
+            if not isinstance(value, str):
+                raise OperationError(f"{schema['label']} debe ser texto")
+            if schema.get("pattern") and not re.fullmatch(schema["pattern"], value):
+                raise OperationError(f"Formato inválido para {schema['label']}")
         options = schema.get("options")
-        if options and value not in {item["value"] for item in options}:
+        if options and not any(value == item["value"] for item in options):
             raise OperationError(f"Valor no permitido para {schema['label']}")
         if parameter_id == "node_name" and not re.fullmatch(r"[A-Za-z0-9._:-]+", str(value)):
             raise OperationError("Nombre de instancia UERANSIM inválido")
@@ -250,7 +277,7 @@ def _validate_parameters(definition: OperationDefinition, raw: dict[str, Any]) -
 def _safe_value(value: Any) -> Any:
     if isinstance(value, dict):
         return {
-            key: "[REDACTED]" if key.lower() in {"key", "opc", "op", "password", "secret"} else _safe_value(item)
+            key: "[REDACTED]" if key.lower() in {"k", "key", "opc", "op", "password", "secret"} else _safe_value(item)
             for key, item in value.items()
         }
     if isinstance(value, list):
@@ -271,6 +298,77 @@ def _safe_output(output: str) -> str:
 
 
 class OperationsService:
+    async def _recover_ue(self, node_name: str | None = None) -> tuple[str, dict]:
+        gnb_status = ""
+        try:
+            gnb_res = await scenario_manager.adapter.native_operation("ueransim-cli", "gnb", {"command": "status"})
+            gnb_status = gnb_res.get("output", "")
+        except Exception:
+            pass
+        if "true" not in gnb_status:
+            try:
+                await scenario_manager.adapter.start_service("ueransim-gnb")
+                for _ in range(8):
+                    await asyncio.sleep(1)
+                    st = await scenario_manager.adapter.native_operation("ueransim-cli", "gnb", {"command": "status"})
+                    if "true" in st.get("output", ""):
+                        break
+                await asyncio.sleep(2)
+            except Exception:
+                pass
+
+        await scenario_manager.adapter.stop_service("ueransim-ue")
+        await asyncio.sleep(1)
+        await scenario_manager.adapter.start_service("ueransim-ue")
+
+        status_out = ""
+        node_arg = {"node_name": node_name} if node_name else {}
+        for attempt in range(12):
+            await asyncio.sleep(1)
+            res = await scenario_manager.adapter.native_operation("ueransim-cli", "ue", {**node_arg, "command": "status"})
+            status_out = res.get("output", "")
+            if "RM-REGISTERED" in status_out and "NORMAL-SERVICE" in status_out:
+                break
+            if "LIMITED-SERVICE" in status_out and attempt >= 2:
+                await scenario_manager.adapter.stop_service("ueransim-ue")
+                await asyncio.sleep(1)
+                await scenario_manager.adapter.start_service("ueransim-ue")
+
+        ps_out = ""
+        try:
+            ps_res = await scenario_manager.adapter.native_operation("ueransim-cli", "ue", {**node_arg, "command": "ps-list"})
+            ps_out = ps_res.get("output", "")
+        except Exception:
+            pass
+
+        registered = "RM-REGISTERED" in status_out and "NORMAL-SERVICE" in status_out
+        pdu_active = "state: PS-ACTIVE" in ps_out or "PS-ACTIVE" in ps_out
+
+        lines = [
+            "Reconexión y Registro 5G (Attach) Completado",
+            "---------------------------------------------",
+            f"Estado 5G MM         : {'MM-REGISTERED / NORMAL-SERVICE' if registered else 'DESREGISTRADO'}",
+            f"Estado Conexión (CM) : {'CM-CONNECTED' if 'CM-CONNECTED' in status_out else 'CM-IDLE'}",
+            f"Estado Registro (RM) : {'RM-REGISTERED' if 'RM-REGISTERED' in status_out else 'RM-DEREGISTERED'}",
+            f"Sesión PDU           : {'ACTIVA' if pdu_active else 'PENDIENTE'}",
+        ]
+        if status_out.strip():
+            lines.append("")
+            lines.append("Detalle de Registro (UERANSIM):")
+            lines.append(status_out.strip())
+        if ps_out.strip():
+            lines.append("")
+            lines.append("Detalle de Sesión PDU:")
+            lines.append(ps_out.strip())
+
+        return "\n".join(lines), {
+            "registered": registered,
+            "pdu_active": pdu_active,
+            "status": status_out,
+            "ps_list": ps_out,
+            "service": "ueransim-ue",
+        }
+
     async def catalog(self, scenario_id: str, user: UserPublic) -> dict:
         if scenario_id not in CATALOG:
             raise KeyError(scenario_id)
@@ -341,7 +439,7 @@ class OperationsService:
         )
         if not definition:
             raise KeyError("operation")
-        if definition.mutating and user.role not in {Role.admin, Role.teacher}:
+        if (definition.mutating or definition.executor == "charging" or definition.id.startswith(("chf.", "nwdaf."))) and user.role not in {Role.admin, Role.teacher}:
             raise PermissionError("Esta operación requiere rol docente o administrador")
 
         parameters = _validate_parameters(definition, raw_parameters)
@@ -354,7 +452,10 @@ class OperationsService:
         data: Any = None
         error = None
         try:
-            if definition.executor == "status":
+            if definition.executor == "mutation":
+                data, source = await execute_mutation(operation_id, parameters, run_id)
+                output = json.dumps(_safe_value(data), ensure_ascii=False, indent=2)
+            elif definition.executor == "status":
                 state = await scenario_manager.adapter.service_status(component["unit"])
                 output = f"{component['unit']}: {state}"
                 data = {"unit": component["unit"], "state": state}
@@ -384,19 +485,46 @@ class OperationsService:
                         for item in checks
                     )
                 source = "ss/ip"
+            elif definition.executor == "ue-recover":
+                output, data = await self._recover_ue(parameters.get("node_name"))
+                source = "ueransim-auto-recovery"
             elif definition.executor == "restart":
-                await scenario_manager.adapter.stop_service(component["unit"])
-                await scenario_manager.adapter.start_service(component["unit"])
-                state = await scenario_manager.adapter.service_status(component["unit"])
-                output = f"Reinicio completado. {component['unit']}: {state}"
-                data = {"unit": component["unit"], "state": state}
-                source = "systemd"
+                if component["id"] == "ue" or component["unit"] == "ueransim-ue":
+                    output, data = await self._recover_ue(parameters.get("node_name"))
+                    source = "ueransim-auto-recovery"
+                elif component["id"] == "gnb" or component["unit"] == "ueransim-gnb":
+                    await scenario_manager.adapter.stop_service("ueransim-gnb")
+                    await asyncio.sleep(0.5)
+                    await scenario_manager.adapter.start_service("ueransim-gnb")
+                    for _ in range(8):
+                        await asyncio.sleep(1)
+                        st = await scenario_manager.adapter.native_operation("ueransim-cli", "gnb", {"command": "status"})
+                        if "true" in st.get("output", ""):
+                            break
+                    await asyncio.sleep(2)
+                    await self._recover_ue()
+                    state = await scenario_manager.adapter.service_status(component["unit"])
+                    output = f"Reinicio completado. {component['unit']}: {state}\nUE sincronizado automáticamente en NORMAL-SERVICE."
+                    data = {"unit": component["unit"], "state": state}
+                    source = "systemd"
+                else:
+                    await scenario_manager.adapter.stop_service(component["unit"])
+                    await scenario_manager.adapter.start_service(component["unit"])
+                    state = await scenario_manager.adapter.service_status(component["unit"])
+                    output = f"Reinicio completado. {component['unit']}: {state}"
+                    data = {"unit": component["unit"], "state": state}
+                    source = "systemd"
             elif definition.executor == "version":
                 result = await scenario_manager.adapter.native_operation(
                     "software-version", component_id, {}
                 )
                 output, data = result.get("output", ""), result.get("data")
                 source = "native-cli"
+            elif definition.executor == "charging":
+                from app.services.charging import records
+                data = await asyncio.to_thread(records, definition.endpoint, None, 25, 0)
+                output = json.dumps(data, ensure_ascii=False, indent=2)
+                source = "chf-management-api"
             elif definition.executor == "info":
                 result = await scenario_manager.adapter.native_operation(
                     "open5gs-info", component_id, {"endpoint": definition.endpoint}
@@ -415,8 +543,8 @@ class OperationsService:
                 raise OperationError("Ejecutor no reconocido")
         except Exception as exc:
             status = "failed"
-            error = str(exc)
-            output = str(exc)
+            error = _safe_output(str(getattr(exc, "detail", str(exc))))
+            output = error
 
         completed = datetime.now(timezone.utc)
         duration_ms = max(0, round((time.perf_counter() - started_clock) * 1000))

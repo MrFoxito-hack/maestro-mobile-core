@@ -3,10 +3,12 @@ import { render, type RenderResult } from 'vitest-browser-react'
 import { type Locator, userEvent } from 'vitest/browser'
 import { UserAuthForm } from './user-auth-form'
 
-const navigate = vi.fn()
-const setUser = vi.fn()
-const setAccessToken = vi.fn()
-const post = vi.fn()
+const { navigate, setUser, setAccessToken, post } = vi.hoisted(() => ({
+  navigate: vi.fn(),
+  setUser: vi.fn(),
+  setAccessToken: vi.fn(),
+  post: vi.fn(),
+}))
 
 vi.mock('@/stores/auth-store', () => ({
   useAuthStore: () => ({ auth: { setUser, setAccessToken } }),

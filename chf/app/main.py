@@ -15,7 +15,7 @@ from app.body_limit import BodyLimitMiddleware
 from app.config import Settings, get_settings
 from app.errors import ChargingError
 from app.metrics import RequestMetrics
-from app.models import AccountUpsert, ChargingDataRequest, ChargingDataResponse, ReconcileRequest
+from app.models import AccountUpsert, ChargingDataRequest, ChargingDataResponse, ReconcileRequest, TopupRequest
 from app.repository import ChargingRepository
 from app.service import ChargingService
 
@@ -85,6 +85,13 @@ def create_app(settings: Settings | None = None, *, management=False):
                 return nf.lower()
         raise ChargingError(403, "FORBIDDEN", "Invalid NF credential")
 
+    def require_reader(authorization: str | None = Header(default=None)):
+        token = bearer(authorization)
+        for configured in (settings.reader_token, settings.admin_token):
+            if configured and secrets.compare_digest(token.encode(), configured.get_secret_value().encode()):
+                return "reader-api"
+        raise ChargingError(403, "FORBIDDEN", "Invalid read credential")
+
     def match_consumer(payload, principal):
         if principal and str(payload.nfConsumerIdentification.nFName) != principal:
             raise ChargingError(403, "FORBIDDEN", "Credential is bound to a different NF instance")
@@ -144,20 +151,24 @@ def create_app(settings: Settings | None = None, *, management=False):
             stale = (datetime.now(timezone.utc) - timedelta(seconds=settings.orphan_grace_seconds)).isoformat()
             return PlainTextResponse(metrics.render(repository, stale), media_type="text/plain; version=0.0.4")
     else:
+        @application.post('/admin/v1/accounts/{supi}/topup')
+        def account_topup(supi: str, payload: TopupRequest, actor=Depends(require_admin)):
+            return repository.topup(supi, payload.amountBytes, payload.requestId, actor)
+
         @application.put("/admin/v1/accounts/{supi}")
         def account_put(supi: str, payload: AccountUpsert, actor=Depends(require_admin)):
             if payload.supi != supi:
                 raise ChargingError(409, "CONTEXT_MISMATCH", "path and payload SUPI differ")
             return repository.upsert_account(supi, payload.quotaBytes, payload.enabled, actor)
 
-        @application.get("/admin/v1/accounts/{supi}", dependencies=[Depends(require_admin)])
+        @application.get("/admin/v1/accounts/{supi}", dependencies=[Depends(require_reader)])
         def account_get(supi: str):
             result = repository.get_account(supi)
             if not result:
                 raise ChargingError(404, "USER_UNKNOWN", "account not found")
             return result
 
-        @application.get("/admin/v1/{kind}", dependencies=[Depends(require_admin)])
+        @application.get("/admin/v1/{kind}", dependencies=[Depends(require_reader)])
         def list_records(kind: str, supi: str | None = None,
                          limit: int = Query(default=100, ge=1, le=500),
                          offset: int = Query(default=0, ge=0)):

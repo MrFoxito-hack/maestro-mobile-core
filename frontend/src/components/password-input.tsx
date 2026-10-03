@@ -19,10 +19,10 @@ export function PasswordInput({
   const [showPassword, setShowPassword] = React.useState(false)
 
   return (
-    <div className={cn('relative rounded-md', className)}>
+    <div className={cn('relative w-full rounded-md', className)}>
       <input
         type={showPassword ? 'text' : 'password'}
-        className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50'
+        className='flex h-10 w-full rounded-lg border border-zinc-800 bg-zinc-950/70 px-3 py-2 pr-10 text-sm text-white shadow-xs transition-colors placeholder:text-zinc-600 focus-visible:ring-1 focus-visible:ring-zinc-600 focus-visible:border-zinc-500 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50'
         ref={ref}
         disabled={disabled}
         {...props}
@@ -32,10 +32,10 @@ export function PasswordInput({
         size='icon'
         variant='ghost'
         disabled={disabled}
-        className='absolute inset-e-1 top-1/2 h-6 w-6 -translate-y-1/2 rounded-md text-muted-foreground'
+        className='absolute inset-e-1 top-1/2 h-7 w-7 -translate-y-1/2 rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 cursor-pointer'
         onClick={() => setShowPassword((prev) => !prev)}
       >
-        {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+        {showPassword ? <Eye size={16} /> : <EyeOff size={16} />}
         <span className='sr-only'>
           {showPassword ? 'Hide password' : 'Show password'}
         </span>

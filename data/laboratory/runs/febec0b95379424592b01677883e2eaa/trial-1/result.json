@@ -1,0 +1,3073 @@
+{
+  "run": "labqoe-febec0b953794245-r1",
+  "utc": "2026-09-30T14:27:27.402637+00:00",
+  "cases": [
+    {
+      "phase": "baseline",
+      "player_status": "PLAYED_TO_END"
+    }
+  ],
+  "observations": [
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47590.78,
+        "timestamp": 1790778457.8596473
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47592.26,
+        "timestamp": 1790778459.339244
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47592.26,
+        "timestamp": 1790778459.339244
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47593.22,
+        "timestamp": 1790778460.299484
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47593.22,
+        "timestamp": 1790778460.299484
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47594.2,
+        "timestamp": 1790778461.2798598
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47594.2,
+        "timestamp": 1790778461.2798598
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47595.13,
+        "timestamp": 1790778462.209562
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47595.13,
+        "timestamp": 1790778462.209562
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47596.07,
+        "timestamp": 1790778463.1501591
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47596.07,
+        "timestamp": 1790778463.1501591
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47597.02,
+        "timestamp": 1790778464.0999408
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47597.02,
+        "timestamp": 1790778464.0999408
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47598.0,
+        "timestamp": 1790778465.0782723
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47598.0,
+        "timestamp": 1790778465.0782723
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47598.95,
+        "timestamp": 1790778466.0305321
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47598.95,
+        "timestamp": 1790778466.0305321
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47599.92,
+        "timestamp": 1790778466.9978087
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47599.92,
+        "timestamp": 1790778466.9978087
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47601.02,
+        "timestamp": 1790778468.0982072
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47601.02,
+        "timestamp": 1790778468.0982072
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47602.37,
+        "timestamp": 1790778469.4507258
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47602.37,
+        "timestamp": 1790778469.4507258
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47603.33,
+        "timestamp": 1790778470.4113216
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47603.33,
+        "timestamp": 1790778470.4113216
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47604.32,
+        "timestamp": 1790778471.3966825
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47604.32,
+        "timestamp": 1790778471.3966825
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47605.74,
+        "timestamp": 1790778472.8144617
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47605.74,
+        "timestamp": 1790778472.8144617
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47606.92,
+        "timestamp": 1790778474.000626
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47606.92,
+        "timestamp": 1790778474.000626
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47607.9,
+        "timestamp": 1790778474.9772635
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47607.9,
+        "timestamp": 1790778474.9772635
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47609.65,
+        "timestamp": 1790778476.7248602
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47609.65,
+        "timestamp": 1790778476.7248602
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47610.67,
+        "timestamp": 1790778477.7450283
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47610.67,
+        "timestamp": 1790778477.7450283
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47611.67,
+        "timestamp": 1790778478.7456915
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47611.67,
+        "timestamp": 1790778478.7456915
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47612.6,
+        "timestamp": 1790778479.6788912
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47612.6,
+        "timestamp": 1790778479.6788912
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47613.54,
+        "timestamp": 1790778480.621165
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47613.54,
+        "timestamp": 1790778480.621165
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47614.53,
+        "timestamp": 1790778481.6047864
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47614.53,
+        "timestamp": 1790778481.6047864
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47615.47,
+        "timestamp": 1790778482.5435221
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47615.47,
+        "timestamp": 1790778482.5435221
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47616.38,
+        "timestamp": 1790778483.4614093
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47616.38,
+        "timestamp": 1790778483.4614093
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47617.32,
+        "timestamp": 1790778484.399546
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47617.32,
+        "timestamp": 1790778484.399546
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47618.26,
+        "timestamp": 1790778485.3350654
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47618.26,
+        "timestamp": 1790778485.3350654
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47619.56,
+        "timestamp": 1790778486.633528
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47619.56,
+        "timestamp": 1790778486.633528
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47620.82,
+        "timestamp": 1790778487.8984256
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47620.82,
+        "timestamp": 1790778487.8984256
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47621.78,
+        "timestamp": 1790778488.8614361
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47621.78,
+        "timestamp": 1790778488.8614361
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47622.79,
+        "timestamp": 1790778489.8653562
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47622.79,
+        "timestamp": 1790778489.8653562
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47624.13,
+        "timestamp": 1790778491.20987
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47624.13,
+        "timestamp": 1790778491.20987
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47625.24,
+        "timestamp": 1790778492.3207464
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47625.24,
+        "timestamp": 1790778492.3207464
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47626.19,
+        "timestamp": 1790778493.2649026
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47626.19,
+        "timestamp": 1790778493.2649026
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47627.51,
+        "timestamp": 1790778494.5833883
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819385,
+        "uptime": 47627.51,
+        "timestamp": 1790778494.5833883
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819550,
+        "uptime": 47629.12,
+        "timestamp": 1790778496.201794
+      },
+      "observed_bps": 819.875776397219
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 50819550,
+        "uptime": 47629.12,
+        "timestamp": 1790778496.201794
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 53739977,
+        "uptime": 47631.17,
+        "timestamp": 1790778498.2512414
+      },
+      "observed_bps": 11396788.292707197
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 53739977,
+        "uptime": 47631.17,
+        "timestamp": 1790778498.2512414
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 55711966,
+        "uptime": 47632.44,
+        "timestamp": 1790778499.5202982
+      },
+      "observed_bps": 12421977.952716053
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 55711966,
+        "uptime": 47632.44,
+        "timestamp": 1790778499.5202982
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 61445424,
+        "uptime": 47634.8,
+        "timestamp": 1790778501.8803804
+      },
+      "observed_bps": 19435450.847452834
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 61445424,
+        "uptime": 47634.8,
+        "timestamp": 1790778501.8803804
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 66730364,
+        "uptime": 47637.17,
+        "timestamp": 1790778504.243304
+      },
+      "observed_bps": 17839459.915646866
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 66730364,
+        "uptime": 47637.17,
+        "timestamp": 1790778504.243304
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 69228673,
+        "uptime": 47639.94,
+        "timestamp": 1790778507.0170562
+      },
+      "observed_bps": 7215332.851974946
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 69228673,
+        "uptime": 47639.94,
+        "timestamp": 1790778507.0170562
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 69828549,
+        "uptime": 47641.75,
+        "timestamp": 1790778508.823414
+      },
+      "observed_bps": 2651385.635362527
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 69828549,
+        "uptime": 47641.75,
+        "timestamp": 1790778508.823414
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 70122338,
+        "uptime": 47643.39,
+        "timestamp": 1790778510.4649668
+      },
+      "observed_bps": 1433117.0731712403
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 70122338,
+        "uptime": 47643.39,
+        "timestamp": 1790778510.4649668
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 70425433,
+        "uptime": 47644.8,
+        "timestamp": 1790778511.8805735
+      },
+      "observed_bps": 1719687.9432581519
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 70425433,
+        "uptime": 47644.8,
+        "timestamp": 1790778511.8805735
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 70575560,
+        "uptime": 47646.61,
+        "timestamp": 1790778513.684971
+      },
+      "observed_bps": 663544.7513820691
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 70575560,
+        "uptime": 47646.61,
+        "timestamp": 1790778513.684971
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 70717861,
+        "uptime": 47647.68,
+        "timestamp": 1790778514.75321
+      },
+      "observed_bps": 1063932.7102806633
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 70717861,
+        "uptime": 47647.68,
+        "timestamp": 1790778514.75321
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71018353,
+        "uptime": 47648.76,
+        "timestamp": 1790778515.8357735
+      },
+      "observed_bps": 2225866.666663068
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71018353,
+        "uptime": 47648.76,
+        "timestamp": 1790778515.8357735
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47649.7,
+        "timestamp": 1790778516.7814052
+      },
+      "observed_bps": 2516697.872353672
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47649.7,
+        "timestamp": 1790778516.7814052
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47651.52,
+        "timestamp": 1790778518.5934427
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47651.52,
+        "timestamp": 1790778518.5934427
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47652.63,
+        "timestamp": 1790778519.705193
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47652.63,
+        "timestamp": 1790778519.705193
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47653.63,
+        "timestamp": 1790778520.7104027
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47653.63,
+        "timestamp": 1790778520.7104027
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47654.6,
+        "timestamp": 1790778521.679304
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47654.6,
+        "timestamp": 1790778521.679304
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47655.76,
+        "timestamp": 1790778522.8378255
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47655.76,
+        "timestamp": 1790778522.8378255
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47656.78,
+        "timestamp": 1790778523.861777
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47656.78,
+        "timestamp": 1790778523.861777
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47657.75,
+        "timestamp": 1790778524.8289697
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47657.75,
+        "timestamp": 1790778524.8289697
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47658.67,
+        "timestamp": 1790778525.7445147
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47658.67,
+        "timestamp": 1790778525.7445147
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47659.87,
+        "timestamp": 1790778526.9423814
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47659.87,
+        "timestamp": 1790778526.9423814
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47660.88,
+        "timestamp": 1790778527.9557414
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47660.88,
+        "timestamp": 1790778527.9557414
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47661.89,
+        "timestamp": 1790778528.9693587
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47661.89,
+        "timestamp": 1790778528.9693587
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47662.83,
+        "timestamp": 1790778529.9116704
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47662.83,
+        "timestamp": 1790778529.9116704
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47663.77,
+        "timestamp": 1790778530.849225
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47663.77,
+        "timestamp": 1790778530.849225
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47665.04,
+        "timestamp": 1790778532.1174095
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47665.04,
+        "timestamp": 1790778532.1174095
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47666.87,
+        "timestamp": 1790778533.9431906
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "baseline",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47666.87,
+        "timestamp": 1790778533.9431906
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47669.35,
+        "timestamp": 1790778536.4273121
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "recovery",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47669.35,
+        "timestamp": 1790778536.4273121
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47670.4,
+        "timestamp": 1790778537.4792225
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "recovery",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47670.4,
+        "timestamp": 1790778537.4792225
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47671.39,
+        "timestamp": 1790778538.4629998
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "recovery",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47671.39,
+        "timestamp": 1790778538.4629998
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47672.79,
+        "timestamp": 1790778539.8707445
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "recovery",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47672.79,
+        "timestamp": 1790778539.8707445
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47673.77,
+        "timestamp": 1790778540.8471358
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "recovery",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47673.77,
+        "timestamp": 1790778540.8471358
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47674.72,
+        "timestamp": 1790778541.7994256
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "recovery",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47674.72,
+        "timestamp": 1790778541.7994256
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47675.67,
+        "timestamp": 1790778542.7513483
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "recovery",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47675.67,
+        "timestamp": 1790778542.7513483
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47676.65,
+        "timestamp": 1790778543.7287984
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "recovery",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47676.65,
+        "timestamp": 1790778543.7287984
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47677.61,
+        "timestamp": 1790778544.6848364
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "recovery",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47677.61,
+        "timestamp": 1790778544.6848364
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47678.56,
+        "timestamp": 1790778545.641205
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "recovery",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47678.56,
+        "timestamp": 1790778545.641205
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47679.51,
+        "timestamp": 1790778546.5893648
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "recovery",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47679.51,
+        "timestamp": 1790778546.5893648
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47680.44,
+        "timestamp": 1790778547.519995
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "recovery",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47680.44,
+        "timestamp": 1790778547.519995
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47681.37,
+        "timestamp": 1790778548.4462087
+      },
+      "observed_bps": 0.0
+    },
+    {
+      "phase": "recovery",
+      "before": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47681.37,
+        "timestamp": 1790778548.4462087
+      },
+      "after": {
+        "boot_id": "e88326ad-19ab-4df3-8923-266c02b0ded8",
+        "ifindex": 4,
+        "tx_bytes": 71314065,
+        "uptime": 47682.3,
+        "timestamp": 1790778549.3807714
+      },
+      "observed_bps": 0.0
+    }
+  ],
+  "transfers": [
+    {
+      "phase": "baseline",
+      "asset": "index.m3u8",
+      "started": 1790778498.4285805,
+      "finished": 1790778498.8614647,
+      "bytes": 574,
+      "sha256": "8ee1e6e83682453fac0528f9cb7dc5460fe0b30416d5e0ef244d6550d13d1e51",
+      "verified": true,
+      "exit_code": 0,
+      "ue_interface": "uesimtun0"
+    },
+    {
+      "phase": "baseline",
+      "asset": "seg000.m4s",
+      "started": 1790778498.89153,
+      "finished": 1790778502.036543,
+      "bytes": 150060,
+      "sha256": "854778542ae2cd530c8603d3f9a4422f521b24d951c0f174e00ed5ac242bc280",
+      "verified": true,
+      "exit_code": 0,
+      "ue_interface": "uesimtun0"
+    },
+    {
+      "phase": "baseline",
+      "asset": "init.mp4",
+      "started": 1790778502.036543,
+      "finished": 1790778505.5895858,
+      "bytes": 1384,
+      "sha256": "252981a17a133e09b5a13875610fbbb001fab824c69d5b7aa80fd93a398d7087",
+      "verified": true,
+      "exit_code": 0,
+      "ue_interface": "uesimtun0"
+    },
+    {
+      "phase": "baseline",
+      "asset": "seg001.m4s",
+      "started": 1790778505.6234305,
+      "finished": 1790778507.0252132,
+      "bytes": 155266,
+      "sha256": "92d12fe645c75a6f5c360dd7da565576214ce69d83304bd7a65c6db51ebb970d",
+      "verified": true,
+      "exit_code": 0,
+      "ue_interface": "uesimtun0"
+    },
+    {
+      "phase": "baseline",
+      "asset": "seg002.m4s",
+      "started": 1790778507.0507202,
+      "finished": 1790778507.5948727,
+      "bytes": 143270,
+      "sha256": "7e6483d83ed525a4aadae6a75488ddf6775050cd510d7c0f40897042af1f7b44",
+      "verified": true,
+      "exit_code": 0,
+      "ue_interface": "uesimtun0"
+    },
+    {
+      "phase": "baseline",
+      "asset": "seg003.m4s",
+      "started": 1790778507.619067,
+      "finished": 1790778508.0449512,
+      "bytes": 142168,
+      "sha256": "a4174530d24ed5b82f9af454542eb1ca34d7f8f1ecdb180d05463a47cfeb9c49",
+      "verified": true,
+      "exit_code": 0,
+      "ue_interface": "uesimtun0"
+    },
+    {
+      "phase": "baseline",
+      "asset": "seg004.m4s",
+      "started": 1790778508.0665555,
+      "finished": 1790778508.4824607,
+      "bytes": 141707,
+      "sha256": "0a4a7ccfab09b0da3b5280cbfa92d837fa8b2b26f880303618c76846ffa8a132",
+      "verified": true,
+      "exit_code": 0,
+      "ue_interface": "uesimtun0"
+    },
+    {
+      "phase": "baseline",
+      "asset": "seg005.m4s",
+      "started": 1790778508.5040822,
+      "finished": 1790778508.9745784,
+      "bytes": 139984,
+      "sha256": "8020148839ad0f64a4b9751b420a27deb888f8e476dd3a8c4a2bc580aaa24256",
+      "verified": true,
+      "exit_code": 0,
+      "ue_interface": "uesimtun0"
+    },
+    {
+      "phase": "baseline",
+      "asset": "seg006.m4s",
+      "started": 1790778508.9941893,
+      "finished": 1790778510.0050366,
+      "bytes": 142057,
+      "sha256": "a66c8143e500d7e88310a90ef4883ff43ad7b2e2e4bc86340da5c1fa42e098c3",
+      "verified": true,
+      "exit_code": 0,
+      "ue_interface": "uesimtun0"
+    },
+    {
+      "phase": "baseline",
+      "asset": "seg007.m4s",
+      "started": 1790778510.0296774,
+      "finished": 1790778510.466227,
+      "bytes": 149110,
+      "sha256": "f5654a1eda9e5db1479705b1344c0a189cc742d47285a654844866e29d4f7c1e",
+      "verified": true,
+      "exit_code": 0,
+      "ue_interface": "uesimtun0"
+    },
+    {
+      "phase": "baseline",
+      "asset": "seg008.m4s",
+      "started": 1790778510.4892912,
+      "finished": 1790778511.450835,
+      "bytes": 141821,
+      "sha256": "a95bf60d2ce7a9d601a2fb9ac6c3be10b9aecd23137e3bb42a3b65aa40d28e70",
+      "verified": true,
+      "exit_code": 0,
+      "ue_interface": "uesimtun0"
+    },
+    {
+      "phase": "baseline",
+      "asset": "seg009.m4s",
+      "started": 1790778511.4719512,
+      "finished": 1790778512.980438,
+      "bytes": 144097,
+      "sha256": "dcac413077f45d7ad9c8203da2b175e614e42b79571333b64d74b48e991bac10",
+      "verified": true,
+      "exit_code": 0,
+      "ue_interface": "uesimtun0"
+    },
+    {
+      "phase": "baseline",
+      "asset": "seg010.m4s",
+      "started": 1790778513.0061061,
+      "finished": 1790778514.0968623,
+      "bytes": 136583,
+      "sha256": "9c6232039caa09b619fb739895c181f88e3d0afe4a05eb1d33d8b50a82b79fb7",
+      "verified": true,
+      "exit_code": 0,
+      "ue_interface": "uesimtun0"
+    },
+    {
+      "phase": "baseline",
+      "asset": "seg011.m4s",
+      "started": 1790778514.124868,
+      "finished": 1790778514.8519373,
+      "bytes": 143253,
+      "sha256": "799b94669d9558f56b5bd716a9bdae57839e3725223fbe0156793818f7540a56",
+      "verified": true,
+      "exit_code": 0,
+      "ue_interface": "uesimtun0"
+    },
+    {
+      "phase": "baseline",
+      "asset": "seg012.m4s",
+      "started": 1790778514.8725224,
+      "finished": 1790778515.2849505,
+      "bytes": 145231,
+      "sha256": "74c3ab16127a99410b623f5597bb8ebb94059837823710a2818547fd884e59d9",
+      "verified": true,
+      "exit_code": 0,
+      "ue_interface": "uesimtun0"
+    },
+    {
+      "phase": "baseline",
+      "asset": "seg013.m4s",
+      "started": 1790778515.3084683,
+      "finished": 1790778515.8312469,
+      "bytes": 146984,
+      "sha256": "6196eb49c44c3873ba477d852b17c607115d6d93607a57832b5db6631a03defb",
+      "verified": true,
+      "exit_code": 0,
+      "ue_interface": "uesimtun0"
+    },
+    {
+      "phase": "baseline",
+      "asset": "seg014.m4s",
+      "started": 1790778515.854918,
+      "finished": 1790778516.346962,
+      "bytes": 136876,
+      "sha256": "0367df94e129ac07b5f71b68d92238af6cb7e850d93751d393c0a3e00e42bb68",
+      "verified": true,
+      "exit_code": 0,
+      "ue_interface": "uesimtun0"
+    }
+  ],
+  "accounts_before": [
+    {
+      "supi": "imsi-999700000000001",
+      "quota_bytes": 550000000,
+      "consumed_bytes": 406310620,
+      "reserved_bytes": 12000000
+    },
+    {
+      "supi": "imsi-999700000000002",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 1208928,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000003",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 48000000,
+      "reserved_bytes": 2000000
+    },
+    {
+      "supi": "imsi-999700000000004",
+      "quota_bytes": 102428800,
+      "consumed_bytes": 32057290,
+      "reserved_bytes": 6500000
+    },
+    {
+      "supi": "imsi-999700000000005",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 810568,
+      "reserved_bytes": 5000000
+    },
+    {
+      "supi": "imsi-999700000000006",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 1210984,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000007",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 808008,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000008",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 799784,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000009",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 812120,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000010",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 812120,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000011",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 1171920,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000012",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 814176,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000013",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 812120,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000014",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 810064,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000015",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 1208928,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000016",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 793616,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000017",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 810064,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000018",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 810064,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000019",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 810064,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000020",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 812120,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000021",
+      "quota_bytes": 52428800,
+      "consumed_bytes": 0,
+      "reserved_bytes": 500000
+    }
+  ],
+  "ledger_before": {
+    "items": [
+      {
+        "id": 32,
+        "received_at": 1790604163.7258973,
+        "sha256": "62218d1c21f36ced06077edd789968e9ff73701eaabe255106bfdca286d6df92",
+        "action": "restore",
+        "decision_id": "4306554a-bb45-41f1-ad29-1945361aa99d",
+        "elapsed_ms": 29.918,
+        "event_id": "430ae5a6-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:4306554a-bb45-41f1-ad29-1945361aa99d:N7_ACK:utc_us=1790604157712126",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 31,
+        "received_at": 1790604162.726333,
+        "sha256": "840e7ce88f7843f71d7771ae6fbadb596b609fd04bbb8d318d52462a09919d5d",
+        "action": "restore",
+        "decision_id": "43084422-bb45-41f1-ad29-1945361aa99d",
+        "elapsed_ms": 11.192,
+        "event_id": "4309f8f8-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:43084422-bb45-41f1-ad29-1945361aa99d:N7_ACK:utc_us=1790604157706068",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000004",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 30,
+        "received_at": 1790604161.6934998,
+        "sha256": "15eb5c382d270a7135ef91f0fd4bfc574e232e36d9d66fd47c57e502d9468285",
+        "action": "restore",
+        "decision_id": "43084422-bb45-41f1-ad29-1945361aa99d",
+        "event_id": "4308e260-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:43084422-bb45-41f1-ad29-1945361aa99d:N7_SENT:utc_us=1790604157698932",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000004",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 29,
+        "received_at": 1790604160.693385,
+        "sha256": "304314435bca7862541898e2d9461b4fd9f80d40c0c0707dc836b8892c6b3b36",
+        "action": "restore",
+        "decision_id": "43084422-bb45-41f1-ad29-1945361aa99d",
+        "event_id": "430845bc-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:43084422-bb45-41f1-ad29-1945361aa99d:DETECTED:utc_us=1790604157694922",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000004",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 28,
+        "received_at": 1790604159.6889668,
+        "sha256": "00e82e0155ced777d43c6fbdeea2a445f882eec55798c5739bfdd1768de0fab2",
+        "action": "restore",
+        "decision_id": "4306554a-bb45-41f1-ad29-1945361aa99d",
+        "event_id": "43077ed4-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:4306554a-bb45-41f1-ad29-1945361aa99d:N7_SENT:utc_us=1790604157689829",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 27,
+        "received_at": 1790604158.684426,
+        "sha256": "6a733e55933e14bbbef310c281690ae8935ca4b58256ec704a19b3c50c2e688e",
+        "action": "restore",
+        "decision_id": "4306554a-bb45-41f1-ad29-1945361aa99d",
+        "event_id": "430656bc-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:4306554a-bb45-41f1-ad29-1945361aa99d:DETECTED:utc_us=1790604157682249",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 26,
+        "received_at": 1790604152.160175,
+        "sha256": "79aac3f3a6f27ba0ede13d45850c06a01ccaf6a6e19e9cea9917f155bd39c655",
+        "action": "mitigate",
+        "decision_id": "3c750ef6-bb45-41f1-ad29-1945361aa99d",
+        "elapsed_ms": 23.026,
+        "event_id": "3c789238-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:3c750ef6-bb45-41f1-ad29-1945361aa99d:N7_ACK:utc_us=1790604146686833",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000004",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 25,
+        "received_at": 1790604151.6674614,
+        "sha256": "82f1b5f33f7ede99dd0141cdaef60d9719f77d420e6f9e130500255e452632db",
+        "action": "mitigate",
+        "decision_id": "3c73bf4c-bb45-41f1-ad29-1945361aa99d",
+        "elapsed_ms": 25.768,
+        "event_id": "3c77ada0-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:3c73bf4c-bb45-41f1-ad29-1945361aa99d:N7_ACK:utc_us=1790604146680982",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 24,
+        "received_at": 1790604150.6659758,
+        "sha256": "bb53f1e41977d11030fc05b905d755ce99f6893344217d08a0ab95872d07f18e",
+        "action": "mitigate",
+        "decision_id": "3c750ef6-bb45-41f1-ad29-1945361aa99d",
+        "event_id": "3c76aea0-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:3c750ef6-bb45-41f1-ad29-1945361aa99d:N7_SENT:utc_us=1790604146674453",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000004",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 23,
+        "received_at": 1790604149.6658394,
+        "sha256": "16a20a3b2eb34e58342c54401b8fbb3506b03d67f9d47afcacb955e727eb072b",
+        "action": "mitigate",
+        "decision_id": "3c750ef6-bb45-41f1-ad29-1945361aa99d",
+        "event_id": "3c751040-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:3c750ef6-bb45-41f1-ad29-1945361aa99d:DETECTED:utc_us=1790604146663843",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000004",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 22,
+        "received_at": 1790604148.6627595,
+        "sha256": "84a27bb6bc056e74b379af1fb600b370dcee8d9cf967b67d0550c6ba15156f78",
+        "action": "mitigate",
+        "decision_id": "3c73bf4c-bb45-41f1-ad29-1945361aa99d",
+        "event_id": "3c745f9c-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:3c73bf4c-bb45-41f1-ad29-1945361aa99d:N7_SENT:utc_us=1790604146659321",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 21,
+        "received_at": 1790604147.6651986,
+        "sha256": "7b04322781ccc09ff44216cb393ac27f3c22ded86d1b2a33a80d411c22246475",
+        "action": "mitigate",
+        "decision_id": "3c73bf4c-bb45-41f1-ad29-1945361aa99d",
+        "event_id": "3c73e238-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:3c73bf4c-bb45-41f1-ad29-1945361aa99d:DETECTED:utc_us=1790604146656113",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 20,
+        "received_at": 1790602012.7084172,
+        "sha256": "823c3743d249d32833030626565713cc6a41e1f517eb0bce2592ef16334041c9",
+        "action": "restore",
+        "decision_id": "cb0f38d0-bb13-41f1-be35-0563e22fc573",
+        "elapsed_ms": 9.920835,
+        "event_id": "544cf37b-76fa-5af8-b8ab-ed67bfdbedc3",
+        "evidence_ref": "pcap:sha256:5a64991256c65e1b762f243457fe45bfff0b92677a08467324fab68818c113f8:frames=616,621;UE-counters:nwdaf-loop-aef171083b/result.json",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "ENFORCEMENT_VERIFIED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 19,
+        "received_at": 1790602012.6821187,
+        "sha256": "f4969b40f1d36922f07987c5960784c7f93e76df56ccddd1b645687a08455a45",
+        "action": "mitigate",
+        "decision_id": "c47cd752-bb13-41f1-be35-0563e22fc573",
+        "elapsed_ms": 28.265953,
+        "event_id": "7115c564-34e3-5762-a063-ef9d0e307665",
+        "evidence_ref": "pcap:sha256:5a64991256c65e1b762f243457fe45bfff0b92677a08467324fab68818c113f8:frames=211,216;UE-counters:nwdaf-loop-aef171083b/result.json",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "ENFORCEMENT_VERIFIED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 18,
+        "received_at": 1790582934.7271464,
+        "sha256": "2fdfec161b79585ef92500bf3be3706420a137f9222ac4469ccdbe949a37e0a9",
+        "action": "restore",
+        "decision_id": "d739a38e-bb13-41f1-be35-0563e22fc573",
+        "elapsed_ms": 16.848,
+        "event_id": "d73c3536-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:d739a38e-bb13-41f1-be35-0563e22fc573:N7_ACK:utc_us=1790582931501609",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 17,
+        "received_at": 1790582933.731265,
+        "sha256": "17eab798d4c6c70b05fa6f0b8e2951c02eba3be453a81d98568b329f889cd2a7",
+        "action": "restore",
+        "decision_id": "d739a38e-bb13-41f1-be35-0563e22fc573",
+        "event_id": "d73a8826-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:d739a38e-bb13-41f1-be35-0563e22fc573:N7_SENT:utc_us=1790582931490619",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 16,
+        "received_at": 1790582932.4853168,
+        "sha256": "3d8a8001082a373f2e975733c34f8f74974beb280b6c1c41d61c79506eb2814a",
+        "action": "restore",
+        "decision_id": "d739a38e-bb13-41f1-be35-0563e22fc573",
+        "event_id": "d739a5e6-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:d739a38e-bb13-41f1-be35-0563e22fc573:DETECTED:utc_us=1790582931484828",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 15,
+        "received_at": 1790582924.243459,
+        "sha256": "0a6512e78f2dbfe8eb55f5b10e7aa99b62af57d4145632529c1aca295c131eaa",
+        "action": "mitigate",
+        "decision_id": "d115523c-bb13-41f1-be35-0563e22fc573",
+        "elapsed_ms": 11.182,
+        "event_id": "d11706cc-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:d115523c-bb13-41f1-be35-0563e22fc573:N7_ACK:utc_us=1790582921191603",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 14,
+        "received_at": 1790582923.2567067,
+        "sha256": "6a02dfcd2f8933693b109b1f3ac35c59a1d1f3c9e043f39c7557bf3717600d45",
+        "action": "mitigate",
+        "decision_id": "d115523c-bb13-41f1-be35-0563e22fc573",
+        "event_id": "d115f142-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:d115523c-bb13-41f1-be35-0563e22fc573:N7_SENT:utc_us=1790582921184496",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 13,
+        "received_at": 1790582922.2509077,
+        "sha256": "90e6704b51e4934600e98c0655678bc585dd4ae383ec09f1599d01d94109a0f1",
+        "action": "mitigate",
+        "decision_id": "d115523c-bb13-41f1-be35-0563e22fc573",
+        "event_id": "d115537c-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:d115523c-bb13-41f1-be35-0563e22fc573:DETECTED:utc_us=1790582921180457",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 12,
+        "received_at": 1790582914.148157,
+        "sha256": "624e1e9d62829dd04f875276d943fe8fe6dcda3596ce76b9af74617e7262a79a",
+        "action": "restore",
+        "decision_id": "cb0f38d0-bb13-41f1-be35-0563e22fc573",
+        "elapsed_ms": 9.611,
+        "event_id": "cb10b002-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:cb0f38d0-bb13-41f1-be35-0563e22fc573:N7_ACK:utc_us=1790582911083729",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 11,
+        "received_at": 1790582913.0952106,
+        "sha256": "67b8bc52d7d3f5abd6c0abae644cb67c5dfe06937edad42b537f0a3eadfbc197",
+        "action": "restore",
+        "decision_id": "cb0f38d0-bb13-41f1-be35-0563e22fc573",
+        "event_id": "cb0fc0f2-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:cb0f38d0-bb13-41f1-be35-0563e22fc573:N7_SENT:utc_us=1790582911077607",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 10,
+        "received_at": 1790582912.0787024,
+        "sha256": "7f553b00843cafed20a62b15eecd8cd8f525e7d16d99e7ab78b1da6251e3f585",
+        "action": "restore",
+        "decision_id": "cb0f38d0-bb13-41f1-be35-0563e22fc573",
+        "event_id": "cb0f3a10-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:cb0f38d0-bb13-41f1-be35-0563e22fc573:DETECTED:utc_us=1790582911074156",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 9,
+        "received_at": 1790582903.074405,
+        "sha256": "c2118828cfcb3c1bb25a4f4ecf20694970ac6eb9fed8847cfa4a8292d26637f7",
+        "action": "mitigate",
+        "decision_id": "c47cd752-bb13-41f1-be35-0563e22fc573",
+        "elapsed_ms": 16.199,
+        "event_id": "c47f4faa-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:c47cd752-bb13-41f1-be35-0563e22fc573:N7_ACK:utc_us=1790582900064666",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 8,
+        "received_at": 1790582902.0557184,
+        "sha256": "5bde761528835523c7a4440dd01e3d1cc735e444084d6c906a6b7c8bd3ee9e56",
+        "action": "mitigate",
+        "decision_id": "c47cd752-bb13-41f1-be35-0563e22fc573",
+        "event_id": "c47dc7a2-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:c47cd752-bb13-41f1-be35-0563e22fc573:N7_SENT:utc_us=1790582900054624",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 7,
+        "received_at": 1790582901.0563679,
+        "sha256": "fd860b74a592c1d89547a3d84a458f00dbed90531146f8eecd1d800b42546fb9",
+        "action": "mitigate",
+        "decision_id": "c47cd752-bb13-41f1-be35-0563e22fc573",
+        "event_id": "c47ce210-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:c47cd752-bb13-41f1-be35-0563e22fc573:DETECTED:utc_us=1790582900048748",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 6,
+        "received_at": 1790582497.7788122,
+        "sha256": "6edb197e79ab9d6249b313a807af7159484a36ddbe0cb30cb51b594cd138c0f2",
+        "action": "restore",
+        "decision_id": "d2e8f786-bb12-41f1-b455-f1f13096ab6d",
+        "elapsed_ms": 13.734,
+        "event_id": "d2eb0f8a-bb12-41f1-b455-f1f13096ab6d",
+        "evidence_ref": "pcf-native:d2e8f786-bb12-41f1-b455-f1f13096ab6d:N7_ACK:utc_us=1790582494762187",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 5,
+        "received_at": 1790582496.7652886,
+        "sha256": "b557de83364db23aaef01bf166209f8077dfa87b42c0a8fdb180b78f9ac39fb8",
+        "action": "restore",
+        "decision_id": "d2e8f786-bb12-41f1-b455-f1f13096ab6d",
+        "event_id": "d2e9a5fa-bb12-41f1-b455-f1f13096ab6d",
+        "evidence_ref": "pcf-native:d2e8f786-bb12-41f1-b455-f1f13096ab6d:N7_SENT:utc_us=1790582494752924",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 4,
+        "received_at": 1790582495.7614963,
+        "sha256": "1813c60a7060c12d4963f6e71b99fead37f045c442d572e1f2cd661f99a64254",
+        "action": "restore",
+        "decision_id": "d2e8f786-bb12-41f1-b455-f1f13096ab6d",
+        "event_id": "d2e8f8a8-bb12-41f1-b455-f1f13096ab6d",
+        "evidence_ref": "pcf-native:d2e8f786-bb12-41f1-b455-f1f13096ab6d:DETECTED:utc_us=1790582494748487",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 3,
+        "received_at": 1790582487.7300217,
+        "sha256": "4b0368d46894ceeff6ccb4903c91bf0b3ecfe70d9cbdba1262f58e1aa6d7435f",
+        "action": "mitigate",
+        "decision_id": "ccef3c82-bb12-41f1-b455-f1f13096ab6d",
+        "elapsed_ms": 20.624,
+        "event_id": "ccf261dc-bb12-41f1-b455-f1f13096ab6d",
+        "evidence_ref": "pcf-native:ccef3c82-bb12-41f1-b455-f1f13096ab6d:N7_ACK:utc_us=1790582484743835",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 2,
+        "received_at": 1790582486.729259,
+        "sha256": "25ae6998d87f565d9a351d9f37fddb39daaa67333cb4e88b58fe97549d2089f9",
+        "action": "mitigate",
+        "decision_id": "ccef3c82-bb12-41f1-b455-f1f13096ab6d",
+        "event_id": "ccf0e29e-bb12-41f1-b455-f1f13096ab6d",
+        "evidence_ref": "pcf-native:ccef3c82-bb12-41f1-b455-f1f13096ab6d:N7_SENT:utc_us=1790582484734022",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 1,
+        "received_at": 1790582485.7254503,
+        "sha256": "ae0b57095193e9cb52f5953c104ba6306c619073f95f08e48325be1f5a1fc8d3",
+        "action": "mitigate",
+        "decision_id": "ccef3c82-bb12-41f1-b455-f1f13096ab6d",
+        "event_id": "ccf01580-bb12-41f1-b455-f1f13096ab6d",
+        "evidence_ref": "pcf-native:ccef3c82-bb12-41f1-b455-f1f13096ab6d:DETECTED:utc_us=1790582484728776",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      }
+    ],
+    "next_before": null
+  },
+  "sessions": {
+    "video": {
+      "supi": "imsi-999700000000001",
+      "address": "10.45.0.45",
+      "interface": "uesimtun0",
+      "free": 131689380
+    },
+    "load": {
+      "supi": "imsi-999700000000004",
+      "address": "10.45.0.46",
+      "interface": "uesimtun1",
+      "free": 63871510
+    }
+  },
+  "remote": "/home/emsadmin/labqoe-febec0b953794245-r1-XTfIiG",
+  "media_bytes": 2160425,
+  "media_sha256": {
+    "index.m3u8": "8ee1e6e83682453fac0528f9cb7dc5460fe0b30416d5e0ef244d6550d13d1e51",
+    "init.mp4": "252981a17a133e09b5a13875610fbbb001fab824c69d5b7aa80fd93a398d7087",
+    "seg000.m4s": "854778542ae2cd530c8603d3f9a4422f521b24d951c0f174e00ed5ac242bc280",
+    "seg001.m4s": "92d12fe645c75a6f5c360dd7da565576214ce69d83304bd7a65c6db51ebb970d",
+    "seg002.m4s": "7e6483d83ed525a4aadae6a75488ddf6775050cd510d7c0f40897042af1f7b44",
+    "seg003.m4s": "a4174530d24ed5b82f9af454542eb1ca34d7f8f1ecdb180d05463a47cfeb9c49",
+    "seg004.m4s": "0a4a7ccfab09b0da3b5280cbfa92d837fa8b2b26f880303618c76846ffa8a132",
+    "seg005.m4s": "8020148839ad0f64a4b9751b420a27deb888f8e476dd3a8c4a2bc580aaa24256",
+    "seg006.m4s": "a66c8143e500d7e88310a90ef4883ff43ad7b2e2e4bc86340da5c1fa42e098c3",
+    "seg007.m4s": "f5654a1eda9e5db1479705b1344c0a189cc742d47285a654844866e29d4f7c1e",
+    "seg008.m4s": "a95bf60d2ce7a9d601a2fb9ac6c3be10b9aecd23137e3bb42a3b65aa40d28e70",
+    "seg009.m4s": "dcac413077f45d7ad9c8203da2b175e614e42b79571333b64d74b48e991bac10",
+    "seg010.m4s": "9c6232039caa09b619fb739895c181f88e3d0afe4a05eb1d33d8b50a82b79fb7",
+    "seg011.m4s": "799b94669d9558f56b5bd716a9bdae57839e3725223fbe0156793818f7540a56",
+    "seg012.m4s": "74c3ab16127a99410b623f5597bb8ebb94059837823710a2818547fd884e59d9",
+    "seg013.m4s": "6196eb49c44c3873ba477d852b17c607115d6d93607a57832b5db6631a03defb",
+    "seg014.m4s": "0367df94e129ac07b5f71b68d92238af6cb7e850d93751d393c0a3e00e42bb68"
+  },
+  "uremote": "/home/emsadmin/labqoe-febec0b953794245-r1-dqTd8m",
+  "table": "62878",
+  "rescue_timers_verified": {
+    "core": "labqoe-febec0b953794245-r1-cleanup.timer",
+    "ue": "labqoe-febec0b953794245-r1-route.timer",
+    "deadline_seconds": 300
+  },
+  "baseline_stabilization_seconds": 35,
+  "treatment_before": "inactive",
+  "receiver_before": {
+    "rx_bytes": 159453,
+    "ifindex": 7,
+    "boot_id": "634b8df1-3e9a-4c04-a50b-fa938bd2599a"
+  },
+  "receiver_after": {
+    "rx_bytes": 2410895,
+    "ifindex": 7,
+    "boot_id": "634b8df1-3e9a-4c04-a50b-fa938bd2599a"
+  },
+  "treatment_after": "inactive",
+  "ledger_after": {
+    "items": [
+      {
+        "id": 32,
+        "received_at": 1790604163.7258973,
+        "sha256": "62218d1c21f36ced06077edd789968e9ff73701eaabe255106bfdca286d6df92",
+        "action": "restore",
+        "decision_id": "4306554a-bb45-41f1-ad29-1945361aa99d",
+        "elapsed_ms": 29.918,
+        "event_id": "430ae5a6-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:4306554a-bb45-41f1-ad29-1945361aa99d:N7_ACK:utc_us=1790604157712126",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 31,
+        "received_at": 1790604162.726333,
+        "sha256": "840e7ce88f7843f71d7771ae6fbadb596b609fd04bbb8d318d52462a09919d5d",
+        "action": "restore",
+        "decision_id": "43084422-bb45-41f1-ad29-1945361aa99d",
+        "elapsed_ms": 11.192,
+        "event_id": "4309f8f8-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:43084422-bb45-41f1-ad29-1945361aa99d:N7_ACK:utc_us=1790604157706068",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000004",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 30,
+        "received_at": 1790604161.6934998,
+        "sha256": "15eb5c382d270a7135ef91f0fd4bfc574e232e36d9d66fd47c57e502d9468285",
+        "action": "restore",
+        "decision_id": "43084422-bb45-41f1-ad29-1945361aa99d",
+        "event_id": "4308e260-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:43084422-bb45-41f1-ad29-1945361aa99d:N7_SENT:utc_us=1790604157698932",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000004",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 29,
+        "received_at": 1790604160.693385,
+        "sha256": "304314435bca7862541898e2d9461b4fd9f80d40c0c0707dc836b8892c6b3b36",
+        "action": "restore",
+        "decision_id": "43084422-bb45-41f1-ad29-1945361aa99d",
+        "event_id": "430845bc-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:43084422-bb45-41f1-ad29-1945361aa99d:DETECTED:utc_us=1790604157694922",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000004",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 28,
+        "received_at": 1790604159.6889668,
+        "sha256": "00e82e0155ced777d43c6fbdeea2a445f882eec55798c5739bfdd1768de0fab2",
+        "action": "restore",
+        "decision_id": "4306554a-bb45-41f1-ad29-1945361aa99d",
+        "event_id": "43077ed4-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:4306554a-bb45-41f1-ad29-1945361aa99d:N7_SENT:utc_us=1790604157689829",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 27,
+        "received_at": 1790604158.684426,
+        "sha256": "6a733e55933e14bbbef310c281690ae8935ca4b58256ec704a19b3c50c2e688e",
+        "action": "restore",
+        "decision_id": "4306554a-bb45-41f1-ad29-1945361aa99d",
+        "event_id": "430656bc-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:4306554a-bb45-41f1-ad29-1945361aa99d:DETECTED:utc_us=1790604157682249",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 26,
+        "received_at": 1790604152.160175,
+        "sha256": "79aac3f3a6f27ba0ede13d45850c06a01ccaf6a6e19e9cea9917f155bd39c655",
+        "action": "mitigate",
+        "decision_id": "3c750ef6-bb45-41f1-ad29-1945361aa99d",
+        "elapsed_ms": 23.026,
+        "event_id": "3c789238-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:3c750ef6-bb45-41f1-ad29-1945361aa99d:N7_ACK:utc_us=1790604146686833",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000004",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 25,
+        "received_at": 1790604151.6674614,
+        "sha256": "82f1b5f33f7ede99dd0141cdaef60d9719f77d420e6f9e130500255e452632db",
+        "action": "mitigate",
+        "decision_id": "3c73bf4c-bb45-41f1-ad29-1945361aa99d",
+        "elapsed_ms": 25.768,
+        "event_id": "3c77ada0-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:3c73bf4c-bb45-41f1-ad29-1945361aa99d:N7_ACK:utc_us=1790604146680982",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 24,
+        "received_at": 1790604150.6659758,
+        "sha256": "bb53f1e41977d11030fc05b905d755ce99f6893344217d08a0ab95872d07f18e",
+        "action": "mitigate",
+        "decision_id": "3c750ef6-bb45-41f1-ad29-1945361aa99d",
+        "event_id": "3c76aea0-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:3c750ef6-bb45-41f1-ad29-1945361aa99d:N7_SENT:utc_us=1790604146674453",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000004",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 23,
+        "received_at": 1790604149.6658394,
+        "sha256": "16a20a3b2eb34e58342c54401b8fbb3506b03d67f9d47afcacb955e727eb072b",
+        "action": "mitigate",
+        "decision_id": "3c750ef6-bb45-41f1-ad29-1945361aa99d",
+        "event_id": "3c751040-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:3c750ef6-bb45-41f1-ad29-1945361aa99d:DETECTED:utc_us=1790604146663843",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000004",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 22,
+        "received_at": 1790604148.6627595,
+        "sha256": "84a27bb6bc056e74b379af1fb600b370dcee8d9cf967b67d0550c6ba15156f78",
+        "action": "mitigate",
+        "decision_id": "3c73bf4c-bb45-41f1-ad29-1945361aa99d",
+        "event_id": "3c745f9c-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:3c73bf4c-bb45-41f1-ad29-1945361aa99d:N7_SENT:utc_us=1790604146659321",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 21,
+        "received_at": 1790604147.6651986,
+        "sha256": "7b04322781ccc09ff44216cb393ac27f3c22ded86d1b2a33a80d411c22246475",
+        "action": "mitigate",
+        "decision_id": "3c73bf4c-bb45-41f1-ad29-1945361aa99d",
+        "event_id": "3c73e238-bb45-41f1-ad29-1945361aa99d",
+        "evidence_ref": "pcf-native:3c73bf4c-bb45-41f1-ad29-1945361aa99d:DETECTED:utc_us=1790604146656113",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 20,
+        "received_at": 1790602012.7084172,
+        "sha256": "823c3743d249d32833030626565713cc6a41e1f517eb0bce2592ef16334041c9",
+        "action": "restore",
+        "decision_id": "cb0f38d0-bb13-41f1-be35-0563e22fc573",
+        "elapsed_ms": 9.920835,
+        "event_id": "544cf37b-76fa-5af8-b8ab-ed67bfdbedc3",
+        "evidence_ref": "pcap:sha256:5a64991256c65e1b762f243457fe45bfff0b92677a08467324fab68818c113f8:frames=616,621;UE-counters:nwdaf-loop-aef171083b/result.json",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "ENFORCEMENT_VERIFIED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 19,
+        "received_at": 1790602012.6821187,
+        "sha256": "f4969b40f1d36922f07987c5960784c7f93e76df56ccddd1b645687a08455a45",
+        "action": "mitigate",
+        "decision_id": "c47cd752-bb13-41f1-be35-0563e22fc573",
+        "elapsed_ms": 28.265953,
+        "event_id": "7115c564-34e3-5762-a063-ef9d0e307665",
+        "evidence_ref": "pcap:sha256:5a64991256c65e1b762f243457fe45bfff0b92677a08467324fab68818c113f8:frames=211,216;UE-counters:nwdaf-loop-aef171083b/result.json",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "ENFORCEMENT_VERIFIED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 18,
+        "received_at": 1790582934.7271464,
+        "sha256": "2fdfec161b79585ef92500bf3be3706420a137f9222ac4469ccdbe949a37e0a9",
+        "action": "restore",
+        "decision_id": "d739a38e-bb13-41f1-be35-0563e22fc573",
+        "elapsed_ms": 16.848,
+        "event_id": "d73c3536-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:d739a38e-bb13-41f1-be35-0563e22fc573:N7_ACK:utc_us=1790582931501609",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 17,
+        "received_at": 1790582933.731265,
+        "sha256": "17eab798d4c6c70b05fa6f0b8e2951c02eba3be453a81d98568b329f889cd2a7",
+        "action": "restore",
+        "decision_id": "d739a38e-bb13-41f1-be35-0563e22fc573",
+        "event_id": "d73a8826-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:d739a38e-bb13-41f1-be35-0563e22fc573:N7_SENT:utc_us=1790582931490619",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 16,
+        "received_at": 1790582932.4853168,
+        "sha256": "3d8a8001082a373f2e975733c34f8f74974beb280b6c1c41d61c79506eb2814a",
+        "action": "restore",
+        "decision_id": "d739a38e-bb13-41f1-be35-0563e22fc573",
+        "event_id": "d739a5e6-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:d739a38e-bb13-41f1-be35-0563e22fc573:DETECTED:utc_us=1790582931484828",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 15,
+        "received_at": 1790582924.243459,
+        "sha256": "0a6512e78f2dbfe8eb55f5b10e7aa99b62af57d4145632529c1aca295c131eaa",
+        "action": "mitigate",
+        "decision_id": "d115523c-bb13-41f1-be35-0563e22fc573",
+        "elapsed_ms": 11.182,
+        "event_id": "d11706cc-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:d115523c-bb13-41f1-be35-0563e22fc573:N7_ACK:utc_us=1790582921191603",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 14,
+        "received_at": 1790582923.2567067,
+        "sha256": "6a02dfcd2f8933693b109b1f3ac35c59a1d1f3c9e043f39c7557bf3717600d45",
+        "action": "mitigate",
+        "decision_id": "d115523c-bb13-41f1-be35-0563e22fc573",
+        "event_id": "d115f142-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:d115523c-bb13-41f1-be35-0563e22fc573:N7_SENT:utc_us=1790582921184496",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 13,
+        "received_at": 1790582922.2509077,
+        "sha256": "90e6704b51e4934600e98c0655678bc585dd4ae383ec09f1599d01d94109a0f1",
+        "action": "mitigate",
+        "decision_id": "d115523c-bb13-41f1-be35-0563e22fc573",
+        "event_id": "d115537c-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:d115523c-bb13-41f1-be35-0563e22fc573:DETECTED:utc_us=1790582921180457",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 12,
+        "received_at": 1790582914.148157,
+        "sha256": "624e1e9d62829dd04f875276d943fe8fe6dcda3596ce76b9af74617e7262a79a",
+        "action": "restore",
+        "decision_id": "cb0f38d0-bb13-41f1-be35-0563e22fc573",
+        "elapsed_ms": 9.611,
+        "event_id": "cb10b002-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:cb0f38d0-bb13-41f1-be35-0563e22fc573:N7_ACK:utc_us=1790582911083729",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 11,
+        "received_at": 1790582913.0952106,
+        "sha256": "67b8bc52d7d3f5abd6c0abae644cb67c5dfe06937edad42b537f0a3eadfbc197",
+        "action": "restore",
+        "decision_id": "cb0f38d0-bb13-41f1-be35-0563e22fc573",
+        "event_id": "cb0fc0f2-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:cb0f38d0-bb13-41f1-be35-0563e22fc573:N7_SENT:utc_us=1790582911077607",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 10,
+        "received_at": 1790582912.0787024,
+        "sha256": "7f553b00843cafed20a62b15eecd8cd8f525e7d16d99e7ab78b1da6251e3f585",
+        "action": "restore",
+        "decision_id": "cb0f38d0-bb13-41f1-be35-0563e22fc573",
+        "event_id": "cb0f3a10-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:cb0f38d0-bb13-41f1-be35-0563e22fc573:DETECTED:utc_us=1790582911074156",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 9,
+        "received_at": 1790582903.074405,
+        "sha256": "c2118828cfcb3c1bb25a4f4ecf20694970ac6eb9fed8847cfa4a8292d26637f7",
+        "action": "mitigate",
+        "decision_id": "c47cd752-bb13-41f1-be35-0563e22fc573",
+        "elapsed_ms": 16.199,
+        "event_id": "c47f4faa-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:c47cd752-bb13-41f1-be35-0563e22fc573:N7_ACK:utc_us=1790582900064666",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 8,
+        "received_at": 1790582902.0557184,
+        "sha256": "5bde761528835523c7a4440dd01e3d1cc735e444084d6c906a6b7c8bd3ee9e56",
+        "action": "mitigate",
+        "decision_id": "c47cd752-bb13-41f1-be35-0563e22fc573",
+        "event_id": "c47dc7a2-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:c47cd752-bb13-41f1-be35-0563e22fc573:N7_SENT:utc_us=1790582900054624",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 7,
+        "received_at": 1790582901.0563679,
+        "sha256": "fd860b74a592c1d89547a3d84a458f00dbed90531146f8eecd1d800b42546fb9",
+        "action": "mitigate",
+        "decision_id": "c47cd752-bb13-41f1-be35-0563e22fc573",
+        "event_id": "c47ce210-bb13-41f1-be35-0563e22fc573",
+        "evidence_ref": "pcf-native:c47cd752-bb13-41f1-be35-0563e22fc573:DETECTED:utc_us=1790582900048748",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 6,
+        "received_at": 1790582497.7788122,
+        "sha256": "6edb197e79ab9d6249b313a807af7159484a36ddbe0cb30cb51b594cd138c0f2",
+        "action": "restore",
+        "decision_id": "d2e8f786-bb12-41f1-b455-f1f13096ab6d",
+        "elapsed_ms": 13.734,
+        "event_id": "d2eb0f8a-bb12-41f1-b455-f1f13096ab6d",
+        "evidence_ref": "pcf-native:d2e8f786-bb12-41f1-b455-f1f13096ab6d:N7_ACK:utc_us=1790582494762187",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 5,
+        "received_at": 1790582496.7652886,
+        "sha256": "b557de83364db23aaef01bf166209f8077dfa87b42c0a8fdb180b78f9ac39fb8",
+        "action": "restore",
+        "decision_id": "d2e8f786-bb12-41f1-b455-f1f13096ab6d",
+        "event_id": "d2e9a5fa-bb12-41f1-b455-f1f13096ab6d",
+        "evidence_ref": "pcf-native:d2e8f786-bb12-41f1-b455-f1f13096ab6d:N7_SENT:utc_us=1790582494752924",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 4,
+        "received_at": 1790582495.7614963,
+        "sha256": "1813c60a7060c12d4963f6e71b99fead37f045c442d572e1f2cd661f99a64254",
+        "action": "restore",
+        "decision_id": "d2e8f786-bb12-41f1-b455-f1f13096ab6d",
+        "event_id": "d2e8f8a8-bb12-41f1-b455-f1f13096ab6d",
+        "evidence_ref": "pcf-native:d2e8f786-bb12-41f1-b455-f1f13096ab6d:DETECTED:utc_us=1790582494748487",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 20000000
+      },
+      {
+        "id": 3,
+        "received_at": 1790582487.7300217,
+        "sha256": "4b0368d46894ceeff6ccb4903c91bf0b3ecfe70d9cbdba1262f58e1aa6d7435f",
+        "action": "mitigate",
+        "decision_id": "ccef3c82-bb12-41f1-b455-f1f13096ab6d",
+        "elapsed_ms": 20.624,
+        "event_id": "ccf261dc-bb12-41f1-b455-f1f13096ab6d",
+        "evidence_ref": "pcf-native:ccef3c82-bb12-41f1-b455-f1f13096ab6d:N7_ACK:utc_us=1790582484743835",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_ACK",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 2,
+        "received_at": 1790582486.729259,
+        "sha256": "25ae6998d87f565d9a351d9f37fddb39daaa67333cb4e88b58fe97549d2089f9",
+        "action": "mitigate",
+        "decision_id": "ccef3c82-bb12-41f1-b455-f1f13096ab6d",
+        "event_id": "ccf0e29e-bb12-41f1-b455-f1f13096ab6d",
+        "evidence_ref": "pcf-native:ccef3c82-bb12-41f1-b455-f1f13096ab6d:N7_SENT:utc_us=1790582484734022",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "N7_SENT",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      },
+      {
+        "id": 1,
+        "received_at": 1790582485.7254503,
+        "sha256": "ae0b57095193e9cb52f5953c104ba6306c619073f95f08e48325be1f5a1fc8d3",
+        "action": "mitigate",
+        "decision_id": "ccef3c82-bb12-41f1-b455-f1f13096ab6d",
+        "event_id": "ccf01580-bb12-41f1-b455-f1f13096ab6d",
+        "evidence_ref": "pcf-native:ccef3c82-bb12-41f1-b455-f1f13096ab6d:DETECTED:utc_us=1790582484728776",
+        "nominal_mbr_bps": 20000000,
+        "policy_id": "maestro-nwdaf-internet",
+        "snssai": {
+          "sd": "000001",
+          "sst": 1
+        },
+        "stage": "DETECTED",
+        "supi": "imsi-999700000000001",
+        "target_mbr_bps": 5000000
+      }
+    ],
+    "next_before": null
+  },
+  "status": "MEASURED",
+  "cleanup": {
+    "ue": "executed",
+    "core": "executed"
+  },
+  "accounts_after": [
+    {
+      "supi": "imsi-999700000000001",
+      "quota_bytes": 550000000,
+      "consumed_bytes": 408314974,
+      "reserved_bytes": 12000000
+    },
+    {
+      "supi": "imsi-999700000000002",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 1208928,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000003",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 48000000,
+      "reserved_bytes": 2000000
+    },
+    {
+      "supi": "imsi-999700000000004",
+      "quota_bytes": 102428800,
+      "consumed_bytes": 44373994,
+      "reserved_bytes": 6500000
+    },
+    {
+      "supi": "imsi-999700000000005",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 810568,
+      "reserved_bytes": 5000000
+    },
+    {
+      "supi": "imsi-999700000000006",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 1210984,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000007",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 808008,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000008",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 799784,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000009",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 812120,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000010",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 812120,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000011",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 1171920,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000012",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 814176,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000013",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 812120,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000014",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 810064,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000015",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 1208928,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000016",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 793616,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000017",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 810064,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000018",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 810064,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000019",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 810064,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000020",
+      "quota_bytes": 50000000,
+      "consumed_bytes": 812120,
+      "reserved_bytes": 500000
+    },
+    {
+      "supi": "imsi-999700000000021",
+      "quota_bytes": 52428800,
+      "consumed_bytes": 0,
+      "reserved_bytes": 500000
+    }
+  ],
+  "quota_unchanged": true,
+  "pcap_sha256": "caec8734d9a71ae3e3d4e3333d04dd42b3bb5a34482138248f8fbc3fb8e93cc6"
+}

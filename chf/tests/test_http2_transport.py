@@ -70,6 +70,17 @@ def test_nchf_over_real_http2(settings, account):
             assert response[':status'] == '200'
             response, body = exchange(resource + '/release', charging_request(3, used=200, requested=0))
             assert response[':status'] == '204' and body == b''
+            # A crashed producer may not have persisted the successful 204.
+            # Recovery must replay the exact durable body without another debit.
+            from tools.recover_release import replay_http2
+            from app.repository import ChargingRepository
+            origin = f'http://127.0.0.1:{port}'
+            replay_http2({'uri': origin + resource + '/release',
+                         'body': json.dumps(charging_request(3, used=200, requested=0))}, origin, SMF_TOKEN)
+            with ChargingRepository(settings.database_path).transaction() as conn:
+                session = conn.execute('SELECT consumed_bytes,reserved_bytes,status FROM charging_sessions').fetchone()
+                assert tuple(session) == (300, 0, 'RELEASED')
+                assert conn.execute('SELECT COUNT(*) FROM charging_cdrs').fetchone()[0] == 1
     finally:
         process.terminate()
         try:

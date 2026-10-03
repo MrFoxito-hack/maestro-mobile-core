@@ -1,0 +1,82 @@
+{
+  "read_only": true,
+  "started_at": "2026-09-30T14:36:48.977467+00:00",
+  "nodes": {
+    "core": {
+      "guard": {
+        "owner": [
+          [
+            "ac1039d04fba4bb3b35323bec7aeabf6",
+            "released"
+          ]
+        ],
+        "unknown": 0
+      },
+      "services": {
+        "open5gs-amfd": "active",
+        "open5gs-smfd": "active",
+        "open5gs-smfd2": "active",
+        "open5gs-pcfd": "active",
+        "open5gs-nssfd": "active",
+        "maestro-nwdaf": "active"
+      },
+      "active_owned_units": "",
+      "listeners": {
+        "5209": "",
+        "5210": "",
+        "18091": ""
+      },
+      "routes": {
+        "10.45.0.45": "",
+        "10.45.0.46": ""
+      },
+      "accounts": [
+        {
+          "supi": "imsi-999700000000001",
+          "quota_bytes": 550000000,
+          "consumed_bytes": 413123272,
+          "reserved_bytes": 12000000
+        },
+        {
+          "supi": "imsi-999700000000004",
+          "quota_bytes": 152428800,
+          "consumed_bytes": 66303381,
+          "reserved_bytes": 6500000
+        }
+      ]
+    },
+    "upf": {
+      "guard": {
+        "owner": [
+          [
+            "ac1039d04fba4bb3b35323bec7aeabf6",
+            "released"
+          ]
+        ],
+        "unknown": 0
+      },
+      "services": {
+        "open5gs-upfd": "active"
+      },
+      "active_owned_units": ""
+    },
+    "ue": {
+      "guard": {
+        "owner": [
+          [
+            "ac1039d04fba4bb3b35323bec7aeabf6",
+            "released"
+          ]
+        ],
+        "unknown": 0
+      },
+      "services": {
+        "ueransim-ue-01": "inactive",
+        "ueransim-ue-04": "active"
+      },
+      "active_owned_units": "",
+      "priority_105_rules": []
+    }
+  },
+  "finished_at": "2026-09-30T14:36:51.593748+00:00"
+}

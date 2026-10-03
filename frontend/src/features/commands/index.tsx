@@ -4,7 +4,7 @@ import {
   Activity,
   BookOpen,
   CheckCircle2,
-  ChevronRight,
+  ChevronDown,
   Copy,
   Database,
   Download,
@@ -13,11 +13,9 @@ import {
   Play,
   List,
   SlidersHorizontal,
-  Radio,
   Search,
   Server,
   ShieldAlert,
-  Smartphone,
   Terminal,
   Wrench,
 } from 'lucide-react'
@@ -51,6 +49,7 @@ import { EmsPage } from '@/features/ems-page'
 import {
   formatTelcoReport,
   parseMmlCommand,
+  redactMml,
   toMmlSyntax,
 } from './mml-formatter'
 import type {
@@ -64,6 +63,90 @@ import type {
 
 type ResultTab = 'result' | 'history'
 
+export type NetworkDomainId = 'all' | 'control' | 'user' | 'infra'
+
+export interface DomainMeta {
+  id: Exclude<NetworkDomainId, 'all'>
+  label: string
+  shortLabel: string
+  icon: typeof Server
+  order: number
+}
+
+export const DOMAINS: Record<Exclude<NetworkDomainId, 'all'>, DomainMeta> = {
+  control: {
+    id: 'control',
+    label: 'Plano de Control (5GC)',
+    shortLabel: 'Control',
+    icon: Server,
+    order: 1,
+  },
+  user: {
+    id: 'user',
+    label: 'Plano de Usuario (UPF)',
+    shortLabel: 'Usuario',
+    icon: Network,
+    order: 2,
+  },
+  infra: {
+    id: 'infra',
+    label: 'Datos & Infraestructura',
+    shortLabel: 'Datos',
+    icon: Database,
+    order: 3,
+  },
+}
+
+export const NF_SIGNALING_ORDER: Record<string, number> = {
+  // 5G Core Control Plane (Flujo de señalización de trazas 3GPP: AMF -> SMF -> AUSF -> UDM -> PCF -> NSSF -> NRF -> SCP -> UDR)
+  amf: 1,
+  smf: 2,
+  ausf: 3,
+  udm: 4,
+  pcf: 5,
+  nssf: 6,
+  nrf: 7,
+  scp: 8,
+  udr: 9,
+  chf: 10,
+  nwdaf: 11,
+
+  // Plano de Usuario
+  upf: 1,
+  upf2: 2,
+
+  // Datos
+  mongodb: 1,
+}
+
+export function getComponentDomain(
+  component: ComponentOperations
+): Exclude<NetworkDomainId, 'all'> {
+  const kind = (component.kind ?? '').toLowerCase()
+  const id = component.id.toLowerCase()
+  const unit = (component.unit ?? '').toLowerCase()
+
+  if (kind === 'user-plane' || id.startsWith('upf') || unit.includes('upf')) {
+    return 'user'
+  }
+  if (kind === 'database' || id === 'mongodb' || unit.includes('mongod')) {
+    return 'infra'
+  }
+  return 'control'
+}
+
+export function parseNodeLabel(label: string): {
+  title: string
+  subtitle?: string
+} {
+  const match = /^([^(]+?)(?:\s*\(([^)]+)\))?$/.exec(label.trim())
+  if (!match) return { title: label }
+  return {
+    title: match[1].trim(),
+    subtitle: match[2]?.trim(),
+  }
+}
+
 export function CommandsPage() {
   const queryClient = useQueryClient()
   const searchParams = new URLSearchParams(
@@ -75,6 +158,9 @@ export function CommandsPage() {
   const scenario = useScenarioStore((state) => state.scenario)
   const [selectedComponentId, setSelectedComponentId] = useState(initialNode)
   const [selectedOperationId, setSelectedOperationId] = useState('')
+  const [collapsedDomains, setCollapsedDomains] = useState<
+    Record<string, boolean>
+  >({})
   const [paramValues, setParamValues] = useState<Record<string, unknown>>({})
   const [nodeSearch, setNodeSearch] = useState('')
   const [operationSearch, setOperationSearch] = useState('')
@@ -112,18 +198,42 @@ export function CommandsPage() {
     refetchInterval: 10_000,
   })
 
-  const components = useMemo(
-    () => catalogQuery.data?.components ?? [],
-    [catalogQuery.data?.components]
-  )
+  const components = useMemo(() => {
+    const raw = catalogQuery.data?.components ?? []
+    // Enfoque 3GPP Core O&M: Excluir gNodeB (RAN) y UE (Terminales).
+    // En una red de operador real, los UEs y gNodeBs se consultan centralizadamente desde el AMF/SMF.
+    return raw.filter((c) => {
+      const kind = (c.kind ?? '').toLowerCase()
+      const id = c.id.toLowerCase()
+      return (
+        kind !== 'ran' &&
+        kind !== 'ue' &&
+        !id.startsWith('gnb') &&
+        !id.startsWith('ue') &&
+        !id.startsWith('enb')
+      )
+    })
+  }, [catalogQuery.data?.components])
+
   const currentComponent = useMemo(
     () =>
       components.find((component) => component.id === selectedComponentId) ??
-      components.find((component) => component.id === 'gnb') ??
       components.find((component) => component.id === 'amf') ??
+      components.find((component) => component.id === 'smf') ??
       components[0],
     [components, selectedComponentId]
   )
+
+  const selectComponent = (componentId: string) => {
+    setSelectedComponentId(componentId)
+    const component = components.find((item) => item.id === componentId)
+    if (component) {
+      const dom = getComponentDomain(component)
+      setCollapsedDomains((prev) =>
+        prev[dom] ? { ...prev, [dom]: false } : prev
+      )
+    }
+  }
   const currentOperation = useMemo(
     () =>
       currentComponent?.operations.find(
@@ -132,7 +242,10 @@ export function CommandsPage() {
     [currentComponent, selectedOperationId]
   )
   const executeMutation = useMutation({
-    mutationFn: async (payload: OperationExecutePayload) =>
+    mutationFn: async ({
+      original_command: _original,
+      ...payload
+    }: OperationExecutePayload) =>
       (await api.post<OperationResult>('/operations/execute', payload)).data,
     onSuccess: (result, variables) => {
       const component = components.find(
@@ -141,16 +254,18 @@ export function CommandsPage() {
       const operation = component?.operations.find(
         (item) => item.id === variables.operation_id
       )
-      const syntax = operation
-        ? toMmlSyntax(
-            operation,
-            variables.component_id,
-            component?.label ?? result.component_label,
-            variables.parameters
-          )
-        : `%%${commandInput}%%`
+      const syntax =
+        variables.original_command ??
+        (operation
+          ? toMmlSyntax(
+              operation,
+              variables.component_id,
+              component?.label ?? result.component_label,
+              variables.parameters
+            )
+          : `%%${commandInput}%%`)
       setLastResult(result)
-      setLastMmlCommand(syntax)
+      setLastMmlCommand(redactMml(syntax))
       setResultTab('result')
       void queryClient.invalidateQueries({
         queryKey: ['operations-history', scenario],
@@ -167,11 +282,44 @@ export function CommandsPage() {
     onSettled: () => {
       executionLock.current = false
     },
-    onError: (error) =>
+    onError: (error, variables) => {
+      showCommandError(
+        apiErrorMessage(error, 'El nodo rechazó el comando.'),
+        variables.original_command ?? commandInput
+      )
       toast.error('No se pudo ejecutar la operación', {
         description: apiErrorMessage(error, 'El nodo rechazó el comando.'),
-      }),
+      })
+    },
   })
+
+  const showCommandError = (detail: string, command: string) => {
+    const timestamp = new Date().toISOString()
+    setLastMmlCommand(redactMml(command))
+    setLastResult({
+      id: crypto.randomUUID(),
+      scenario_id: scenario,
+      testbed_id: '',
+      component_id: currentComponent?.id ?? '',
+      component_label: currentComponent?.label ?? '',
+      operation_id: currentOperation?.id ?? '',
+      operation_label: 'COMMAND EXECUTION',
+      category: '',
+      mutating: false,
+      username: '',
+      role: '',
+      parameters: {},
+      status: 'failed',
+      source: 'mml-console',
+      output: detail,
+      data: null,
+      error: detail,
+      started_at: timestamp,
+      completed_at: timestamp,
+      duration_ms: 0,
+    })
+    setResultTab('result')
+  }
 
   const submit = (payload: OperationExecutePayload) => {
     if (executionLock.current) return
@@ -190,20 +338,26 @@ export function CommandsPage() {
       catalogQuery.isError
     )
       return
-    let input = stripEnvelope(commandInput.trim()).replace(/;$/, '').trim()
+    const input = stripEnvelope(commandInput.trim()).replace(/;$/, '').trim()
     if (!input) return
-    // An omitted NF means the selected destination; an explicit different NF is rejected.
-    if (!/(?:^|[:,])\s*NF\s*=/i.test(input)) {
-      input += input.includes(':') ? (input.endsWith(':') ? ' ' : ', ') : ': '
-      input += 'NF="' + currentComponent.id + '"'
-    }
-    const parsed = parseMmlCommand(input + ';', catalogQuery.data)
+    // An omitted NF means the selected destination for infrastructure commands.
+    // Analytics NF is a measurement target, not the command destination.
+    const parsed = parseMmlCommand(
+      input + ';',
+      catalogQuery.data,
+      currentComponent.id
+    )
     if (!parsed.success) {
       toast.error('Comando no válido', { description: parsed.error })
+      showCommandError(parsed.error, commandInput)
       return
     }
     if (parsed.componentId !== currentComponent.id) {
       toast.error('El destino del comando no coincide con el nodo seleccionado')
+      showCommandError(
+        'El destino del comando no coincide con el nodo seleccionado',
+        commandInput
+      )
       return
     }
     const operation = currentComponent.operations.find(
@@ -211,6 +365,7 @@ export function CommandsPage() {
     )
     if (!operation?.allowed) {
       toast.error('Operación no autorizada para su rol')
+      showCommandError('Operación no autorizada para su rol', commandInput)
       return
     }
     setSelectedOperationId(operation.id)
@@ -220,6 +375,7 @@ export function CommandsPage() {
       component_id: currentComponent.id,
       operation_id: operation.id,
       parameters: parsed.parameters,
+      original_command: redactMml(commandInput),
     }
     if (operation.mutating) setConfirmation(payload)
     else submit(payload)
@@ -232,7 +388,7 @@ export function CommandsPage() {
     const comp = targetComponent ?? currentComponent
     if (!comp) return
     if (comp.id !== currentComponent?.id) {
-      setSelectedComponentId(comp.id)
+      selectComponent(comp.id)
     }
     const defaults = parameterDefaults(operation)
     setSelectedOperationId(operation.id)
@@ -329,11 +485,40 @@ export function CommandsPage() {
     const query = nodeSearch.trim().toLowerCase()
     if (!query) return components
     return components.filter((component) =>
-      [component.id, component.label, component.unit, component.node_id]
+      [
+        component.id,
+        component.label,
+        component.unit,
+        component.node_id,
+        ...(component.interfaces ?? []),
+      ]
         .filter(Boolean)
         .some((value) => value?.toLowerCase().includes(query))
     )
   }, [components, nodeSearch])
+
+  const groupedComponents = useMemo(() => {
+    const domainList = Object.values(DOMAINS).sort((a, b) => a.order - b.order)
+    const groups: {
+      domain: DomainMeta
+      items: ComponentOperations[]
+    }[] = []
+
+    for (const domain of domainList) {
+      const items = visibleComponents
+        .filter((c) => getComponentDomain(c) === domain.id)
+        .sort((a, b) => {
+          const orderA = NF_SIGNALING_ORDER[a.id.toLowerCase()] ?? 99
+          const orderB = NF_SIGNALING_ORDER[b.id.toLowerCase()] ?? 99
+          if (orderA !== orderB) return orderA - orderB
+          return a.label.localeCompare(b.label)
+        })
+      if (items.length > 0) {
+        groups.push({ domain, items })
+      }
+    }
+    return groups
+  }, [visibleComponents])
 
   const visibleOperations = useMemo(() => {
     const query = operationSearch.trim().toLowerCase()
@@ -380,7 +565,7 @@ export function CommandsPage() {
     const operation = component?.operations.find(
       (item) => item.id === run.operation_id
     )
-    setSelectedComponentId(run.component_id)
+    selectComponent(run.component_id)
     setSelectedOperationId(run.operation_id)
     setParamValues(run.parameters)
     setLastResult(run)
@@ -411,59 +596,127 @@ export function CommandsPage() {
         </Alert>
       )}
       <Card className='mb-6 overflow-hidden p-0'>
-        <div className='grid h-[calc(100dvh-110px)] min-h-[520px] grid-cols-1 md:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[230px_minmax(0,1fr)]'>
+        <div className='grid h-[calc(100dvh-110px)] min-h-[520px] grid-cols-1 md:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[290px_minmax(0,1fr)]'>
           <aside className='flex min-h-0 flex-col border-b md:border-r md:border-b-0'>
-            <div className='flex items-center justify-between border-b px-3 py-2 text-xs font-semibold'>
-              Elementos de red{' '}
-              <span className='font-mono text-muted-foreground'>
-                {components.length}
+            <div className='flex items-center justify-between border-b bg-muted/20 px-3 py-2.5 text-xs font-semibold'>
+              <span>Funciones de Red Core</span>
+              <span className='font-mono text-xs text-muted-foreground'>
+                {visibleComponents.length}
               </span>
             </div>
-            <div className='p-2'>
+            <div className='border-b p-2'>
               <SearchInput
                 value={nodeSearch}
                 onChange={setNodeSearch}
-                placeholder='Buscar NF…'
-                label='Buscar elementos de red'
+                placeholder='Buscar función de red…'
+                label='Buscar funciones de red'
               />
             </div>
-            <div className='max-h-40 flex-1 overflow-y-auto px-2 pb-2 md:max-h-none'>
+            {/* Lista agrupada y plegable por dominios */}
+            <div className='max-h-56 flex-1 space-y-3 overflow-y-auto p-2 md:max-h-none'>
               {catalogQuery.isLoading ? (
                 <LoadingRows count={6} />
+              ) : groupedComponents.length > 0 ? (
+                groupedComponents.map(({ domain, items }) => {
+                  const DomainIcon = domain.icon
+                  const isCollapsed = Boolean(collapsedDomains[domain.id])
+                  const showItems = nodeSearch.trim() || !isCollapsed
+
+                  return (
+                    <div key={domain.id} className='space-y-1'>
+                      <button
+                        type='button'
+                        onClick={() =>
+                          setCollapsedDomains((prev) => ({
+                            ...prev,
+                            [domain.id]: !prev[domain.id],
+                          }))
+                        }
+                        className='flex w-full items-center justify-between rounded px-1.5 py-1 text-[10px] font-bold tracking-wider text-muted-foreground uppercase transition-colors hover:bg-muted/50 hover:text-foreground'
+                      >
+                        <div className='flex items-center gap-1.5'>
+                          <ChevronDown
+                            className={cn(
+                              'size-3 text-muted-foreground transition-transform duration-200',
+                              !showItems && '-rotate-90'
+                            )}
+                          />
+                          <DomainIcon className='size-3 text-primary/70' />
+                          <span>{domain.label}</span>
+                        </div>
+                        <span className='py-0.2 rounded bg-muted/80 px-1.5 font-mono text-[9px] text-muted-foreground'>
+                          {items.length}
+                        </span>
+                      </button>
+
+                      {showItems && (
+                        <div className='space-y-1 pl-1'>
+                          {items.map((component) => (
+                            <NodeButton
+                              key={component.id}
+                              component={component}
+                              selected={component.id === currentComponent?.id}
+                              onSelect={() => {
+                                if (executeMutation.isPending) return
+                                selectComponent(component.id)
+                                setSelectedOperationId('')
+                                setParamValues({})
+                                setCommandInput('')
+                                setParametersOpen(false)
+                                setOperationSearch('')
+                                inputRef.current?.focus()
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })
               ) : (
-                visibleComponents.map((component) => (
-                  <NodeButton
-                    key={component.id}
-                    component={component}
-                    selected={component.id === currentComponent?.id}
-                    onSelect={() => {
-                      if (executeMutation.isPending) return
-                      setSelectedComponentId(component.id)
-                      setSelectedOperationId('')
-                      setParamValues({})
-                      setCommandInput('')
-                      setParametersOpen(false)
-                      setOperationSearch('')
-                      inputRef.current?.focus()
-                    }}
-                  />
-                ))
-              )}
-              {!catalogQuery.isLoading && !visibleComponents.length && (
-                <EmptyList text='Sin coincidencias' />
+                <EmptyList text='Sin funciones de red coincidentes' />
               )}
             </div>
           </aside>
           <section className='flex min-h-0 min-w-0 flex-col'>
             <div className='shrink-0 space-y-2 border-b bg-muted/10 p-3'>
-              <div className='flex items-center justify-between gap-2'>
-                <div className='flex min-w-0 items-center gap-2 text-xs'>
-                  <span className='font-semibold'>
+              <div className='flex items-center justify-between gap-3'>
+                <div className='flex min-w-0 items-center gap-2.5 text-xs'>
+                  <span className='text-sm font-bold text-foreground'>
                     {currentComponent?.label ?? 'Sin destino'}
                   </span>
-                  <span className='truncate font-mono text-muted-foreground'>
-                    {currentComponent?.unit}
-                  </span>
+                  {currentComponent && (
+                    <Badge
+                      variant='outline'
+                      className='h-4.5 border-border/80 px-1.5 font-sans text-[10px] font-normal text-muted-foreground'
+                    >
+                      {DOMAINS[getComponentDomain(currentComponent)].label}
+                    </Badge>
+                  )}
+                  {currentComponent?.status && (
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium',
+                        currentComponent.status === 'running'
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                          : currentComponent.status === 'stopped'
+                            ? 'bg-destructive/10 text-destructive'
+                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'size-1.5 rounded-full',
+                          currentComponent.status === 'running'
+                            ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.6)]'
+                            : currentComponent.status === 'stopped'
+                              ? 'bg-destructive'
+                              : 'bg-amber-500'
+                        )}
+                      />
+                      {statusLabel(currentComponent.status)}
+                    </span>
+                  )}
                 </div>
                 <div className='flex flex-wrap items-center gap-1'>
                   <Button
@@ -866,7 +1119,12 @@ export function CommandsPage() {
             {confirmation?.operation_id}
           </p>
           <pre className='overflow-auto rounded border p-3 text-xs'>
-            {JSON.stringify(confirmation?.parameters, null, 2)}
+            {JSON.stringify(
+              confirmation?.parameters,
+              (key, value: unknown) =>
+                ['key', 'opc'].includes(key) ? '[REDACTED]' : value,
+              2
+            )}
           </pre>
           <div className='flex justify-end gap-2'>
             <Button variant='outline' onClick={() => setConfirmation(null)}>
@@ -895,15 +1153,18 @@ function CommandReference({ component }: { component?: ComponentOperations }) {
     <ScrollArea className='h-[65vh]'>
       <div className='space-y-5 p-5'>
         <div>
-          <h3 className='text-sm font-semibold'>Referencia operativa</h3>
+          <h3 className='text-sm font-semibold'>
+            Referencia operativa del 5G Core
+          </h3>
           <p className='mt-1 text-xs text-muted-foreground'>
-            Sintaxis controlada del EMS para {component.label}. Cada código se
-            traduce a una operación validada del backend; no abre una terminal
-            Linux libre. Seleccione un nodo y escriba un comando, o insértelo
-            desde Catálogo. Enter o Ctrl + Enter ejecutan una sola operación. Si
-            omite NF, se utiliza el nodo seleccionado; otro destino explícito se
-            rechaza. El historial permite recuperar resultados y comandos, sin
-            volver a ejecutarlos.
+            Consola MML de operación centralizada para funciones de red del
+            Núcleo 5G (3GPP Rel-16). Cada código se traduce a una operación
+            validada del backend sin abrir terminales SSH libres. Para consultar
+            el estado de terminales (UE) y enlaces radio (gNodeB), utilice las
+            operaciones del AMF (<code>LST AMF-UE-CONTEXT:;</code>,{' '}
+            <code>LST AMF-GNB-ASSOC:;</code>) o del SMF (
+            <code>LST SMF-PDU-SESSION:;</code>) conforme al estándar 3GPP TS
+            28.530.
           </p>
         </div>
 
@@ -1025,53 +1286,69 @@ function NodeButton({
   selected: boolean
   onSelect: () => void
 }) {
+  const { title, subtitle } = parseNodeLabel(component.label)
+  const isRunning = component.status === 'running'
+  const isStopped = component.status === 'stopped'
+
   return (
     <button
       type='button'
       onClick={onSelect}
       aria-pressed={selected}
       className={cn(
-        'group flex w-full items-center gap-3 rounded-md border border-transparent px-3 py-2.5 text-left transition-colors',
+        'group flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-all duration-150',
         selected
-          ? 'border-primary/20 bg-primary/10 text-foreground'
-          : 'hover:border-border hover:bg-muted/50'
+          ? 'bg-primary/10 font-semibold text-foreground ring-1 ring-primary/25'
+          : 'text-foreground/80 hover:bg-muted/60 hover:text-foreground'
       )}
     >
       <span
         className={cn(
-          'flex size-8 shrink-0 items-center justify-center rounded-md border bg-background',
-          selected && 'border-primary/30 text-primary'
+          'flex size-6 shrink-0 items-center justify-center rounded border bg-background/80 transition-colors',
+          selected
+            ? 'border-primary/40 text-primary'
+            : 'border-border/60 text-muted-foreground group-hover:text-foreground'
         )}
       >
         {componentIcon(component)}
       </span>
-      <span className='min-w-0 flex-1'>
-        <span className='flex items-center gap-2'>
-          <span className='truncate text-sm font-medium'>
-            {component.label}
-          </span>
+      <span className='flex min-w-0 flex-1 items-center justify-between gap-2'>
+        <span className='flex min-w-0 items-center gap-1.5'>
           <span
             className={cn(
-              'size-1.5 shrink-0 rounded-full',
-              component.status === 'running'
-                ? 'bg-emerald-500'
-                : component.status === 'stopped'
-                  ? 'bg-destructive'
-                  : 'bg-amber-500'
+              'truncate text-xs tracking-tight',
+              selected ? 'font-bold text-foreground' : 'font-medium'
             )}
-            aria-label={statusLabel(component.status)}
-          />
+          >
+            {title}
+          </span>
+          {subtitle && (
+            <Badge
+              variant='outline'
+              className={cn(
+                'h-4 shrink-0 px-1 py-0 text-[9px] leading-none font-normal',
+                selected
+                  ? 'border-primary/40 bg-primary/15 font-medium text-primary'
+                  : 'border-border/70 text-muted-foreground'
+              )}
+            >
+              {subtitle}
+            </Badge>
+          )}
         </span>
-        <span className='block truncate font-mono text-[10px] text-muted-foreground'>
-          {component.node_id ?? component.unit}
-        </span>
+        <span
+          className={cn(
+            'size-1.5 shrink-0 rounded-full',
+            isRunning
+              ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.7)]'
+              : isStopped
+                ? 'bg-destructive'
+                : 'bg-amber-500'
+          )}
+          title={statusLabel(component.status)}
+          aria-label={statusLabel(component.status)}
+        />
       </span>
-      <ChevronRight
-        className={cn(
-          'size-4 shrink-0 text-muted-foreground transition-transform',
-          selected && 'translate-x-0.5 text-primary'
-        )}
-      />
     </button>
   )
 }
@@ -1156,13 +1433,20 @@ function ParameterField({
         </Select>
       ) : (
         <Input
-          type={parameter.type === 'number' ? 'number' : 'text'}
+          type={
+            parameter.secret
+              ? 'password'
+              : parameter.type === 'number'
+                ? 'number'
+                : 'text'
+          }
+          step={parameter.integer === false ? 'any' : 1}
           min={parameter.minimum}
           max={parameter.maximum}
           value={String(value ?? parameter.default ?? '')}
           onChange={(event) =>
             onChange(
-              parameter.type === 'number'
+              parameter.type === 'number' && event.target.value !== ''
                 ? Number(event.target.value)
                 : event.target.value
             )
@@ -1266,7 +1550,7 @@ function parameterDefaults(operation: OperationDefinition) {
   for (const parameter of operation.parameters) {
     if (parameter.default !== undefined)
       defaults[parameter.id] = parameter.default
-    else if (parameter.options?.length)
+    else if (parameter.required && parameter.options?.length)
       defaults[parameter.id] = parameter.options[0].value
   }
   return defaults
@@ -1304,10 +1588,21 @@ function statusLabel(status?: string) {
 }
 
 function componentIcon(component: ComponentOperations) {
-  if (component.id === 'ue') return <Smartphone className='size-4' />
-  if (component.id === 'gnb' || component.id === 'enb')
-    return <Radio className='size-4' />
-  if (component.kind === 'database') return <Database className='size-4' />
-  if (component.kind === 'host') return <Network className='size-4' />
-  return <Server className='size-4' />
+  const kind = (component.kind ?? '').toLowerCase()
+  const id = component.id.toLowerCase()
+  const unit = (component.unit ?? '').toLowerCase()
+
+  if (
+    kind === 'user-plane' ||
+    id.startsWith('upf') ||
+    id.startsWith('sgwu') ||
+    id.startsWith('pgwu') ||
+    unit.includes('upf')
+  ) {
+    return <Network className='size-3.5' />
+  }
+  if (kind === 'database' || id === 'mongodb' || unit.includes('mongod')) {
+    return <Database className='size-3.5' />
+  }
+  return <Server className='size-3.5' />
 }

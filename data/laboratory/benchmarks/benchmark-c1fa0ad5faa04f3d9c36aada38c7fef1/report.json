@@ -1,0 +1,769 @@
+{
+  "started_at": "2026-09-30T15:18:50.776528+00:00",
+  "model": "qwen2.5:7b-instruct-q4_K_M",
+  "kind": "development_benchmark",
+  "hardware_before": {
+    "name": "NVIDIA GeForce RTX 5070",
+    "total_mib": 12227,
+    "used_mib": 6044,
+    "gpu_percent": 6,
+    "driver": "595.79"
+  },
+  "runs": [
+    {
+      "wall_seconds": 7.832801500000642,
+      "id": "dd28c2fbe1a24af0b383826c20e4b573",
+      "context_sha256": "8cf13988bae1eb60101acbc3e37a2ceab5035fef170d02e1329c91f10568d84b",
+      "status": "unavailable",
+      "reason": "invalid_model_output",
+      "message": "La propuesta no supera la validacion de evidencia. No se muestra como resultado."
+    },
+    {
+      "wall_seconds": 7.064023400002043,
+      "id": "e914b32c295145fb89d520daa4de09f9",
+      "context_sha256": "8cf13988bae1eb60101acbc3e37a2ceab5035fef170d02e1329c91f10568d84b",
+      "status": "completed",
+      "proposal": {
+        "observations": [
+          {
+            "claim": "Ensayo 1, NWDAF OFF: espera inicial 7.0615 s; validez inconclusive.",
+            "evidence_ids": [
+              "ev_02"
+            ]
+          },
+          {
+            "claim": "Ensayo 2, NWDAF ON: espera inicial 3.4524 s; validez inconclusive.",
+            "evidence_ids": [
+              "ev_03"
+            ]
+          }
+        ],
+        "hypotheses": [
+          {
+            "id": "h1",
+            "description": "Podria ser que la presencia de NWDAF no afecte directamente la espera inicial, sino que la variacion en la carga compartida entre el reproductor y el relay SSH sea la causa de la disminucion de la espera inicial.",
+            "supporting_evidence": [
+              "ev_02",
+              "ev_03"
+            ],
+            "contradicting_evidence": [],
+            "missing_information": [
+              "Se desconoce la carga compartida en cada ensayo."
+            ]
+          },
+          {
+            "id": "h2",
+            "description": "Podria ser que la espera inicial se vea afectada por la configuracion inicial del reproductor y el relay SSH, independientemente de la activacion de NWDAF.",
+            "supporting_evidence": [
+              "ev_02",
+              "ev_03"
+            ],
+            "contradicting_evidence": [],
+            "missing_information": [
+              "Se desconoce la configuracion inicial del reproductor y el relay SSH en cada ensayo."
+            ]
+          }
+        ],
+        "proposed_test": {
+          "catalog_action": "review_receiver_counters",
+          "parameters": {},
+          "expected_observations_by_hypothesis": {
+            "h1": "Se espera que la variacion en la carga compartida entre el reproductor y el relay SSH sea menor en el ensayo 2, lo que explicaria la disminucion de la espera inicial.",
+            "h2": "Se espera que la configuracion inicial del reproductor y el relay SSH sea similar en ambos ensayos, lo que no explicaria la disminucion de la espera inicial."
+          },
+          "limitations": []
+        },
+        "conclusion_status": "inconclusive"
+      },
+      "runtime": {
+        "model": "qwen2.5:7b-instruct-q4_K_M",
+        "model_digest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+        "prompt_sha256": "392a4b786dbf9957c78d5723289d8ceb532d7e13589a44c01745f7de216bf333",
+        "output_schema_sha256": "ad5075ca63580e8f7cc78677829f8b9cf176577c1b67f105201edb80d10e8885",
+        "prompt_version": "qoe-tutor-v5",
+        "context_tokens_limit": 4096,
+        "first_token_seconds": 0.36670349999621976,
+        "total_seconds": 5.931921999996121,
+        "eval_count": 512,
+        "eval_duration_ns": 5349036000,
+        "prompt_eval_count": 1126,
+        "local_only": true
+      },
+      "advisory_only": true,
+      "commands_executed": false
+    },
+    {
+      "wall_seconds": 5.700669500001823,
+      "id": "4094c5f7bf414059a347bbd37b5aa502",
+      "context_sha256": "8cf13988bae1eb60101acbc3e37a2ceab5035fef170d02e1329c91f10568d84b",
+      "status": "completed",
+      "proposal": {
+        "observations": [
+          {
+            "claim": "Ensayo 1, NWDAF OFF: espera inicial 7.0615 s; validez inconclusive.",
+            "evidence_ids": [
+              "ev_02"
+            ]
+          },
+          {
+            "claim": "Ensayo 2, NWDAF ON: espera inicial 3.4524 s; validez inconclusive.",
+            "evidence_ids": [
+              "ev_03"
+            ]
+          }
+        ],
+        "hypotheses": [
+          {
+            "id": "h1",
+            "description": "Podria ser que la presencia de NWDAF no afecte directamente la espera inicial, sino que la variacion en la carga compartida entre el reproductor y el relay SSH sea la causa de la disminucion de la espera inicial.",
+            "supporting_evidence": [
+              "ev_02",
+              "ev_03"
+            ],
+            "contradicting_evidence": [],
+            "missing_information": [
+              "Se desconoce la carga compartida en cada ensayo."
+            ]
+          },
+          {
+            "id": "h2",
+            "description": "Podria ser que la espera inicial se vea afectada por la configuracion inicial del reproductor y el relay SSH, independientemente de la activacion de NWDAF.",
+            "supporting_evidence": [
+              "ev_02",
+              "ev_03"
+            ],
+            "contradicting_evidence": [],
+            "missing_information": [
+              "Se desconoce la configuracion inicial del reproductor y el relay SSH en cada ensayo."
+            ]
+          }
+        ],
+        "proposed_test": {
+          "catalog_action": "review_receiver_counters",
+          "parameters": {},
+          "expected_observations_by_hypothesis": {
+            "h1": "Se espera que la variacion en la carga compartida entre el reproductor y el relay SSH sea menor en el ensayo 2, lo que explicaria la disminucion de la espera inicial.",
+            "h2": "Se espera que la configuracion inicial del reproductor y el relay SSH sea similar en ambos ensayos, lo que no explicaria la disminucion de la espera inicial."
+          },
+          "limitations": []
+        },
+        "conclusion_status": "inconclusive"
+      },
+      "runtime": {
+        "model": "qwen2.5:7b-instruct-q4_K_M",
+        "model_digest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+        "prompt_sha256": "392a4b786dbf9957c78d5723289d8ceb532d7e13589a44c01745f7de216bf333",
+        "output_schema_sha256": "ad5075ca63580e8f7cc78677829f8b9cf176577c1b67f105201edb80d10e8885",
+        "prompt_version": "qoe-tutor-v5",
+        "context_tokens_limit": 4096,
+        "first_token_seconds": 0.0352366000006441,
+        "total_seconds": 5.495090199998231,
+        "eval_count": 512,
+        "eval_duration_ns": 5325451000,
+        "prompt_eval_count": 1126,
+        "local_only": true
+      },
+      "advisory_only": true,
+      "commands_executed": false
+    }
+  ],
+  "samples": [
+    {
+      "time": 1790781530.8202674,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6044,
+        "gpu_percent": 6,
+        "driver": "595.79"
+      },
+      "cpu_percent": 27.1,
+      "ram_available_bytes": 5788512256,
+      "ram_used_bytes": 28322103296,
+      "model_processes": {
+        "33860": {
+          "cpu_seconds": 23.375,
+          "rss_bytes": 113934336
+        },
+        "45580": {
+          "cpu_seconds": 1.8125,
+          "rss_bytes": 145154048
+        }
+      }
+    },
+    {
+      "time": 1790781532.4950502,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6044,
+        "gpu_percent": 7,
+        "driver": "595.79"
+      },
+      "cpu_percent": 29.4,
+      "ram_available_bytes": 5816918016,
+      "ram_used_bytes": 28293697536,
+      "model_processes": {
+        "33860": {
+          "cpu_seconds": 23.375,
+          "rss_bytes": 113934336
+        },
+        "45580": {
+          "cpu_seconds": 1.8125,
+          "rss_bytes": 145154048
+        }
+      }
+    },
+    {
+      "time": 1790781534.2870326,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6044,
+        "gpu_percent": 61,
+        "driver": "595.79"
+      },
+      "cpu_percent": 23.6,
+      "ram_available_bytes": 5676376064,
+      "ram_used_bytes": 28434239488,
+      "model_processes": {
+        "33860": {
+          "cpu_seconds": 23.515625,
+          "rss_bytes": 114044928
+        },
+        "45580": {
+          "cpu_seconds": 1.8125,
+          "rss_bytes": 145154048
+        }
+      }
+    },
+    {
+      "time": 1790781536.9917908,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6044,
+        "gpu_percent": 95,
+        "driver": "595.79"
+      },
+      "cpu_percent": 22.4,
+      "ram_available_bytes": 5705367552,
+      "ram_used_bytes": 28405248000,
+      "model_processes": {
+        "33860": {
+          "cpu_seconds": 23.578125,
+          "rss_bytes": 114044928
+        },
+        "45580": {
+          "cpu_seconds": 1.8125,
+          "rss_bytes": 145154048
+        }
+      }
+    },
+    {
+      "time": 1790781539.574437,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6044,
+        "gpu_percent": 95,
+        "driver": "595.79"
+      },
+      "cpu_percent": 21.2,
+      "ram_available_bytes": 5725626368,
+      "ram_used_bytes": 28384989184,
+      "model_processes": {
+        "33860": {
+          "cpu_seconds": 23.59375,
+          "rss_bytes": 114044928
+        },
+        "45580": {
+          "cpu_seconds": 1.8125,
+          "rss_bytes": 145154048
+        }
+      }
+    },
+    {
+      "time": 1790781542.2462003,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6044,
+        "gpu_percent": 96,
+        "driver": "595.79"
+      },
+      "cpu_percent": 21.6,
+      "ram_available_bytes": 5701525504,
+      "ram_used_bytes": 28409090048,
+      "model_processes": {
+        "33860": {
+          "cpu_seconds": 23.640625,
+          "rss_bytes": 114044928
+        },
+        "45580": {
+          "cpu_seconds": 1.8125,
+          "rss_bytes": 145154048
+        }
+      }
+    },
+    {
+      "time": 1790781545.189782,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6044,
+        "gpu_percent": 95,
+        "driver": "595.79"
+      },
+      "cpu_percent": 35.7,
+      "ram_available_bytes": 5692469248,
+      "ram_used_bytes": 28418146304,
+      "model_processes": {
+        "33860": {
+          "cpu_seconds": 23.6875,
+          "rss_bytes": 114044928
+        },
+        "45580": {
+          "cpu_seconds": 1.8125,
+          "rss_bytes": 145154048
+        }
+      }
+    },
+    {
+      "time": 1790781548.2302647,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6044,
+        "gpu_percent": 94,
+        "driver": "595.79"
+      },
+      "cpu_percent": 34.5,
+      "ram_available_bytes": 5689462784,
+      "ram_used_bytes": 28421152768,
+      "model_processes": {
+        "33860": {
+          "cpu_seconds": 23.734375,
+          "rss_bytes": 114335744
+        },
+        "45580": {
+          "cpu_seconds": 1.8125,
+          "rss_bytes": 145154048
+        }
+      }
+    },
+    {
+      "time": 1790781551.162696,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6044,
+        "gpu_percent": 95,
+        "driver": "595.79"
+      },
+      "cpu_percent": 34.9,
+      "ram_available_bytes": 5648871424,
+      "ram_used_bytes": 28461744128,
+      "model_processes": {
+        "33860": {
+          "cpu_seconds": 23.765625,
+          "rss_bytes": 114368512
+        },
+        "45580": {
+          "cpu_seconds": 1.8125,
+          "rss_bytes": 145154048
+        }
+      }
+    }
+  ],
+  "timer_lag_seconds": [
+    0.006578799994895232,
+    0.00892339999991236,
+    0.01090269999549491,
+    0.009194500005105508,
+    0.009497400005056986,
+    0.013812400003371292,
+    0.015495300004840826,
+    0.009751000000687779,
+    0.009195100002398246,
+    0.01171329999779118,
+    0.012164599999960043,
+    0.008668200006650292,
+    0.010042099998099727,
+    0.007970900001237166,
+    0.007166099999449213,
+    0.011056300000927874,
+    0.016334800001641267,
+    0.006785799999488515,
+    0.011020799999823791,
+    0.001324000000022349,
+    0.0015926999942166703,
+    0.0012601000009453828,
+    0.0014146999994409243,
+    0.0014400999963982003,
+    0.0015060000034281956,
+    0.0016066000054706792,
+    0.0010244999968563179,
+    0.0011933000016142586,
+    0.001361099998757706,
+    0.011893099998997056,
+    0.008921499999996738,
+    0.007132599999022202,
+    0.009305500006303188,
+    0.007140000004437749,
+    0.014276600001903714,
+    0.014464200004294978,
+    0.0020638000016333508,
+    0.007786800003668756,
+    0.004982100002234799,
+    0.0010466999985510456,
+    0.022332400006416717,
+    0.013204699996276756,
+    0.005710000000544821,
+    0.004858700001204849,
+    0.4259556999997585,
+    0.004386199997679793,
+    0.001040999998804179,
+    0.0014114999969024183,
+    0.0015335000018239925,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0.028132200003892646,
+    0.004419599997345355,
+    0.004586099999141877,
+    0.0035241999969002763,
+    0.024996600000304167,
+    0.004764399996201971,
+    0.021300600000540723,
+    0,
+    0.00936090000614058,
+    0.013502699995297004,
+    0.014419600006658581,
+    0,
+    0,
+    0.03437390000472078,
+    0,
+    0,
+    0.016427400000975464,
+    0.006192600000940726,
+    0.0002836000014212886,
+    0.016974299996218176,
+    0,
+    0.022040099999867377,
+    0.009043400004156862,
+    0,
+    0.014809200004674491,
+    0.037232699996093285,
+    0,
+    0,
+    0,
+    0.008050499996170399,
+    0,
+    0.02188709999900311,
+    0,
+    0.024395399999048092,
+    0.004896199995710046,
+    0.02800320000387728,
+    0.0005080000002635615,
+    0,
+    0,
+    0,
+    0.006283400001120751,
+    0,
+    0,
+    0.00742060000193305,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0.004474899996421297,
+    0,
+    0.00710840000392636,
+    0,
+    0.001335399999516082,
+    0,
+    0,
+    0.004887000005692241,
+    0,
+    0.01139879999682307,
+    0.014559400001598985,
+    0,
+    0.002595200002542694,
+    0.008177299993985795,
+    0.009480700001586226,
+    0.036199799996393264,
+    0,
+    0.01349149999732617,
+    0,
+    0,
+    0.0314230999967549,
+    0.016309999994700772,
+    0.009871099998417773,
+    0.00232319999777246,
+    0,
+    0,
+    0,
+    0.003622699997504239,
+    0.01116140000085579,
+    0.025500999999349003,
+    0.008440400003746615,
+    0.021193600000697185,
+    0.01072100000164937,
+    0.004757999998400916,
+    0,
+    0,
+    0.00663690000073984,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0.004510599999048279,
+    0,
+    0.008907699996780136,
+    0.008994899998651815,
+    0.016336099996988193,
+    0.01922559999657096,
+    0,
+    0.035366999999678225,
+    0.22862180000374793,
+    0.020799399996758436,
+    0.011706400003458836,
+    0.008211000003211663,
+    0.020469500002218408,
+    0.01861840000055963,
+    0.013478799995209553,
+    0.015428100002463904,
+    0.01067980000079842,
+    0.019162700005108488,
+    0.016292099996644535,
+    0.0011555999983102055,
+    0.005457899994507895,
+    0.0211511999979848,
+    0.009594599995762107,
+    0.014383199998701454,
+    0.02283220000681467,
+    0.011994600000616626,
+    0.22080940000450938,
+    0.06111280000477563,
+    0.011142500002461017,
+    0,
+    0.004200500002480109,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0.011425600004440636,
+    0.010993999999482182,
+    0.022943200000736394,
+    0.020312999996531286,
+    0.005008900002576408,
+    0,
+    0,
+    0.0057153999980073394,
+    0,
+    0.01855970000469824,
+    0.025288000000000463,
+    0.018777800006500908,
+    0.016345100000035015,
+    0.0055372999951941865,
+    0.014958599999954456,
+    0,
+    0,
+    0.055804599996190515,
+    0.0008241999996243948,
+    0.009869700002309398,
+    0.029091400002653242,
+    0.007087900000624356,
+    0.05160470000118948,
+    0.0194939000022714,
+    0.02421700000122655,
+    0.04801010000228416,
+    0,
+    0.020438700000522655,
+    0,
+    0,
+    0.02245349999720929,
+    0.014527499998803248,
+    0.021447400005126835,
+    0.029228200003853996,
+    0.01717159999971045,
+    0.015739400000893508,
+    0.0021221000017248998,
+    0.01926920000114478,
+    0.006166000002122016,
+    0.017487399996025485,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0.005797000000893601,
+    0.015026399999624115,
+    0,
+    0.007749100000364703,
+    0.0017653999995673048,
+    0.009525199998461173,
+    0.00803510000259848,
+    0.026575300001422872,
+    0.03295869999710703,
+    0.010074999993958042,
+    0.015723300001991444,
+    0.019400400003360116,
+    0.01691210000280989,
+    0.010491500000352968,
+    0,
+    0.000284199998714027,
+    0,
+    0.019192100003419907,
+    0.002693099998577961,
+    0,
+    0.0030587000030209283,
+    0,
+    0,
+    0.0404861000017263,
+    9.480000444454795e-05,
+    0.009953000003588383,
+    0.002020099996298083,
+    0.09551810000557452,
+    0.021583500000997444,
+    0.01598530000337632,
+    0.03245339999848511,
+    0.17903580000274816,
+    0.04061310000106459,
+    0.01796710000344319,
+    0.012304300001414956,
+    0.009697299999243111,
+    0.019153799995547158,
+    0.0010474999973666826,
+    0,
+    0.009621100001095326,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0.008077199995750559,
+    0.01757790000119712,
+    0.015641799999866632,
+    0.009517100002267395,
+    0.015735700001823713,
+    0.0028810999967390644,
+    0.0014836000002105693,
+    0.01330960000195773,
+    0.012813399999868122,
+    0.0026433999984874362,
+    0.007279100001323965,
+    0.010358700000506357,
+    0.00031130000133998414,
+    0.0003590000007534372,
+    0,
+    0,
+    0.0055017999940901036,
+    0.005675099996733476,
+    0.000487399996200108,
+    0.006841800003894602,
+    0.031566499997279604,
+    0.004568500003369988,
+    0,
+    0.011402700004691721,
+    0.006733700002951079,
+    0.04314630000153556,
+    0.01620090000069467,
+    0.009684700005163902,
+    0.0011550999945029589,
+    0.015984000000753437,
+    0.02351039999775821,
+    0.005983700003707779,
+    0.023141699998814144,
+    0.005814899998949838,
+    0,
+    0.00451010000251699,
+    0.00891120000160299,
+    0,
+    0.009244099997158625,
+    0.0027293999984976808,
+    0.014712399995187295,
+    0.004396599996834991,
+    0.004498699995747299,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0.006038700000499372,
+    0,
+    0.04030189999612048,
+    0,
+    0,
+    0.0037020999981905306,
+    0.023169700001017188,
+    0.010132899998279751,
+    0.020044499996583906,
+    0.00246099999931175,
+    0.02178720000229077,
+    0.021927500001038422,
+    0,
+    0.005892799995490347,
+    0,
+    0.0035248000014689723,
+    0.0391059000059613,
+    1.4999997802050968e-06,
+    0,
+    0,
+    0,
+    0.013595100000384261,
+    0,
+    0,
+    0.004765199995017608,
+    0.008329799998318774,
+    0.007674499999848192,
+    0.007834899998852049,
+    0.017018000001553443,
+    0,
+    0.01337750000238884,
+    0.025269600005412937,
+    0.005289800002356057,
+    0,
+    0,
+    0,
+    0.18492190000251868,
+    0.00901040000026114,
+    0.010632100001384967
+  ],
+  "investigation_id": "61c16ef4c6a14135a46cdfc9ce7d9b06",
+  "preload_seconds": 0.406018599998788,
+  "finished_at": "2026-09-30T15:19:13.467663+00:00",
+  "summary": {
+    "valid_proposals": 2,
+    "sampled_peak_vram_mib": 6044,
+    "host_cpu_mean_percent": 27.822222222222223,
+    "host_cpu_peak_percent": 35.7,
+    "host_ram_available_min_bytes": 5648871424,
+    "event_loop_max_lag_seconds": 0.4259556999997585,
+    "ollama_cpu_seconds_delta": 0.390625,
+    "ollama_cpu_mean_percent_of_host": 0.06858027247976987,
+    "ollama_peak_rss_bytes": 259522560
+  }
+}

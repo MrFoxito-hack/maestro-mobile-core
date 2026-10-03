@@ -332,7 +332,7 @@ class RemoteExecutionAdapter(ExecutionAdapter):
             return getattr(self.settings, "ue_ssh_port", 2226)
         return self.settings.ssh_port
 
-    def _execute_sync(self, command: str, port: int | None = None) -> str:
+    def _execute_sync(self, command: str, port: int | None = None, *, retries: int = 3) -> str:
         import paramiko
         import time
 
@@ -351,7 +351,7 @@ class RemoteExecutionAdapter(ExecutionAdapter):
             connect_kwargs["password"] = self.settings.ssh_password
 
         last_err = None
-        for attempt in range(3):
+        for attempt in range(retries):
             client = paramiko.SSHClient()
             if self.settings.ssh_strict_host_key:
                 client.load_system_host_keys()
@@ -361,15 +361,38 @@ class RemoteExecutionAdapter(ExecutionAdapter):
             try:
                 client.connect(**connect_kwargs)
                 _, stdout, stderr = client.exec_command(command, timeout=20)
-                exit_code = stdout.channel.recv_exit_status()
-                output = stdout.read().decode(errors="replace")
-                error = stderr.read().decode(errors="replace")
+                # Drain stdout and stderr while the command runs. Calling
+                # recv_exit_status() first can deadlock once a verbose tshark
+                # analysis fills Paramiko's SSH channel window.
+                channel = stdout.channel
+                output_chunks: list[bytes] = []
+                error_chunks: list[bytes] = []
+                deadline = time.monotonic() + 120
+                while True:
+                    while channel.recv_ready():
+                        output_chunks.append(channel.recv(1024 * 1024))
+                    while channel.recv_stderr_ready():
+                        error_chunks.append(channel.recv_stderr(256 * 1024))
+                    if channel.exit_status_ready():
+                        while channel.recv_ready():
+                            output_chunks.append(channel.recv(1024 * 1024))
+                        while channel.recv_stderr_ready():
+                            error_chunks.append(channel.recv_stderr(256 * 1024))
+                        break
+                    if time.monotonic() >= deadline:
+                        channel.close()
+                        raise TimeoutError("El comando remoto excedió 120 segundos")
+                    time.sleep(0.01)
+
+                exit_code = channel.recv_exit_status()
+                output = b"".join(output_chunks).decode(errors="replace")
+                error = b"".join(error_chunks).decode(errors="replace")
                 if exit_code != 0:
                     raise ExecutionError(error.strip() or output.strip() or f"SSH finalizó con código {exit_code}")
                 return output
             except Exception as exc:
                 last_err = exc
-                if attempt < 2:
+                if attempt < retries - 1:
                     time.sleep(0.35)
             finally:
                 client.close()
@@ -662,7 +685,7 @@ class RemoteExecutionAdapter(ExecutionAdapter):
         remote_path, _ = self._capture_paths(trace_id)
         field_arguments = " ".join(f"-e {shlex.quote(field)}" for field in TSHARK_FIELDS)
         command = (
-            f"tshark -n -r {shlex.quote(remote_path)} -c 10000 -d tcp.port==7777,http2 -T fields "
+            f"tshark -n -r {shlex.quote(remote_path)} -d tcp.port==7777,http2 -d tcp.port==8081,http2 -d tcp.port==18081,http2 -T fields "
             "-E separator=/t -E quote=d -E occurrence=a -E aggregator=, "
             f"{field_arguments} 2>/dev/null"
         )
@@ -935,8 +958,7 @@ class RemoteExecutionAdapter(ExecutionAdapter):
             return {"output": output, "data": _key_value_payload(output)}
         if operation == "open5gs-info":
             endpoint = _validate_info_endpoint(component, parameters.get("endpoint"))
-            address = {"amf": "127.0.0.5", "smf": "127.0.0.4", "mme": "127.0.0.2"}[component]
-            port = get_settings().open5gs_info_port
+            address, port = _info_address(component)
             url = f"http://{address}:{port}/{endpoint}?page=0&page_size=100"
             try:
                 output = await self._run(
@@ -1002,6 +1024,7 @@ def _validate_info_endpoint(component: str, endpoint: str | None) -> str:
     allowed = {
         "amf": {"ue-info", "gnb-info"},
         "smf": {"pdu-info"},
+        "smf2": {"pdu-info"},
         "mme": {"ue-info", "enb-info"},
     }
     if endpoint not in allowed.get(component, set()):
@@ -1010,6 +1033,8 @@ def _validate_info_endpoint(component: str, endpoint: str | None) -> str:
 
 
 def _component_binary(component: str) -> str:
+    if component == "smf2":
+        return "/home/emsadmin/maestro-charging/open5gs/build/src/smf/open5gs-smfd"
     if component in {"gnb", "ue"}:
         return "nr-gnb" if component == "gnb" else "nr-ue"
     if not re.fullmatch(r"[a-z0-9]+", component):
@@ -1034,13 +1059,19 @@ def _json_operation_payload(output: str) -> dict:
     return {"output": json.dumps(data, indent=2, ensure_ascii=False), "data": data}
 
 
+def _info_address(component: str) -> tuple[str, int]:
+    if component == "smf2":
+        return "127.0.0.15", 9091
+    return {"amf": "127.0.0.5", "smf": "127.0.0.4", "mme": "127.0.0.2"}[component], get_settings().open5gs_info_port
+
+
 def _local_open5gs_info(component: str, parameters: dict) -> dict:
     from urllib.error import URLError
     from urllib.request import urlopen
 
     endpoint = _validate_info_endpoint(component, parameters.get("endpoint"))
-    address = {"amf": "127.0.0.5", "smf": "127.0.0.4", "mme": "127.0.0.2"}[component]
-    url = f"http://{address}:{get_settings().open5gs_info_port}/{endpoint}?page=0&page_size=100"
+    address, port = _info_address(component)
+    url = f"http://{address}:{port}/{endpoint}?page=0&page_size=100"
     try:
         with urlopen(url, timeout=5) as response:
             output = response.read(get_settings().operation_output_limit + 1).decode("utf-8", errors="replace")

@@ -1,0 +1,4 @@
+# Merge into the actual UPF config only after isolated acceptance.
+# Default off. Does not contact the CHF; the SMF remains the charging consumer.
+upf:
+  charging_enforcement: false

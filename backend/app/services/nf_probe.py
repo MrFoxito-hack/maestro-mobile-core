@@ -59,7 +59,8 @@ def exporter(component):
         if not path.startswith("/etc/open5gs/") or not Path(path).is_file():
             continue
         config = yaml.safe_load(Path(path).read_text()) or {}
-        settings = (config.get(component["id"]) or {}).get("metrics", {})
+        config_key = {"smf2": "smf", "upf2": "upf"}.get(component["id"], component["id"])
+        settings = (config.get(config_key) or {}).get("metrics", {})
         servers = settings.get("server", []) if isinstance(settings, dict) else []
         if isinstance(servers, dict):
             servers = [servers]

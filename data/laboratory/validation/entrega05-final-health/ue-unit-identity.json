@@ -1,0 +1,8 @@
+{
+  "observed_at": "2026-09-30T14:50:02.796990+00:00",
+  "note": "Actual unit identity; ueransim-ue-01 is not the observed UE service",
+  "services": {
+    "ueransim-ue": "active",
+    "ueransim-ue-04": "active"
+  }
+}

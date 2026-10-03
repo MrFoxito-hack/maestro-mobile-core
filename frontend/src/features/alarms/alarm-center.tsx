@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { DateTimePicker } from '@/components/ui/date-time-picker'
 import { EmsPage } from '@/features/ems-page'
 
 type Incident = {
@@ -419,23 +420,21 @@ export function AlarmsPage() {
               </select>
             </Field>
             <Field title='Primera detección desde'>
-              <Input
-                aria-label='Desde'
-                type='datetime-local'
+              <DateTimePicker
                 value={start}
-                onChange={(event) => {
-                  setStart(event.target.value)
+                placeholder='Fecha y hora inicial...'
+                onChange={(val) => {
+                  setStart(val)
                   resetSelection()
                 }}
               />
             </Field>
             <Field title='Primera detección hasta'>
-              <Input
-                aria-label='Hasta'
-                type='datetime-local'
+              <DateTimePicker
                 value={end}
-                onChange={(event) => {
-                  setEnd(event.target.value)
+                placeholder='Fecha y hora final...'
+                onChange={(val) => {
+                  setEnd(val)
                   resetSelection()
                 }}
               />
@@ -965,7 +964,7 @@ function Detail({
             Consola MML ({incident.component.toUpperCase()})
           </Button>
         </Link>
-        <Link to='/traces'>
+        <Link to='/traces/node'>
           <Button variant='outline' size='sm' className='h-7 gap-1.5 text-xs'>
             <Radio className='size-3 text-sky-500' />
             Capturar Traza PCAP

@@ -148,10 +148,15 @@ class ProblemDetails(BaseModel):
 
 class AccountUpsert(StrictModel):
     supi: Supi
-    quotaBytes: Annotated[int, Field(strict=True, gt=0, le=MAX_BYTES)]
+    quotaBytes: Annotated[int, Field(strict=True, gt=0, le=MAX_BYTES)] | None = None
     enabled: bool = True
 
 
 class ReconcileRequest(StrictModel):
     confirmedConsumerStopped: Literal[True]
     reason: str = Field(min_length=10, max_length=500)
+
+
+class TopupRequest(StrictModel):
+    requestId: str = Field(pattern=r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')
+    amountBytes: Annotated[int, Field(strict=True, gt=0, le=100_000_000)]

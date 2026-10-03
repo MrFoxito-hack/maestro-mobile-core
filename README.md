@@ -1,76 +1,38 @@
-# EMS educativo 4G/5G
+# MAEstro: Plataforma Integral 5G SA (EMS, CHF, NWDAF & Aceleración eBPF/XDP)
 
-El directorio [`chf`](chf/README.md) contiene el primer incremento experimental
-del CHF 5G. Se ejecuta como servicio independiente en el puerto local `8081` y
-aún no implica integración con el SMF/UPF ni soporte upstream de Open5GS.
+> ⚠️ **AVISO LEGAL DE PROPIEDAD INTELECTUAL Y DERECHOS DE AUTOR**  
+> **Autor y Titular Exclusivo:** Miguel Angel Alvizuri Yucra  
+> **Proyecto Independiente de I+D en desarrollo para Trabajo de Egreso en Ingeniería de las Telecomunicaciones — Pontificia Universidad Católica del Perú (PUCP)**  
+> **Año:** 2026. Todos los derechos reservados (*All Rights Reserved*).  
+> 
+> Queda **estrictamente prohibida** la copia, duplicación, distribución, uso comercial o presentación académica parcial o total de este código, arquitectura, benchmarks empíricos (eBPF/XDP +227%), parches de código en C o módulos (CHF, NWDAF, Terminal) por parte de terceros sin autorización expresa y por escrito del autor titular. El uso no autorizado será denunciado ante los comités de integridad académica de la universidad y ante las instancias legales de propiedad intelectual pertinentes (INDECOPI / D. Leg. 822). Ver archivo completo de licencia en [`LICENSE`](LICENSE).
 
-Prototipo de plataforma web para gestionar, observar y analizar testbeds Open5GS/srsRAN previamente instalados. El frontend parte de [`satnaing/shadcn-admin`](https://github.com/satnaing/shadcn-admin) (MIT) y conserva su licencia. Incluye perfiles 4G EPC y 5G SA, RBAC, auditoría, topología, configuración YAML, suscriptores y capturas PCAP limitadas.
+---
 
-## Inicio rápido sin Open5GS
+## 1. Descripción General del Proyecto
+**MAEstro** es una plataforma de grado operador diseñada para la gestión (EMS), tarificación convergente en tiempo real (CHF Nchf), observabilidad autónoma en bucle cerrado (NWDAF Release 16/17 con IA local Ollama) y aceleración de plano de usuario (UPF con eBPF/XDP) sobre redes 5G Standalone puras (3GPP Rel-15 a Rel-18).
 
-Se requiere Docker con Compose:
+### Módulos Principales de Autoría Propietaria:
+1. **Aceleración In-Kernel de UPF con eBPF/XDP**: Decapsulación de túneles GTP-U en modo Zero-Copy con +227.30% de incremento en rendimiento TCP Downlink y bypass estricto verificado.
+2. **Motor de Tarificación Convergente (CHF Nativo 5G)**: Implementación de la interfaz `Nchf` (3GPP TS 32.291) con control de cuota por tramos (`grant`) de 500 KB y corte automático por saldo cero.
+3. **Parche de Idempotencia UDM en Lenguaje C**: Corrección del desbordamiento estático de pool de Open5GS (`UDM context exhaustion`) bajo norma 3GPP TS 29.503, validado bajo estrés continuo de 34,000 peticiones.
+4. **NWDAF Closed-Loop con IA Local**: Muestreo continuo de KPIs de red, mitigación autónoma hacia PCF vía socket MML y diagnóstico inteligente con modelo LLM Qwen 2.5 7B en GPU RTX 5070 con soberanía de datos.
+5. **Terminal Interactivo 5G (Video Lab)**: Cliente interactivo con conmutación de rebanadas (S-NSSAI), deregister formal NAS y reserva dinámica de QoS 5G+ (5QI=2 GBR) vía interfaz N5 Policy Authorization.
 
-```bash
-docker compose up --build
+---
+
+## 2. Puesta en Marcha en Laboratorio
+
+### Requisitos:
+* **Host**: Windows 11 con Python 3.11, Node.js / pnpm, GPU NVIDIA (opcional para IA local Ollama).
+* **Testbed VMs**: Cluster VirtualBox 5G SA (Core VM en `127.0.0.1:2222`, UPF VM en `127.0.0.1:2223`, UE VM en `127.0.0.1:2226`).
+
+### Ejecución Dual (Backend FastAPI + Frontend React):
+```powershell
+.\run_ems.ps1
 ```
+* **Frontend**: `http://localhost:5173`
+* **Backend API**: `http://localhost:8000` (Docs OpenAPI en `/docs`)
 
-Abrir `http://localhost:8080`. Usuarios iniciales de demostración:
-
-| Usuario | Contraseña | Rol |
-|---|---|---|
-| `docente` | `teacher-change-me` | Opera escenarios |
-| `alumno` | `student-change-me` | Solo observación |
-| `admin` | `admin-change-me` | Administración |
-
-Estas credenciales deben cambiarse antes de compartir o desplegar el sistema.
-
-## Desarrollo
-
-Backend:
-
-```bash
-cd backend
-python -m venv .venv
-.venv/Scripts/pip install -r requirements-dev.txt
-.venv/Scripts/uvicorn app.main:app --reload
-```
-
-En Linux, sustituir `.venv/Scripts/` por `.venv/bin/`. La documentación OpenAPI queda en `http://localhost:8000/docs`.
-
-Frontend:
-
-```bash
-cd frontend
-corepack pnpm install
-corepack pnpm run dev
-```
-
-## Integración con una VM real
-
-1. Disponer de un Open5GS/srsRAN ya instalado y validado; el EMS no lo aprovisiona.
-2. Copiar `backend/.env.example` a `backend/.env` y fijar una clave aleatoria.
-3. Usar `EMS_EXECUTION_MODE=local` si el backend corre en la VM del core, o `remote` para conectarse por SSH al VNRT.
-4. Declarar únicamente raíces YAML e interfaces necesarias.
-5. Crear reglas `sudoers` exactas para `systemctl start/stop` de las unidades presentes en el catálogo. No conceder `sudo systemctl *`.
-6. Habilitar MongoDB solo después de confirmar la compatibilidad del esquema con la versión fijada de Open5GS.
-7. Habilitar capturas reales solo después de conceder a `tshark` capacidades de captura limitadas; no ejecutar el backend como root.
-
-El adaptador local nunca usa `shell=True` y rechaza unidades fuera del catálogo. En VNRT se recomienda instalar este backend como agente en la VM y exponerlo detrás de HTTPS/VPN. El control opcional de inicio/parada actúa únicamente sobre servicios ya instalados; no despliega el core. No se implementó una terminal root ni ejecución remota arbitraria.
-
-## Pruebas
-
-```bash
-cd backend
-pytest
-```
-
-Las pruebas cubren autenticación, RBAC, ciclo de escenarios, auditoría, respaldo/restauración, enmascaramiento de secretos y PCAP simulado.
-
-## Límites conocidos
-
-- El modo simulado demuestra el flujo web, no emula protocolos celulares.
-- El modo `remote` cubre estado y logs por SSH; métricas de host y capturas reales requieren ejecutar el agente/backend dentro de la VM del testbed (`local`) hasta implementar su transporte remoto.
-- El CRUD MongoDB está desactivado por defecto y debe validarse contra la versión de Open5GS del laboratorio.
-- Las reglas NAT y los YAML concretos dependen del direccionamiento del VNRT; deben agregarse como scripts permitidos después del levantamiento técnico.
-- Las métricas RRC requieren habilitar la salida JSON oficial de srsRAN.
-- El frontend descarga PCAP mediante autenticación, pero para producción debe servirse todo exclusivamente por HTTPS.
+---
+*Para detalles sobre licencias, autoría o solicitudes de evaluación, consultar el archivo [`LICENSE`](LICENSE).*

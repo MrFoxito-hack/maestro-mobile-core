@@ -32,7 +32,7 @@ def initialize() -> None:
             """
             CREATE TABLE IF NOT EXISTS users (
               username TEXT PRIMARY KEY, password_hash TEXT NOT NULL,
-              role TEXT NOT NULL, testbed TEXT, enabled INTEGER NOT NULL DEFAULT 1
+              role TEXT NOT NULL, testbed TEXT, assigned_imsi TEXT, enabled INTEGER NOT NULL DEFAULT 1
             );
             CREATE TABLE IF NOT EXISTS audit_events (
               id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL,
@@ -42,6 +42,15 @@ def initialize() -> None:
             CREATE TABLE IF NOT EXISTS scenario_states (
               scenario_id TEXT PRIMARY KEY, state TEXT NOT NULL,
               parameters TEXT NOT NULL, message TEXT, updated_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS terminal_preferences (
+              terminal_key TEXT PRIMARY KEY, apn TEXT NOT NULL, updated_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS terminal_playback (
+              terminal_key TEXT NOT NULL, session_id TEXT NOT NULL,
+              sequence INTEGER NOT NULL, created_at REAL NOT NULL,
+              received_at REAL NOT NULL, payload TEXT NOT NULL,
+              PRIMARY KEY(terminal_key, session_id)
             );
             CREATE TABLE IF NOT EXISTS trace_tasks (
               id TEXT PRIMARY KEY,
@@ -215,16 +224,26 @@ def initialize() -> None:
               ON operation_runs(username, started_at DESC);
             """
         )
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN assigned_imsi TEXT")
+        except sqlite3.OperationalError:
+            pass
+
         users = [
-            ("admin", "admin-change-me", "admin", None),
-            ("docente", "teacher-change-me", "teacher", None),
-            ("alumno", "student-change-me", "student", "local"),
+            ("docente", "teacher-change-me", "teacher", None, None),
+            ("grupo1", "grupo1-pass-2026", "student", "local", "imsi-999700000000001"),
+            ("grupo2", "grupo2-pass-2026", "student", "local", "imsi-999700000000002"),
+            ("grupo3", "grupo3-pass-2026", "student", "local", "imsi-999700000000003"),
+            ("grupo4", "grupo4-pass-2026", "student", "local", "imsi-999700000000004"),
+            ("grupo5", "grupo5-pass-2026", "student", "local", "imsi-999700000000005"),
         ]
-        for username, password, role, testbed in users:
+        for username, password, role, testbed, assigned_imsi in users:
             conn.execute(
-                "INSERT OR IGNORE INTO users(username,password_hash,role,testbed) VALUES(?,?,?,?)",
-                (username, hash_password(password), role, testbed),
+                "INSERT INTO users(username,password_hash,role,testbed,assigned_imsi) VALUES(?,?,?,?,?) "
+                "ON CONFLICT(username) DO UPDATE SET role=excluded.role, testbed=excluded.testbed, assigned_imsi=excluded.assigned_imsi",
+                (username, hash_password(password), role, testbed, assigned_imsi),
             )
+        conn.execute("DELETE FROM users WHERE username IN ('admin', 'alumno')")
         # Remove measurements produced by an obsolete correlation rule. A
         # control-plane procedure taking over 60 seconds is treated as
         # uncorrelated, never as a valid latency sample.

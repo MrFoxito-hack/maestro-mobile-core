@@ -14,16 +14,8 @@ from app.services.execution import LocalExecutionAdapter, RemoteExecutionAdapter
 
 
 PROCESS = {
-    "cpu_seconds": ("Tiempo de CPU acumulado", "s", "counter"),
-    "cpu_percent": ("CPU del proceso (100% = un núcleo)", "%", "gauge"),
-    "rss_mib": ("Memoria residente del proceso", "MiB", "gauge"),
-    "virtual_memory_mib": ("Memoria virtual reservada", "MiB", "gauge"),
-    "service_memory_mib": ("Memoria del servicio (cgroup)", "MiB", "gauge"),
-    "threads": ("Hilos del proceso", "hilos", "gauge"),
-    "tasks": ("Tareas del servicio", "tareas", "gauge"),
-    "auto_restarts": ("Reinicios automáticos de systemd", "reinicios", "counter"),
-    "uptime_seconds": ("Tiempo activo del proceso", "s", "gauge"),
-    "open_fds": ("Descriptores de archivo abiertos", "descriptores", "gauge"),
+    "cpu_percent": ("CPU utilizada por la función de red", "%", "gauge"),
+    "rss_mib": ("Memoria física residente (RAM)", "MiB", "gauge"),
 }
 CLI = {
     "ngap_connected": ("Asociación NGAP activa (gNB)", "booleano"),
@@ -129,20 +121,33 @@ def parse_metrics(text):
 
 
 def native_definition(nf, name, labels, kind, help_text):
-    label, unit = LABELS.get(name, (help_text, "eventos" if kind == "counter" else "unidades"))
-    for suffix, entry in LABELS.items():
-        if name.endswith("_" + suffix):
-            label, unit = entry
-            break
-    dimension_text = ", ".join(f"{key}={value or 'sin especificar'}" for key, value in sorted(labels.items()))
-    digest = hashlib.sha256(json.dumps(labels, sort_keys=True).encode()).hexdigest()[:16] if labels else ""
+    # Match against known 3GPP counters in LABELS
+    matched_entry = LABELS.get(name)
+    if not matched_entry:
+        for suffix, entry in LABELS.items():
+            if name.endswith("_" + suffix):
+                matched_entry = entry
+                break
+    if not matched_entry:
+        # Ignore obscure internal Open5GS metrics that clutter the PM catalog
+        return None
+    label, unit = matched_entry
+    clean_id = f"native.{nf}.{name}"
+    if labels:
+        encoded = json.dumps(labels, sort_keys=True, separators=(',', ':'))
+        clean_id += '.' + hashlib.sha256(encoded.encode()).hexdigest()[:16]
     return {
-        "id": f"native.{nf}.{name}" + (f".{digest}" if digest else ""),
-        "label": label + (f" [{dimension_text}]" if dimension_text else ""),
-        "unit": unit, "kind": kind, "category": f"{nf.upper()} · Open5GS nativo",
-        "source": "Open5GS /metrics", "objects": ["nf"], "object_ids": [f"nf:{nf}"],
-        "description": help_text + ". Medición del proceso completo; no filtrada por escenario.",
-        "native_name": name, "dimensions": labels,
+        "id": clean_id,
+        "label": label,
+        "unit": unit,
+        "kind": kind,
+        "category": f"{nf.upper()} · Contadores 3GPP",
+        "source": "Open5GS 3GPP",
+        "objects": ["nf"],
+        "object_ids": [f"nf:{nf}"],
+        "description": help_text,
+        "native_name": name,
+        "dimensions": labels,
     }
 
 
@@ -205,13 +210,16 @@ class NFMetrics:
             native = {}
             for name, labels, value, kind, help_text in list(parse_metrics(component.get("metrics", "")))[:256]:
                 definition = native_definition(nf, name, labels, kind, help_text)
+                if not definition:
+                    continue
                 add(nf, definition, value)
                 native[definition["id"]] = value
-                if kind == "counter" and same:
-                    old = previous["native"].get(definition["id"])
-                    if old is not None and value >= old:
-                        rate = {**definition, "id": definition["id"] + ".rate", "label": definition["label"] + " · tasa por segundo", "kind": "gauge", "unit": definition["unit"] + "/s", "category": f"{nf.upper()} · Tasas nativas", "description": "Delta del contador / segundos observados; primera muestra, reinicios y huecos >120 s no generan tasa."}
-                        add(nf, rate, (value - old) / elapsed, "computed")
+                old = previous['native'].get(definition['id']) if same else None
+                if kind == 'counter' and old is not None and value >= old:
+                    rate = {**definition, 'id': definition['id'] + '.rate',
+                            'label': definition['label'] + ' · tasa por segundo',
+                            'unit': definition['unit'] + '/s', 'kind': 'gauge'}
+                    add(nf, rate, (value - old) / elapsed, 'computed')
             self.previous[key] = {"time": observed, "incarnation": incarnation, "values": values, "native": native}
         for nf, values in payload.get("cli", {}).items():
             for name, value in values.items():

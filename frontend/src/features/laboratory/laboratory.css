@@ -1,0 +1,49 @@
+.laboratory {
+  color-scheme: dark;
+  --background: #09090b;
+  --card: #101012;
+  --muted: #1b1b1e;
+  --accent: #202023;
+  --border: #27272a;
+  --input: #303034;
+  --muted-foreground: #a1a1aa;
+}
+
+.laboratory table {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.laboratory th {
+  padding: 0.75rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.laboratory td {
+  border-top: 1px solid var(--border);
+  padding: 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.laboratory select {
+  max-width: 100%;
+  min-height: 2.25rem;
+  font-size: 0.875rem;
+}
+
+.laboratory summary {
+  font-size: 0.875rem;
+}
+
+.laboratory summary:focus-visible,
+.laboratory a:focus-visible,
+.laboratory select:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 4px;
+}
+
+.laboratory article[id] {
+  scroll-margin-top: 1rem;
+}

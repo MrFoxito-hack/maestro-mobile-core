@@ -1,0 +1,48 @@
+{
+  "experiment_id": "4ab461a85ff642bfa40cf5c9a3aa0760",
+  "assignment_id": "3cd1cf695b424632a64046b0635d5a03",
+  "campaign_id": "2297b5332e904cc6bd65b832474a4778",
+  "owner": "docente",
+  "descriptor": {
+    "schema_version": 1,
+    "template": "qoe_closed_loop",
+    "template_version": 1,
+    "scenario": "5g-sa",
+    "observed_ue": "video",
+    "competing_ue": "load",
+    "load_mbps": [
+      19.0
+    ],
+    "repetitions": 1,
+    "measurement_seconds": 10,
+    "campaign_budget_bytes": 70000000,
+    "capture_budget_bytes": 4000000,
+    "seed": 0,
+    "primary_metric": "player_startup_delay_seconds",
+    "design": "paired_randomized_blocks"
+  },
+  "runs": [
+    {
+      "block": 1,
+      "execution_status": "planned",
+      "hypothesis_outcome": "pending",
+      "load_mbps": 19.0,
+      "measurement_seconds": 10,
+      "ordinal": 1,
+      "repetition": 1,
+      "treatment": "controller_disabled_verified",
+      "validity_status": "pending"
+    },
+    {
+      "block": 1,
+      "execution_status": "planned",
+      "hypothesis_outcome": "pending",
+      "load_mbps": 19.0,
+      "measurement_seconds": 10,
+      "ordinal": 2,
+      "repetition": 1,
+      "treatment": "controller_enabled_verified",
+      "validity_status": "pending"
+    }
+  ]
+}

@@ -18,6 +18,26 @@ services:
     depends_on: [backend]
     ports:
       - "8080:80"
+  laboratory-worker:
+    build: ./backend
+    command: ["python", "-m", "app.laboratory.worker"]
+    environment:
+      EMS_DATABASE_PATH: /app/data/ems.db
+      EMS_LABORATORY_DATABASE_PATH: /app/data/laboratory.db
+    volumes:
+      - ems-data:/app/data
+    restart: unless-stopped
+    stop_grace_period: 15s
+  laboratory-watchdog:
+    build: ./backend
+    command: ["python", "-m", "app.laboratory.worker", "--watchdog-only"]
+    environment:
+      EMS_DATABASE_PATH: /app/data/ems.db
+      EMS_LABORATORY_DATABASE_PATH: /app/data/laboratory.db
+    volumes:
+      - ems-data:/app/data
+    restart: unless-stopped
+    stop_grace_period: 15s
   chf:
     profiles: [charging]
     build: ./chf

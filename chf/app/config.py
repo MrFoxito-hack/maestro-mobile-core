@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     validity_time_seconds: int = Field(default=300, ge=1, le=86400)
     orphan_grace_seconds: int = Field(default=60, ge=1)
     admin_token: SecretStr | None = None
+    reader_token: SecretStr | None = None
     sbi_tokens: dict[str, SecretStr] = Field(default_factory=dict)
     sbi_lab_no_auth: bool = False
     max_request_bytes: int = Field(default=262144, ge=1024, le=1048576)
@@ -26,6 +27,9 @@ class Settings(BaseSettings):
         if management:
             if not self.admin_token or len(self.admin_token.get_secret_value()) < 32:
                 raise ValueError('CHF_ADMIN_TOKEN must contain at least 32 characters')
+            if self.reader_token and (len(self.reader_token.get_secret_value()) < 32 or
+                    self.reader_token.get_secret_value() == self.admin_token.get_secret_value()):
+                raise ValueError('CHF_READER_TOKEN must be distinct and at least 32 characters')
         elif not self.sbi_lab_no_auth:
             if not self.sbi_tokens:
                 raise ValueError('configure CHF_SBI_TOKENS or explicitly opt into isolated lab no-auth')

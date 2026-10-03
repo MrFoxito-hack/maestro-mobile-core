@@ -96,12 +96,16 @@ class ChargingRepository:
             )
             migrate_v2(conn)
 
-    def upsert_account(self, supi: str, quota_bytes: int, enabled: bool, actor: str = "admin") -> dict:
+    def upsert_account(self, supi: str, quota_bytes: int | None, enabled: bool, actor: str = "admin") -> dict:
         from app.models import AccountUpsert
         AccountUpsert(supi=supi, quotaBytes=quota_bytes, enabled=enabled)
         now = utc_now()
         with self.transaction(immediate=True) as conn:
             previous = self.account_snapshot(conn, supi)
+            if quota_bytes is None:
+                if not previous:
+                    raise ChargingError(404, "USER_UNKNOWN", "state update requires an existing account")
+                quota_bytes = previous['quota_bytes']
             if previous and quota_bytes < previous['consumed_bytes'] + previous['reserved_bytes']:
                 raise ChargingError(409, "QUOTA_COMMITTED", "quota is below already debited and reserved units")
             conn.execute(
@@ -122,6 +126,28 @@ class ChargingRepository:
     def get_account(self, supi: str) -> dict | None:
         with self.transaction() as conn:
             return self.account_snapshot(conn, supi)
+
+    def topup(self, supi, amount, request_id, actor):
+        from app.models import TopupRequest, MAX_BYTES
+        TopupRequest(requestId=request_id, amountBytes=amount)
+        with self.transaction(immediate=True) as conn:
+            previous = conn.execute("SELECT snapshot_json FROM account_ledger WHERE supi=? AND operation='TOPUP' AND json_extract(snapshot_json,'$.request_id')=?", (supi, request_id)).fetchone()
+            if previous:
+                saved = json.loads(previous[0])
+                if saved['amount_bytes'] != amount:
+                    raise ChargingError(409, 'IDEMPOTENCY_CONFLICT', 'request ID already used with a different amount')
+                return saved['after']
+            before = self.account_snapshot(conn, supi)
+            if not before:
+                raise ChargingError(404, 'USER_UNKNOWN', 'account not found')
+            quota = before['quota_bytes'] + amount
+            if quota > MAX_BYTES:
+                raise ChargingError(409, 'QUOTA_LIMIT', 'account quota limit exceeded')
+            conn.execute('UPDATE charging_accounts SET quota_bytes=?,updated_at=? WHERE supi=?', (quota, utc_now(), supi))
+            after = self.account_snapshot(conn, supi)
+            self.append_ledger(conn, supi, None, 'TOPUP', actor,
+                               {'request_id': request_id, 'amount_bytes': amount, 'before': before, 'after': after})
+            return after
 
     @staticmethod
     def account_snapshot(conn, supi):

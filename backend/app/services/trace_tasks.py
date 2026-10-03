@@ -16,6 +16,7 @@ from app.services.execution import RemoteExecutionAdapter
 from app.services.scenarios import CATALOG, scenario_manager
 from app.services.trace_analysis import TSHARK_FIELDS, build_trace_analysis, mask_subscriber, subscriber_hash
 from app.services.trace_catalog import (
+    SUBSCRIBER_USER_PLANE_FILTER,
     SUBSCRIBER_PROCEDURES,
     TRACE_PROFILES,
     profile,
@@ -219,8 +220,8 @@ class TraceTaskService:
         self._assert_testbed(user, testbed_id)
         if user.role != Role.student:
             return
-        if duration > 120 or size > 25:
-            raise TraceAccessError("La cuota del alumno es 120 segundos y 25 MB por tarea")
+        if duration > 300 or size > 100:
+            raise TraceAccessError("La cuota del alumno es 300 segundos y 100 MB por tarea")
         if trace_repository.count_active(user.username, testbed_id) >= 1:
             raise TraceAccessError("El alumno ya tiene una tarea de captura activa")
 
@@ -235,9 +236,9 @@ class TraceTaskService:
         components = [component.model_dump() for component in status.components]
         quota = {
             "max_active": 1 if user.role == Role.student else 4,
-            "max_duration_seconds": 120 if user.role == Role.student else 300,
-            "max_megabytes": 25 if user.role == Role.student else 100,
-            "auto_trigger_allowed": user.role in {Role.admin, Role.teacher},
+            "max_duration_seconds": 300 if user.role == Role.student else 900,
+            "max_megabytes": 100 if user.role == Role.student else 500,
+            "auto_trigger_allowed": False,
         }
         logical_node_ids = [node["id"] for node in scenario["nodes"]]
         subscriber_supported = scenario_id == "5g-sa"
@@ -319,6 +320,10 @@ class TraceTaskService:
             component_id=request.component_id,
             capture_point=request.capture_point,
         )
+        if request.identifier and request.identifier_type:
+            task["selector_kind"] = request.identifier_type
+            task["selector_hash"] = subscriber_hash(request.identifier)
+            task["selector_masked"] = mask_subscriber(request.identifier)
         return await self._start_task(task)
 
     async def create_subscriber(self, request: SubscriberTraceStart, user: UserPublic) -> dict[str, Any]:
@@ -334,7 +339,9 @@ class TraceTaskService:
             raise TraceAccessError("Solo docente o administrador puede reiniciar automáticamente el UE")
         point = subscriber_capture_profile(request.include_sbi)
         if request.include_user_plane:
-            point["filter"] += " or net 10.45.0.0/16"
+            # Both PDU sessions already exist; selecting an APN changes the
+            # terminal data path without necessarily producing new signaling.
+            point["filter"] += f" or {SUBSCRIBER_USER_PLANE_FILTER}"
             if "N6" not in point["interface_3gpp"]:
                 point["interface_3gpp"].append("N6")
         task = self._new_task(
@@ -530,19 +537,35 @@ class TraceTaskService:
         # Give the remote tshark process enough time to attach to `any` before
         # tearing down the old UE association.
         await asyncio.sleep(0.75)
-        await scenario_manager.stop_component("5g-sa", "ue")
-        await asyncio.sleep(0.5)
-        # Restart gNB as well to ensure clean N2/NGAP association if AMF was restarted
+        # Check if gNB is already running and connected to AMF
+        gnb_up = False
         try:
-            await scenario_manager.stop_component("5g-sa", "gnb")
-            await asyncio.sleep(0.5)
-            await scenario_manager.start_component("5g-sa", "gnb")
-            await asyncio.sleep(1.5)
+            gnb_stat = await scenario_manager.adapter.native_operation("ueransim-cli", "gnb", {"command": "status"})
+            gnb_up = "true" in gnb_stat.get("output", "")
         except Exception:
-            pass
+            gnb_up = False
+
+        if not gnb_up:
+            try:
+                await scenario_manager.stop_component("5g-sa", "gnb")
+                await asyncio.sleep(0.5)
+                await scenario_manager.start_component("5g-sa", "gnb")
+                for _ in range(8):
+                    await asyncio.sleep(1)
+                    st = await scenario_manager.adapter.native_operation("ueransim-cli", "gnb", {"command": "status"})
+                    if "true" in st.get("output", ""):
+                        break
+                await asyncio.sleep(2)  # Allow SIB1 broadcast stabilization
+            except Exception:
+                pass
+
+        await scenario_manager.stop_component("5g-sa", "ue")
+        await asyncio.sleep(1)
         await scenario_manager.start_component("5g-sa", "ue")
+
         status = ""
-        for _ in range(12):
+        recovered = False
+        for attempt in range(15):
             await asyncio.sleep(1)
             result = await scenario_manager.adapter.native_operation(
                 "ueransim-cli", "ue", {"command": "status"}
@@ -550,6 +573,12 @@ class TraceTaskService:
             status = result.get("output", "")
             if "RM-REGISTERED" in status and "CM-CONNECTED" in status:
                 break
+            if "LIMITED-SERVICE" in status and not recovered and attempt >= 3:
+                # UERANSIM scanned before SIB1 was available; restart to select category[SUITABLE]
+                recovered = True
+                await scenario_manager.stop_component("5g-sa", "ue")
+                await asyncio.sleep(1)
+                await scenario_manager.start_component("5g-sa", "ue")
         else:
             raise TraceTaskError(
                 "UERANSIM no alcanzó RM-REGISTERED/CM-CONNECTED después del reinicio"
@@ -757,7 +786,8 @@ class TraceTaskService:
         if not executable:
             return "", "tshark unavailable"
         command = [
-            executable, "-n", "-r", str(path), "-c", "10000", "-d", "tcp.port==7777,http2", "-T", "fields",
+            executable, "-n", "-r", str(path), "-d", "tcp.port==7777,http2",
+            "-d", "tcp.port==8081,http2", "-d", "tcp.port==18081,http2", "-T", "fields",
             "-E", "separator=/t", "-E", "quote=d", "-E", "occurrence=a", "-E", "aggregator=,",
         ]
         for field in TSHARK_FIELDS:
@@ -914,6 +944,45 @@ class TraceTaskService:
             trace_repository.replace_events(task_id, reviewed["events"])
             trace_repository.update(task_id, analysis_file=filename, filtered_file=filtered_file, result=reviewed["result"])
             return reviewed
+
+    async def decode_frame(self, task_id: str, frame_number: int, user: UserPublic) -> dict[str, Any]:
+        if frame_number < 1 or frame_number > 10_000_000:
+            raise ValueError("NÃºmero de trama invÃ¡lido")
+        task = await self.refresh(task_id)
+        self._assert_access(task, user)
+        if task["status"] in ACTIVE_STATES:
+            raise TraceTaskError("Detenga la captura antes de abrir el detalle de trama")
+        capture_root = get_settings().capture_dir.resolve()
+        capture = (capture_root / task.get("pcap_file", "")).resolve()
+        if not capture.is_relative_to(capture_root) or not capture.exists():
+            raise FileNotFoundError("PCAP original no disponible")
+        executable = shutil.which("tshark") or (
+            "C:/Program Files/Wireshark/tshark.exe"
+            if Path("C:/Program Files/Wireshark/tshark.exe").is_file() else None
+        )
+        if not executable:
+            raise TraceTaskError("TShark no estÃ¡ disponible para decodificar la trama")
+        command = [
+            executable, "-n", "-r", str(capture), "-Y", f"frame.number == {frame_number}",
+            "-d", "tcp.port==7777,http2", "-d", "tcp.port==8081,http2",
+            "-d", "tcp.port==18081,http2", "-T", "json",
+        ]
+        try:
+            result = await asyncio.to_thread(
+                subprocess.run, command, capture_output=True, text=True,
+                timeout=30, check=True,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise TraceTaskError("La disecciÃ³n de la trama excediÃ³ 30 segundos") from exc
+        except subprocess.CalledProcessError as exc:
+            raise TraceTaskError((exc.stderr or "TShark no pudo decodificar la trama")[:500]) from exc
+        analysis = await self.analysis(task_id, user)
+        event = next(
+            (item for item in analysis.get("events", []) if item.get("packet_number") == frame_number),
+            None,
+        )
+        from app.services.trace_analysis import build_decode_tree
+        return build_decode_tree(result.stdout, frame_number=frame_number, event=event)
 
     async def artifact(self, task_id: str, artifact: str, user: UserPublic) -> tuple[Path, str, str]:
         if artifact == "evidence":

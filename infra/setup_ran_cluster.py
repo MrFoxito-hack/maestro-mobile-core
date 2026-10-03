@@ -211,10 +211,6 @@ sessions:
     apn: 'internet'
     slice:
       sst: 1
-  - type: 'IPv4'
-    apn: 'corporate'
-    slice:
-      sst: 1
 
 configured-nssai:
   - sst: 1

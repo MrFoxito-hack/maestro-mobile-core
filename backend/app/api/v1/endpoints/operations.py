@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.api.deps import current_user
 from app.db import add_audit
 from app.models import OperationExecute, UserPublic
-from app.services.operations import OperationError, operations_service
+from app.services.operations import OperationError, operations_service, _safe_value
 
 
 router = APIRouter(prefix="/operations", tags=["operations"])
@@ -25,7 +25,7 @@ async def execute(payload: OperationExecute, user: UserPublic = Depends(current_
         "scenario_id": payload.scenario_id,
         "component_id": payload.component_id,
         "operation_id": payload.operation_id,
-        "parameters": payload.parameters,
+        "parameters": _safe_value(payload.parameters),
     }
     try:
         result = await operations_service.execute(

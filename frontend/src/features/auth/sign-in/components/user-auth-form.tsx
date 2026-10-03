@@ -41,8 +41,8 @@ export function UserAuthForm({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: 'docente',
-      password: 'teacher-change-me',
+      username: '',
+      password: '',
     },
   })
 
@@ -65,52 +65,65 @@ export function UserAuthForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className={cn('grid gap-3', className)}
+        className={cn('space-y-4', className)}
         {...props}
       >
         <FormField
           control={form.control}
           name='username'
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Usuario</FormLabel>
+            <FormItem className='space-y-1.5'>
+              <FormLabel className='text-xs font-medium text-zinc-400'>
+                Usuario
+              </FormLabel>
               <FormControl>
                 <Input
-                  placeholder='docente'
+                  placeholder='Usuario'
                   autoComplete='username'
+                  className='h-10 bg-zinc-950/70 border-zinc-800 text-white placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-zinc-700/50 rounded-lg'
                   {...field}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage className='text-xs' />
             </FormItem>
           )}
         />
+
         <FormField
           control={form.control}
           name='password'
           render={({ field }) => (
-            <FormItem className='relative'>
-              <FormLabel>Contraseña</FormLabel>
+            <FormItem className='relative space-y-1.5'>
+              <FormLabel className='text-xs font-medium text-zinc-400'>
+                Contraseña
+              </FormLabel>
               <FormControl>
                 <PasswordInput
-                  placeholder='********'
+                  placeholder='Contraseña'
                   autoComplete='current-password'
+                  className='bg-zinc-950/70 border-zinc-800 text-white placeholder:text-zinc-600 focus-visible:border-zinc-500 focus-visible:ring-zinc-700/50 rounded-lg'
                   {...field}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage className='text-xs' />
             </FormItem>
           )}
         />
-        <Button className='mt-2' disabled={isLoading}>
-          {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}
+
+        <Button
+          type='submit'
+          className='w-full h-10 mt-3 bg-white hover:bg-zinc-200 text-black font-semibold rounded-lg text-sm gap-2 transition-all cursor-pointer shadow-lg active:scale-[0.99]'
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <Loader2 className='size-4 animate-spin' />
+          ) : (
+            <LogIn className='size-4' />
+          )}
           Ingresar
         </Button>
-
-        <p className='text-center text-xs text-muted-foreground'>
-          Acceso educativo controlado · PUCP TEL142
-        </p>
       </form>
     </Form>
   )
 }
+

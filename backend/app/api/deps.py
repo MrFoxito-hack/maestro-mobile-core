@@ -19,10 +19,11 @@ def current_user(credentials: HTTPAuthorizationCredentials | None = Depends(bear
     except InvalidTokenError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido")
     with connection() as conn:
-        row = conn.execute("SELECT username,role,testbed,enabled FROM users WHERE username=?", (payload["sub"],)).fetchone()
+        row = conn.execute("SELECT username,role,testbed,assigned_imsi,enabled FROM users WHERE username=?", (payload["sub"],)).fetchone()
     if not row or not row["enabled"]:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario inactivo")
-    return UserPublic(username=row["username"], role=row["role"], testbed=row["testbed"])
+    assigned_imsi = row["assigned_imsi"] if "assigned_imsi" in row.keys() else None
+    return UserPublic(username=row["username"], role=row["role"], testbed=row["testbed"], assigned_imsi=assigned_imsi)
 
 
 def require_roles(*roles: Role) -> Callable:
@@ -34,3 +35,4 @@ def require_roles(*roles: Role) -> Callable:
 
 
 operator_user = require_roles(Role.admin, Role.teacher)
+terminal_user = require_roles(Role.admin, Role.teacher, Role.student)

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   ArrowLeft,
   ArrowRight,
@@ -91,6 +91,16 @@ export function QueryWizard({
     ).values(),
   ]
   const isNf = draft.object_ids.some((id) => id.startsWith('nf:'))
+  const requires30m = draft.counter_ids.some((id) => {
+    const counter = counters.find((c) => c.id === id)
+    return counter?.min_granularity_seconds && counter.min_granularity_seconds > 300
+  })
+
+  useEffect(() => {
+    if (requires30m && draft.granularity_seconds < 1800) {
+      setDraft((d) => ({ ...d, granularity_seconds: 1800 }))
+    }
+  }, [requires30m, draft.granularity_seconds])
   const compatibleCounters = counters.filter(
     (counter) =>
       draft.object_ids.length > 0 &&
@@ -412,11 +422,10 @@ export function QueryWizard({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value='10'>10 segundos</SelectItem>
-                      <SelectItem value='30'>30 segundos</SelectItem>
-                      <SelectItem value='60'>1 minuto</SelectItem>
-                      <SelectItem value='300'>5 minutos</SelectItem>
-                      <SelectItem value='900'>15 minutos</SelectItem>
+                      <SelectItem value='300' disabled={requires30m}>
+                        {requires30m ? '5 minutos (Bloqueado: requiere 30 min)' : '5 minutos'}
+                      </SelectItem>
+                      <SelectItem value='1800'>30 minutos</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -482,6 +491,9 @@ export function QueryWizard({
           <Button
             disabled={!valid}
             onClick={() => {
+              if (step === 1 && requires30m && draft.granularity_seconds < 1800) {
+                setDraft((prev) => ({ ...prev, granularity_seconds: 1800 }))
+              }
               setStep(step + 1)
               setSearch('')
             }}

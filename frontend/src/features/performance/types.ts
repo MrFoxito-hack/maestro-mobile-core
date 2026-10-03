@@ -25,6 +25,7 @@ export type KpiCounter = {
   native_name?: string
   dimensions?: Record<string, string>
   last_seen?: string
+  min_granularity_seconds?: number
 }
 
 export type PerformanceCatalog = {

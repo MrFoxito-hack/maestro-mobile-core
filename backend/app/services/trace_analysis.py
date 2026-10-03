@@ -2,6 +2,7 @@ import csv
 import hashlib
 import io
 import re
+import json
 from datetime import datetime, timezone
 from typing import Any
 
@@ -9,6 +10,7 @@ from typing import Any
 TSHARK_FIELDS = [
     "frame.number",
     "frame.time_epoch",
+    "frame.len",
     "_ws.col.Protocol",
     "_ws.col.Info",
     "ip.src",
@@ -23,12 +25,15 @@ TSHARK_FIELDS = [
     "nas_5gs.sm.pdu_addr_inf_ipv4",
     "ngap.pDUSessionID",
     "ngap.gTP_TEID",
+    "ngap.fiveQI",
+    "ngap.qosFlowIdentifier",
     "pfcp.seid",
     "pfcp.f_seid.ipv4",
     "pfcp.f_teid.teid",
     "pfcp.f_teid.ipv4_addr",
     "pfcp.outer_hdr_creation.teid",
     "pfcp.ue_ip_addr_ipv4",
+    "pfcp.qfi_value",
     "gtp.teid",
     "e212.imsi",
     "nas_5gs.mm.suci.msin",
@@ -42,6 +47,11 @@ TSHARK_FIELDS = [
     "tcp.stream",
     "http2.headers.status",
     "json.value.string",
+    "json.key",
+    "json.value.number",
+    "tcp.srcport",
+    "tcp.dstport",
+    "http2.data.data",
 ]
 
 
@@ -68,8 +78,11 @@ ADDRESS_TO_NF = {
     "127.0.0.12": "UDM",
     "127.0.0.13": "PCF",
     "127.0.0.14": "NSSF",
-    "127.0.0.15": "UDR",
-    "127.0.0.20": "BSF",
+    # Dual-SMF lab: verified SBI listeners for SMF-02 and the relocated BSF.
+    "127.0.0.15": "SMF-02",
+    "127.0.0.16": "BSF",
+    "10.210.50.2": "SMF-02",
+    "127.0.0.20": "UDR",
     "127.0.0.200": "SCP",
     # Distributed 5G multi-host network endpoints:
     "10.210.50.10": "gNB",
@@ -93,6 +106,65 @@ def subscriber_hash(value: str) -> str:
 
 def sanitize_text(value: str) -> str:
     return re.sub(r"(?<!\d)(\d{14,15})(?!\d)", lambda match: mask_subscriber(match.group(1)) or "", value)
+
+
+DECODE_EXCLUDED_FIELDS = {
+    "data.data", "tcp.payload", "tcp.segment_data", "http2.data.data",
+}
+
+
+def build_decode_tree(raw_json: str, *, frame_number: int, event: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Convert one TShark JSON packet into a bounded, non-hex protocol tree."""
+    try:
+        packets = json.loads(raw_json)
+    except json.JSONDecodeError as exc:
+        raise ValueError("TShark no devolviÃ³ JSON vÃ¡lido") from exc
+    if not isinstance(packets, list) or len(packets) != 1:
+        raise ValueError("La trama solicitada no existe en el PCAP")
+    layers = packets[0].get("_source", {}).get("layers", {})
+    if not isinstance(layers, dict):
+        raise ValueError("La trama no contiene capas decodificables")
+
+    count = 0
+
+    def clean(name: str, value: Any, depth: int = 0) -> dict[str, Any] | None:
+        nonlocal count
+        if depth > 12 or count >= 2500:
+            return None
+        lowered = name.lower()
+        if (
+            name in DECODE_EXCLUDED_FIELDS
+            or lowered.endswith("_raw")
+            or lowered.endswith(".raw")
+            or "raw bytes" in lowered
+        ):
+            return None
+        count += 1
+        label = name.removesuffix("_tree").replace("_", " ")
+        node: dict[str, Any] = {"name": name, "label": label}
+        if isinstance(value, dict):
+            children = [child for key, item in value.items() if (child := clean(str(key), item, depth + 1))]
+            if children:
+                node["children"] = children
+        elif isinstance(value, list):
+            children = [child for index, item in enumerate(value) if (child := clean(f"{name}[{index}]", item, depth + 1))]
+            if children:
+                node["children"] = children
+        else:
+            text_value = sanitize_text(str(value))[:1000]
+            node["value"] = text_value
+            node["label"] = f"{label}: {text_value}"
+        return node
+
+    tree = [node for name, value in layers.items() if (node := clean(str(name), value))]
+    return {
+        "frame_number": frame_number,
+        "protocol": (event or {}).get("protocol") or "Unknown",
+        "message_type": (event or {}).get("message") or f"Frame {frame_number}",
+        "timestamp": (event or {}).get("timestamp"),
+        "tree": tree,
+        "truncated": count >= 2500,
+    }
 
 
 def _values(value: str | None) -> list[str]:
@@ -286,6 +358,7 @@ def _parse_sbi_call(row: dict[str, str], src_ip: str, dst_ip: str) -> tuple[str,
     target_nf = _sbi_nf_for_address(dst_ip, "NRF")
     procedure = "control-plane"
     interface = "SBI"
+    smf_nf = "SMF-02" if "127.0.0.15" in (src_ip, dst_ip) else "SMF"
 
     if "nausf-auth" in p:
         source_nf, target_nf = "AMF", "AUSF"
@@ -296,12 +369,12 @@ def _parse_sbi_call(row: dict[str, str], src_ip: str, dst_ip: str) -> tuple[str,
         clean_msg = "Nudm_UEAuthentication (Generate Auth Data)"
         procedure = "authentication"
     elif "nudm-sdm" in p:
-        source_nf = "SMF" if "127.0.0.4" in (src_ip, dst_ip) else "AMF"
+        source_nf = smf_nf if {"127.0.0.4", "127.0.0.15"}.intersection((src_ip, dst_ip)) else "AMF"
         target_nf = "UDM"
         clean_msg = f"Nudm_SDM Subscription ({method or 'GET'})"
         procedure = "registration"
     elif "nudm-uecm" in p:
-        source_nf = "SMF" if "127.0.0.4" in (src_ip, dst_ip) else "AMF"
+        source_nf = smf_nf if {"127.0.0.4", "127.0.0.15"}.intersection((src_ip, dst_ip)) else "AMF"
         target_nf = "UDM"
         clean_msg = f"Nudm_UECM Registration ({method or 'PUT'})"
         procedure = "registration"
@@ -311,15 +384,20 @@ def _parse_sbi_call(row: dict[str, str], src_ip: str, dst_ip: str) -> tuple[str,
         clean_msg = "Nudr_DM / Nbsf_Management"
         procedure = "registration"
     elif "nsmf-pdusession" in p:
-        source_nf, target_nf = "AMF", "SMF"
+        source_nf, target_nf = "AMF", smf_nf
         action = "Release" if "release" in p else "Modify" if "modify" in p else "Create"
         clean_msg = f"Nsmf_PDUSession {action} Context"
         procedure = "pdu-session"
         # N11 is the 3GPP service-based interface between AMF and SMF.
         interface = "N11 / SBI"
     elif "npcf-smpolicycontrol" in p:
-        source_nf, target_nf = "SMF", "PCF"
+        source_nf, target_nf = smf_nf, "PCF"
         clean_msg = "Npcf_SMPolicyControl (SM Policy)"
+        procedure = "pdu-session"
+    elif "nnssf-nsselection" in p:
+        source_nf, target_nf = "AMF", "NSSF"
+        clean_msg = "Nnssf_NSSelection (PDU Session Slice)"
+        interface = "N22 / SBI"
         procedure = "pdu-session"
     elif "nnrf-disc" in p:
         source_nf, target_nf = "AMF", "NRF"

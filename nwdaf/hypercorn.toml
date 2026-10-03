@@ -1,0 +1,6 @@
+bind = ["127.0.0.1:8085"]
+workers = 1
+keep_alive_timeout = 5
+graceful_timeout = 10
+h2_max_concurrent_streams = 32
+accesslog = "-"

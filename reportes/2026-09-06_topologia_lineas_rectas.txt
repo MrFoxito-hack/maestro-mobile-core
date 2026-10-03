@@ -1,5 +1,0 @@
-Topología — 2026-09-06
-Solo se cambiaron conexiones de la vista Telco (4G/5G): rectas, continuas,
-sin animación de guiones. Conexiones entre nodos de una misma fila salen
-por los laterales; entre filas usan arriba/abajo según la dirección.
-Se conservaron posiciones, tarjetas, colores, etiquetas y vista física.

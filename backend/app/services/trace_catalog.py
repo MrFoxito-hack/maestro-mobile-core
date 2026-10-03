@@ -1,6 +1,59 @@
 from typing import Any
 
 
+SUBSCRIBER_USER_PLANE_FILTER = "net 10.45.0.0/16 or net 10.46.0.0/16"
+
+NODE_TRACE_CATALOG: dict[str, dict[str, Any]] = {
+    "amf": {
+        "label": "AMF",
+        "description": "Access and Mobility Management Function",
+        "interfaces": [
+            {"id": "n2", "label": "N2 Interface Trace", "protocols": ["NGAP", "NGAP/NAS-5GS"]},
+            {"id": "sbi", "label": "HTTP Interface Trace (SBI)", "protocols": ["HTTP/2"]},
+        ],
+        "filter": "sctp port 38412 or tcp port 7777",
+    },
+    "smf": {
+        "label": "SMF",
+        "description": "Session Management Function",
+        "interfaces": [
+            {"id": "n4", "label": "N4 Interface Trace", "protocols": ["PFCP"]},
+            {"id": "sbi", "label": "HTTP Interface Trace (SBI/N11/N7/N10/Nchf)", "protocols": ["HTTP/2"]},
+        ],
+        "filter": "udp port 8805 or tcp port 7777 or tcp port 8081 or tcp port 18081",
+    },
+    "smf2": {
+        "label": "SMF-02 (Corporate)",
+        "description": "Session Management Function for SST=1 SD=000002",
+        "interfaces": [
+            {"id": "n4", "label": "N4 Interface Trace", "protocols": ["PFCP"]},
+            {"id": "sbi", "label": "SBI/N11 Interface Trace", "protocols": ["HTTP/2"]},
+        ],
+        "filter": "(host 10.210.50.2 and udp port 8805) or (host 127.0.0.15 and tcp port 7777)",
+    },
+    "upf": {
+        "label": "UPF",
+        "description": "User Plane Function",
+        "interfaces": [
+            {"id": "n3", "label": "N3 Interface Trace", "protocols": ["GTP-U"]},
+            {"id": "n4", "label": "N4 Interface Trace", "protocols": ["PFCP"]},
+            {"id": "n6", "label": "N6 Interface Trace", "protocols": ["IPv4", "IPv6", "ICMP", "HTTP"]},
+        ],
+        "filter": "udp port 2152 or udp port 8805 or net 10.45.0.0/16 or net 10.46.0.0/16",
+    },
+    "nrf": {
+        "label": "NRF", "description": "Network Repository Function",
+        "interfaces": [{"id": "sbi", "label": "Nnrf Interface Trace", "protocols": ["HTTP/2"]}],
+        "filter": "tcp port 7777",
+    },
+    "scp": {
+        "label": "SCP", "description": "Service Communication Proxy",
+        "interfaces": [{"id": "sbi", "label": "SBI Mesh Trace", "protocols": ["HTTP/2"]}],
+        "filter": "tcp port 7777",
+    },
+}
+
+
 TRACE_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
     "5g-sa": {
         "n2": {
@@ -27,7 +80,7 @@ TRACE_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
             "device": "any",
             "protocols": ["PFCP"],
             "filter": "udp port 8805",
-            "nf_ids": ["smf", "upf"],
+            "nf_ids": ["smf", "smf2", "upf", "upf2"],
             "procedures": ["PFCP Association", "PFCP Session"],
         },
         "n6": {
@@ -44,8 +97,8 @@ TRACE_PROFILES: dict[str, dict[str, dict[str, Any]]] = {
             "interface_3gpp": "SBI",
             "device": "lo",
             "protocols": ["HTTP/2", "SBI"],
-            "filter": "tcp port 7777",
-            "nf_ids": ["amf", "smf", "nrf", "scp", "ausf", "udm", "udr", "pcf", "nssf"],
+            "filter": "tcp port 7777 or tcp port 8081 or tcp port 18081",
+            "nf_ids": ["amf", "smf", "smf2", "nrf", "scp", "ausf", "udm", "udr", "pcf", "bsf", "nssf", "chf"],
             "procedures": ["NF Discovery", "Authentication", "Session Management"],
         },
     },
@@ -103,7 +156,6 @@ SUBSCRIBER_PROCEDURES = [
     {"id": "registration", "label": "Registration", "interfaces": ["N1/N2"]},
     {"id": "authentication", "label": "5G-AKA Authentication", "interfaces": ["N1/N2", "SBI"]},
     {"id": "pdu-session", "label": "PDU Session Establishment", "interfaces": ["N1/N2", "N4", "N3"]},
-    {"id": "user-plane", "label": "User Plane", "interfaces": ["N3", "N6"]},
 ]
 
 
@@ -140,7 +192,7 @@ def subscriber_capture_profile(include_sbi: bool) -> dict[str, Any]:
     interfaces = ["N1/N2", "N4", "N3"]
     protocols = ["NGAP", "NAS-5GS", "PFCP", "GTP-U"]
     if include_sbi:
-        ports.append("tcp port 7777")
+        ports.extend(["tcp port 7777", "tcp port 8081", "tcp port 18081"])
         interfaces.append("SBI")
         protocols.extend(["HTTP/2", "SBI"])
     return {
@@ -150,5 +202,5 @@ def subscriber_capture_profile(include_sbi: bool) -> dict[str, Any]:
         "device": "any",
         "protocols": protocols,
         "filter": " or ".join(ports),
-        "nf_ids": ["ue", "gnb", "amf", "ausf", "udm", "smf", "upf"],
+        "nf_ids": ["ue", "gnb", "amf", "ausf", "udm", "smf", "upf"] + (["chf"] if include_sbi else []),
     }

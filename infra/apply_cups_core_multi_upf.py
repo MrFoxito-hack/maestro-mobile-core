@@ -140,10 +140,7 @@ def main():
     apn: 'internet'
     slice:
       sst: 1
-  - type: 'IPv4'
-    apn: 'corporate'
-    slice:
-      sst: 1"""
+      sd: 1"""
 
     pattern_ue = r"sessions:[\s\S]*?(?=# Configured NSSAI)"
     ue_content = re.sub(pattern_ue, ue_session_replacement + "\n\n", ue_content)
@@ -157,7 +154,7 @@ def main():
     sftp.close()
     client.close()
     run_ssh(CORE_HOST, CORE_PORT, CORE_USER, CORE_PASS, "cp /tmp/open5gs-ue.yaml /home/emsadmin/UERANSIM/config/open5gs-ue.yaml", sudo=True)
-    print("open5gs-ue.yaml updated with dual sessions (internet + corporate)!")
+    print("open5gs-ue.yaml updated with one requested PDU session (internet)!")
 
     print("=== Step 4: Restart 5G Core, gNB, and UE ===")
     restart_cmd = "systemctl restart open5gs-smfd && sleep 3 && systemctl restart ueransim-gnb && sleep 3 && systemctl restart ueransim-ue && sleep 4"

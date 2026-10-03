@@ -858,6 +858,21 @@ function SelectedEventCard({
               value={event.target_ip ?? target.endpoint}
               mono
             />
+            {event.charging && (
+              <>
+                <DecodeRow label='Nchf' value={event.charging.operation} />
+                <DecodeRow label='HTTP/2' value={event.charging.http_status ?? event.charging.http_method ?? 'No decodificado'} />
+                {event.charging.units.map((unit, index) => (
+                  <DecodeRow key={index} label={unit.kind} value={[
+                    unit.ratingGroup !== undefined ? `RG ${unit.ratingGroup}` : null,
+                    unit.totalVolume !== undefined ? `Total ${unit.totalVolume} B` : null,
+                    unit.uplinkVolume !== undefined ? `UL ${unit.uplinkVolume} B` : null,
+                    unit.downlinkVolume !== undefined ? `DL ${unit.downlinkVolume} B` : null,
+                    unit.localSequenceNumber !== undefined ? `Sec. ${unit.localSequenceNumber}` : null,
+                  ].filter(Boolean).join(' · ')} />
+                ))}
+              </>
+            )}
             {event.standard_references?.map((ref) => (
               <DecodeRow
                 key={`${ref.spec}-${ref.clause}`}

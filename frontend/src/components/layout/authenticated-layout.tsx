@@ -4,6 +4,7 @@ import { LayoutProvider } from '@/context/layout-provider'
 import { SearchProvider } from '@/context/search-provider'
 import { TopNavigation } from '@/components/layout/top-navigation'
 import { SkipToMain } from '@/components/skip-to-main'
+import { SmartphoneTerminal } from '@/features/terminal/smartphone-terminal'
 
 type AuthenticatedLayoutProps = {
   children?: React.ReactNode
@@ -20,6 +21,7 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
           <div key={scenario} className='@container/content min-w-0'>
             {children ?? <Outlet />}
           </div>
+          <SmartphoneTerminal key={scenario} />
         </div>
       </LayoutProvider>
     </SearchProvider>

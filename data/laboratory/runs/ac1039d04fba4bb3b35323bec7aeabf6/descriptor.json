@@ -1,0 +1,1 @@
+{"campaign_budget_bytes":70000000,"capture_budget_bytes":4000000,"competing_ue":"load","design":"paired_randomized_blocks","load_mbps":[19.0],"measurement_seconds":10,"observed_ue":"video","primary_metric":"player_startup_delay_seconds","repetitions":1,"scenario":"5g-sa","schema_version":1,"seed":0,"template":"qoe_closed_loop","template_version":1}

@@ -1,0 +1,750 @@
+{
+  "started_at": "2026-09-30T15:07:32.027893+00:00",
+  "model": "qwen2.5:7b-instruct-q4_K_M",
+  "kind": "development_benchmark",
+  "hardware_before": {
+    "name": "NVIDIA GeForce RTX 5070",
+    "total_mib": 12227,
+    "used_mib": 6100,
+    "gpu_percent": 6,
+    "driver": "595.79"
+  },
+  "runs": [
+    {
+      "wall_seconds": 3.8794095999983256,
+      "id": "5f3758d27263468387a143ee1c82b289",
+      "context_sha256": "070f65642ca3c90428400f69885b4e639459dc61e6bbaec806a43a827f5e3a2b",
+      "status": "completed",
+      "proposal": {
+        "observations": [
+          {
+            "claim": "El analizador conserva un dictamen inconcluso.",
+            "evidence_ids": [
+              "ev_01"
+            ]
+          }
+        ],
+        "hypotheses": [
+          {
+            "id": "h1",
+            "description": "La presencia de NWDAF puede influir en la espera inicial del ensayo, posiblemente debido a una carga compartida en el sistema.",
+            "supporting_evidence": [
+              "ev_02",
+              "ev_03"
+            ],
+            "contradicting_evidence": [],
+            "missing_information": [
+              "Detalles sobre la carga del sistema durante los ensayos, comparación de la espera inicial entre ensayos con y sin NWDAF."
+            ]
+          }
+        ],
+        "proposed_test": {
+          "catalog_action": "review_policy_evidence",
+          "parameters": {},
+          "expected_observations_by_hypothesis": {
+            "h1": "Se espera que la espera inicial sea mayor en el ensayo con NWDAF ON debido a la carga compartida, aunque la validez del ensayo siga siendo inconclusiva."
+          },
+          "limitations": []
+        },
+        "conclusion_status": "inconclusive"
+      },
+      "runtime": {
+        "model": "qwen2.5:7b-instruct-q4_K_M",
+        "model_digest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+        "prompt_version": "qoe-tutor-v2",
+        "context_tokens_limit": 4096,
+        "first_token_seconds": 0.20162100000015926,
+        "total_seconds": 3.6448872000037227,
+        "eval_count": 274,
+        "eval_duration_ns": 3447666000,
+        "prompt_eval_count": 907,
+        "local_only": true
+      },
+      "advisory_only": true,
+      "commands_executed": false
+    },
+    {
+      "wall_seconds": 3.504876200000581,
+      "id": "b0d59d3ef1934b3eba1516ce5009a581",
+      "context_sha256": "070f65642ca3c90428400f69885b4e639459dc61e6bbaec806a43a827f5e3a2b",
+      "status": "completed",
+      "proposal": {
+        "observations": [
+          {
+            "claim": "El analizador conserva un dictamen inconcluso.",
+            "evidence_ids": [
+              "ev_01"
+            ]
+          }
+        ],
+        "hypotheses": [
+          {
+            "id": "h1",
+            "description": "La diferencia en la espera inicial entre los ensayos ON y OFF de NWDAF puede ser atribuible a la carga compartida entre el reproductor y el relay SSH.",
+            "supporting_evidence": [
+              "ev_02",
+              "ev_03"
+            ],
+            "contradicting_evidence": [],
+            "missing_information": [
+              "El nivel de carga en el relay SSH durante los ensayos."
+            ]
+          }
+        ],
+        "proposed_test": {
+          "catalog_action": "review_policy_evidence",
+          "parameters": {},
+          "expected_observations_by_hypothesis": {
+            "h1": "Se espera que la espera inicial en el ensayo ON sea menor que en el ensayo OFF, ya que la carga compartida podría ser menor cuando NWDAF está activo."
+          },
+          "limitations": []
+        },
+        "conclusion_status": "inconclusive"
+      },
+      "runtime": {
+        "model": "qwen2.5:7b-instruct-q4_K_M",
+        "model_digest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+        "prompt_version": "qoe-tutor-v2",
+        "context_tokens_limit": 4096,
+        "first_token_seconds": 0.28236309999920195,
+        "total_seconds": 3.4717988000047626,
+        "eval_count": 278,
+        "eval_duration_ns": 3188490000,
+        "prompt_eval_count": 907,
+        "local_only": true
+      },
+      "advisory_only": true,
+      "commands_executed": false
+    },
+    {
+      "wall_seconds": 3.544305199997325,
+      "id": "2457de5086f9429982ab21b6ec03b9a0",
+      "context_sha256": "070f65642ca3c90428400f69885b4e639459dc61e6bbaec806a43a827f5e3a2b",
+      "status": "completed",
+      "proposal": {
+        "observations": [
+          {
+            "claim": "El analizador conserva un dictamen inconcluso.",
+            "evidence_ids": [
+              "ev_01"
+            ]
+          }
+        ],
+        "hypotheses": [
+          {
+            "id": "h1",
+            "description": "La diferencia en la espera inicial entre los ensayos ON y OFF de NWDAF puede ser atribuible a la carga compartida entre el reproductor y el relay SSH.",
+            "supporting_evidence": [
+              "ev_02",
+              "ev_03"
+            ],
+            "contradicting_evidence": [],
+            "missing_information": [
+              "El nivel de carga en el relay SSH durante los ensayos."
+            ]
+          }
+        ],
+        "proposed_test": {
+          "catalog_action": "review_policy_evidence",
+          "parameters": {},
+          "expected_observations_by_hypothesis": {
+            "h1": "Se espera que la espera inicial en el ensayo ON sea menor que en el ensayo OFF, ya que la carga compartida podría ser menor cuando NWDAF está activo."
+          },
+          "limitations": []
+        },
+        "conclusion_status": "inconclusive"
+      },
+      "runtime": {
+        "model": "qwen2.5:7b-instruct-q4_K_M",
+        "model_digest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+        "prompt_version": "qoe-tutor-v2",
+        "context_tokens_limit": 4096,
+        "first_token_seconds": 0.30256609999923967,
+        "total_seconds": 3.507749499993224,
+        "eval_count": 278,
+        "eval_duration_ns": 3204375000,
+        "prompt_eval_count": 907,
+        "local_only": true
+      },
+      "advisory_only": true,
+      "commands_executed": false
+    }
+  ],
+  "samples": [
+    {
+      "time": 1790780852.0705972,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6100,
+        "gpu_percent": 6,
+        "driver": "595.79"
+      },
+      "cpu_percent": 18.1,
+      "ram_available_bytes": 5730414592,
+      "ram_used_bytes": 28380200960
+    },
+    {
+      "time": 1790780852.6087055,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6100,
+        "gpu_percent": 2,
+        "driver": "595.79"
+      },
+      "cpu_percent": 15.4,
+      "ram_available_bytes": 5805809664,
+      "ram_used_bytes": 28304805888
+    },
+    {
+      "time": 1790780853.1439636,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6098,
+        "gpu_percent": 2,
+        "driver": "595.79"
+      },
+      "cpu_percent": 21.2,
+      "ram_available_bytes": 5830340608,
+      "ram_used_bytes": 28280274944
+    },
+    {
+      "time": 1790780853.6803503,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6098,
+        "gpu_percent": 1,
+        "driver": "595.79"
+      },
+      "cpu_percent": 8.6,
+      "ram_available_bytes": 5855621120,
+      "ram_used_bytes": 28254994432
+    },
+    {
+      "time": 1790780854.2202883,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6098,
+        "gpu_percent": 0,
+        "driver": "595.79"
+      },
+      "cpu_percent": 21.6,
+      "ram_available_bytes": 5861416960,
+      "ram_used_bytes": 28249198592
+    },
+    {
+      "time": 1790780854.7601755,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6098,
+        "gpu_percent": 2,
+        "driver": "595.79"
+      },
+      "cpu_percent": 13.8,
+      "ram_available_bytes": 5812490240,
+      "ram_used_bytes": 28298125312
+    },
+    {
+      "time": 1790780855.3006494,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6099,
+        "gpu_percent": 93,
+        "driver": "595.79"
+      },
+      "cpu_percent": 34.7,
+      "ram_available_bytes": 5813993472,
+      "ram_used_bytes": 28296622080
+    },
+    {
+      "time": 1790780855.8415358,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6099,
+        "gpu_percent": 80,
+        "driver": "595.79"
+      },
+      "cpu_percent": 27.3,
+      "ram_available_bytes": 5845921792,
+      "ram_used_bytes": 28264693760
+    },
+    {
+      "time": 1790780856.3823621,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6099,
+        "gpu_percent": 14,
+        "driver": "595.79"
+      },
+      "cpu_percent": 24.2,
+      "ram_available_bytes": 5868326912,
+      "ram_used_bytes": 28242288640
+    },
+    {
+      "time": 1790780856.9211597,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6099,
+        "gpu_percent": 41,
+        "driver": "595.79"
+      },
+      "cpu_percent": 12.9,
+      "ram_available_bytes": 5864914944,
+      "ram_used_bytes": 28245700608
+    },
+    {
+      "time": 1790780857.4627306,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6099,
+        "gpu_percent": 33,
+        "driver": "595.79"
+      },
+      "cpu_percent": 22.8,
+      "ram_available_bytes": 5895778304,
+      "ram_used_bytes": 28214837248
+    },
+    {
+      "time": 1790780858.016912,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6099,
+        "gpu_percent": 94,
+        "driver": "595.79"
+      },
+      "cpu_percent": 14.8,
+      "ram_available_bytes": 5903134720,
+      "ram_used_bytes": 28207480832
+    },
+    {
+      "time": 1790780858.5547016,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6099,
+        "gpu_percent": 34,
+        "driver": "595.79"
+      },
+      "cpu_percent": 20.3,
+      "ram_available_bytes": 5908045824,
+      "ram_used_bytes": 28202569728
+    },
+    {
+      "time": 1790780859.1119266,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6099,
+        "gpu_percent": 92,
+        "driver": "595.79"
+      },
+      "cpu_percent": 18.7,
+      "ram_available_bytes": 5898452992,
+      "ram_used_bytes": 28212162560
+    },
+    {
+      "time": 1790780859.6536732,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6099,
+        "gpu_percent": 93,
+        "driver": "595.79"
+      },
+      "cpu_percent": 11.4,
+      "ram_available_bytes": 5905076224,
+      "ram_used_bytes": 28205539328
+    },
+    {
+      "time": 1790780860.1945918,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6099,
+        "gpu_percent": 75,
+        "driver": "595.79"
+      },
+      "cpu_percent": 10.6,
+      "ram_available_bytes": 5911085056,
+      "ram_used_bytes": 28199530496
+    },
+    {
+      "time": 1790780860.734309,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6099,
+        "gpu_percent": 33,
+        "driver": "595.79"
+      },
+      "cpu_percent": 13.2,
+      "ram_available_bytes": 5905731584,
+      "ram_used_bytes": 28204883968
+    },
+    {
+      "time": 1790780861.275033,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6099,
+        "gpu_percent": 33,
+        "driver": "595.79"
+      },
+      "cpu_percent": 12.2,
+      "ram_available_bytes": 5910568960,
+      "ram_used_bytes": 28200046592
+    },
+    {
+      "time": 1790780861.8178916,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6099,
+        "gpu_percent": 94,
+        "driver": "595.79"
+      },
+      "cpu_percent": 7.5,
+      "ram_available_bytes": 5923573760,
+      "ram_used_bytes": 28187041792
+    },
+    {
+      "time": 1790780862.3579426,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6099,
+        "gpu_percent": 23,
+        "driver": "595.79"
+      },
+      "cpu_percent": 9.3,
+      "ram_available_bytes": 5913743360,
+      "ram_used_bytes": 28196872192
+    },
+    {
+      "time": 1790780862.8994625,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6099,
+        "gpu_percent": 94,
+        "driver": "595.79"
+      },
+      "cpu_percent": 8.4,
+      "ram_available_bytes": 5913133056,
+      "ram_used_bytes": 28197482496
+    },
+    {
+      "time": 1790780863.441373,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6099,
+        "gpu_percent": 74,
+        "driver": "595.79"
+      },
+      "cpu_percent": 12.1,
+      "ram_available_bytes": 5921161216,
+      "ram_used_bytes": 28189454336
+    },
+    {
+      "time": 1790780863.98528,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6099,
+        "gpu_percent": 34,
+        "driver": "595.79"
+      },
+      "cpu_percent": 11.2,
+      "ram_available_bytes": 5902340096,
+      "ram_used_bytes": 28208275456
+    },
+    {
+      "time": 1790780864.5290153,
+      "gpu": {
+        "name": "NVIDIA GeForce RTX 5070",
+        "total_mib": 12227,
+        "used_mib": 6099,
+        "gpu_percent": 34,
+        "driver": "595.79"
+      },
+      "cpu_percent": 39.8,
+      "ram_available_bytes": 5859213312,
+      "ram_used_bytes": 28251402240
+    }
+  ],
+  "timer_lag_seconds": [
+    0,
+    0.00108679999830201,
+    0.001174499996704978,
+    0.0010961999971186714,
+    0.001274199999170375,
+    0.0014934999955585199,
+    0.0014642999987699995,
+    0.0012034999992465573,
+    0.002200100006302816,
+    0.0012522999997599954,
+    0.0019168999962857897,
+    0.0018985999951837557,
+    0.0016167000023415284,
+    0.0019449000057647908,
+    0.0017742000010912279,
+    0.0019599999970523613,
+    0.0019303000037325518,
+    0.0013076999995973865,
+    0.0019932000024709823,
+    0.0020131000012042904,
+    0.0018872000029659802,
+    0.0020919999980833354,
+    0.0019967000000178786,
+    0.0013924000042607049,
+    0.0016037000052165212,
+    0.001116800001182125,
+    0.0014019000038388157,
+    0.0019048999994993182,
+    0.0010966999936499605,
+    0.0018706000002566697,
+    0.0015353000009781653,
+    0.001671200002601833,
+    0.0016930000012507634,
+    0.001077299998723899,
+    0.0019827999960398274,
+    0.0020031999985803822,
+    0.0024197999984608004,
+    0.0007295999996131258,
+    0.21336009999795352,
+    0.10686660000210395,
+    0,
+    0.008698699998785739,
+    0.0035703999994439045,
+    0,
+    0.0023882999987108605,
+    0,
+    0,
+    0.00030399999668588584,
+    0.0009453999984543743,
+    0,
+    0,
+    0,
+    0.004215800002566536,
+    0,
+    0,
+    0.002124800000456159,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0.00870770000183256,
+    0,
+    0,
+    0.003273800003807989,
+    0,
+    0.006984300004842223,
+    0,
+    0.005136499999207442,
+    0,
+    0,
+    0,
+    0.006831099995179099,
+    0.0011463000002549933,
+    0,
+    0.0024484999987180317,
+    0,
+    0.0011918999982299255,
+    0,
+    0,
+    0.004934299994783939,
+    0,
+    0.00502079999860143,
+    0.005007899994961915,
+    0.005783499999961347,
+    0.00015619999903719595,
+    0,
+    0,
+    0,
+    0.004473699994559863,
+    0,
+    0,
+    0.004409099997428709,
+    0,
+    0,
+    0,
+    0,
+    0.004721500004234255,
+    0,
+    0,
+    0,
+    0,
+    0.002426100002776363,
+    0,
+    0.0015895999997155713,
+    0,
+    0,
+    0,
+    0.0022343999982695067,
+    0.2478004999968107,
+    0,
+    0.00434780000359751,
+    0,
+    0.005106400002841835,
+    0,
+    0,
+    0.01088569999701576,
+    0.006175600002461576,
+    0,
+    0,
+    0,
+    0,
+    0.003081899997778234,
+    0,
+    0.0058482999986154,
+    0,
+    0,
+    0,
+    0.0009292000060668187,
+    0,
+    0.002336799999466163,
+    0,
+    0,
+    0.002953899998101403,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0.0023436000003130147,
+    0,
+    0,
+    0,
+    0.0018758000034722472,
+    0,
+    0,
+    0.0020468000031542005,
+    0,
+    0,
+    0.003934700001263988,
+    0,
+    0.006267899999511425,
+    0,
+    0,
+    0,
+    0.002923700000974347,
+    0.00264690000331029,
+    0,
+    0.0007653000022401074,
+    0,
+    0.0012292999992496306,
+    0,
+    0,
+    0,
+    0.0006050999974831911,
+    0.0037971999947330887,
+    0,
+    0.0014865000004647272,
+    0,
+    0.002154999997583215,
+    0,
+    0,
+    0,
+    0,
+    0.003855400001339146,
+    0,
+    0,
+    0.29104240000306164,
+    0.002717600003234108,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0.013039100001333279,
+    0,
+    0,
+    0,
+    0,
+    0.0020278999974834705,
+    0,
+    0.004965700001048387,
+    0,
+    0.0020705999952042448,
+    0,
+    0,
+    0.002366099997016133,
+    0,
+    0,
+    0.0037247000029310556,
+    0,
+    0.003126500002690588,
+    0,
+    0.0034314000033191377,
+    0,
+    0,
+    0.014046999999845863,
+    0.001996000001963691,
+    0,
+    0.005590100004337725,
+    0,
+    0,
+    0,
+    0,
+    0.004679199995007363,
+    0,
+    0,
+    0.0021311999982572133,
+    0.0024337000024388517,
+    0,
+    0,
+    0.0013040000005275915,
+    0,
+    0.004585499994573181,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0.001303700005519201,
+    0,
+    0.003523400005360597,
+    0,
+    0,
+    0.003350900001532861,
+    0,
+    0,
+    0,
+    0.014458399996510704,
+    0,
+    0.002127200004179028,
+    0
+  ],
+  "investigation_id": "faed93fe25034100983d9dbae4c4382f",
+  "preload_seconds": 0.19694409999647178,
+  "finished_at": "2026-09-30T15:07:45.025996+00:00",
+  "summary": {
+    "valid_proposals": 3,
+    "sampled_peak_vram_mib": 6100,
+    "host_cpu_mean_percent": 17.0875,
+    "host_cpu_peak_percent": 39.8,
+    "host_ram_available_min_bytes": 5730414592,
+    "event_loop_max_lag_seconds": 0.29104240000306164
+  }
+}

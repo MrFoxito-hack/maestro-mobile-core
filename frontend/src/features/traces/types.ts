@@ -138,6 +138,8 @@ export type TraceTask = {
   identifier_type?: string
   identifier?: string
   identifier_masked?: string
+  selector_kind?: string
+  selector_masked?: string
   target?: {
     kind?: string
     masked?: string
@@ -197,6 +199,15 @@ export type TraceEventEndpoint = {
 }
 
 export type TraceEvent = {
+  charging?: {
+    operation: string
+    http_method?: string | null
+    http_status?: string | null
+    charging_data_ref?: string | null
+    payload_decoded: boolean
+    payload_frames: string[]
+    units: Array<{ kind: string; ratingGroup?: number; totalVolume?: number; uplinkVolume?: number; downlinkVolume?: number; time?: number; localSequenceNumber?: number }>
+  }
   interpretation_policy?: string
   source_ip?: string
   target_ip?: string
@@ -222,12 +233,36 @@ export type TraceEvent = {
   procedure?: string
   status?: 'success' | 'failure' | 'warning' | 'pending' | string
   packet_number?: number
+  length_bytes?: number | null
   frame_number?: number
   evidence_type?: TraceEvidenceType | string
   evidence?: string
   identifiers?: TraceIdentifier[]
   cause_code?: string | number
   cause?: string
+}
+
+export type TraceDecodeNode = {
+  name: string
+  label: string
+  value?: string
+  children?: TraceDecodeNode[]
+}
+
+export type TraceFrameDecode = {
+  frame_number: number
+  protocol: string
+  message_type: string
+  timestamp?: string | null
+  tree: TraceDecodeNode[]
+  truncated?: boolean
+}
+
+export type NodeTraceCatalogItem = {
+  id: string
+  label: string
+  description: string
+  interfaces: Array<{ id: string; label: string; protocols: string[] }>
 }
 
 export type TraceProcedure = {
@@ -306,6 +341,8 @@ export type InterfaceTraceDraft = {
   capture_point: string
   duration_seconds: number
   max_megabytes: number
+  identifier_type?: 'imsi' | 'supi'
+  identifier?: string
 }
 
 export type SubscriberTraceDraft = {

@@ -33,6 +33,7 @@ class UserPublic(BaseModel):
     username: str
     role: Role
     testbed: str | None = None
+    assigned_imsi: str | None = None
 
 
 class LoginRequest(BaseModel):
@@ -129,6 +130,18 @@ class InterfaceTraceStart(TraceLimits):
     node_id: str
     component_id: str
     capture_point: str
+    identifier_type: Literal["imsi", "supi"] | None = None
+    identifier: str | None = Field(default=None, min_length=14, max_length=15)
+
+    @model_validator(mode="after")
+    def valid_node_user_selector(self):
+        import re
+
+        if (self.identifier_type is None) != (self.identifier is None):
+            raise ValueError("Tipo e identificador deben proporcionarse juntos")
+        if self.identifier and not re.fullmatch(r"\d{14,15}", self.identifier):
+            raise ValueError("El SUPI/IMSI debe contener 14 o 15 dígitos")
+        return self
 
 
 class SubscriberTraceStart(TraceLimits):

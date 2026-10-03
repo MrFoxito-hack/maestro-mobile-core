@@ -1,0 +1,64 @@
+{
+  "archive_verified": true,
+  "network_access": false,
+  "analyses": [
+    {
+      "input_id": "74bbd8b422b3408ab5eba8736de0eae2",
+      "input_sha256": "dca1d9caafda5a57d0082b188107614b04f473ae9e2c3b38b7b78996a52b4b1f",
+      "analyzer_version": "paired-startup-v1",
+      "metric": "player_startup_delay_seconds",
+      "unit": "seconds",
+      "source": "historical_import",
+      "paired_unit": "randomized_block",
+      "pairs": [],
+      "excluded": [
+        {
+          "block": 1,
+          "reasons": [
+            "historical_baseline_and_recovery_not_independently_verified",
+            "historical_baseline_and_recovery_not_independently_verified"
+          ]
+        }
+      ],
+      "mean_delta_seconds": null,
+      "median_delta_seconds": null,
+      "sample_standard_deviation_seconds": null,
+      "confidence_interval": null,
+      "hypothesis_outcome": "inconclusive",
+      "limitations": [
+        "Diferencia = activado menos desactivado; valores negativos indican menor espera.",
+        "No se infiere causalidad ni significación por una diferencia observada.",
+        "Intervalos y umbral de efecto deben fijarse tras piloto antes de contrastar la hipótesis."
+      ]
+    },
+    {
+      "input_id": "5265349ad33843e0b692cf2b6653d30a",
+      "input_sha256": "7882f488eef08b5020176f23847fb5c380db1ecaef90fe457987026d33a2b51a",
+      "analyzer_version": "paired-startup-v1",
+      "metric": "player_startup_delay_seconds",
+      "unit": "seconds",
+      "source": "historical_import",
+      "paired_unit": "randomized_block",
+      "pairs": [],
+      "excluded": [
+        {
+          "block": 1,
+          "reasons": [
+            "historical_baseline_and_recovery_not_independently_verified",
+            "historical_baseline_and_recovery_not_independently_verified"
+          ]
+        }
+      ],
+      "mean_delta_seconds": null,
+      "median_delta_seconds": null,
+      "sample_standard_deviation_seconds": null,
+      "confidence_interval": null,
+      "hypothesis_outcome": "inconclusive",
+      "limitations": [
+        "Diferencia = activado menos desactivado; valores negativos indican menor espera.",
+        "No se infiere causalidad ni significación por una diferencia observada.",
+        "Intervalos y umbral de efecto deben fijarse tras piloto antes de contrastar la hipótesis."
+      ]
+    }
+  ]
+}

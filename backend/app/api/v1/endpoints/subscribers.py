@@ -4,6 +4,7 @@ from app.api.deps import current_user, operator_user
 from app.db import add_audit
 from app.models import SubscriberCreate, SubscriberUpdate, UserPublic
 from app.services.subscribers import subscriber_service
+from app.services.ue_observation import unknown_status
 
 router = APIRouter(prefix="/subscribers", tags=["subscribers"])
 
@@ -15,20 +16,13 @@ def list_subscribers(_: UserPublic = Depends(current_user)):
 
 @router.get("/{imsi}/status")
 def subscriber_status(imsi: str, _: UserPublic = Depends(current_user)):
-    statuses = subscriber_service.get_live_status(imsi)
+    try:
+        statuses = subscriber_service.get_live_status(imsi)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
     status = statuses.get(imsi)
     if not status:
-        return {
-            "registered": False,
-            "cm_state": "CM-IDLE",
-            "rm_state": "RM-DEREGISTERED",
-            "mm_state": "MM-DEREGISTERED",
-            "cell_id": None,
-            "tac": None,
-            "guti": None,
-            "pdu_sessions": [],
-            "active_ip": None,
-        }
+        return unknown_status()
     return status
 
 

@@ -1,0 +1,38 @@
+{
+  "previous_execution": "365a92b0ba8f4726a1f4f340c9798053",
+  "assignment_id": "7d8bf9eff79041359b8d26f3182511f7",
+  "campaign": {
+    "id": "767fb9e642674db8af64fb138b50789e",
+    "revision_id": "14005f2b2f784af5b76062b6dd323f09",
+    "plan": {
+      "runs": [
+        {
+          "block": 1,
+          "execution_status": "planned",
+          "hypothesis_outcome": "pending",
+          "load_mbps": 19.0,
+          "measurement_seconds": 10,
+          "ordinal": 1,
+          "repetition": 1,
+          "treatment": "controller_disabled_verified",
+          "validity_status": "pending"
+        },
+        {
+          "block": 1,
+          "execution_status": "planned",
+          "hypothesis_outcome": "pending",
+          "load_mbps": 19.0,
+          "measurement_seconds": 10,
+          "ordinal": 2,
+          "repetition": 1,
+          "treatment": "controller_enabled_verified",
+          "validity_status": "pending"
+        }
+      ]
+    },
+    "planner_version": "paired-blocks-v1",
+    "created_at": "2026-09-30T14:27:14.760728+00:00",
+    "execution_status": "planned",
+    "execution_ready": false
+  }
+}

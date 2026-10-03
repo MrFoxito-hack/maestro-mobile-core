@@ -33,3 +33,16 @@ docker-compose.override.yml
 docker-compose.local_backup.yml
 frontend/Dockerfile.local
 frontend/nginx.local.conf
+
+# Exclude reports, papers and research documents
+reportes/
+*.pdf
+*.docx
+
+# Exclude images and media assets
+*.png
+*.jpg
+*.jpeg
+*.ico
+*.bmp
+frontend/public/images/

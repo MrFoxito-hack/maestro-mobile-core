@@ -1,0 +1,147 @@
+{
+  "delivery": "02",
+  "date": "2026-09-29",
+  "scope": "Local source snapshot; not deployment or network evidence",
+  "files": [
+    {
+      "path": "backend/.env.example",
+      "bytes": 864,
+      "sha256": "468e25f3f911105f405c6ae65d17f1f9018b0071832d7ae20662eebcc650c9e6"
+    },
+    {
+      "path": "backend/app/api/v1/endpoints/laboratory.py",
+      "bytes": 5116,
+      "sha256": "183eb6307e5d143e46d90d31efb3d03951205f80c86e71a755cf08d90222bf47"
+    },
+    {
+      "path": "backend/app/core/config.py",
+      "bytes": 3452,
+      "sha256": "363584b50c4971f8c1c677c14bf10f44175a2687ca532ca82049427b8258ec34"
+    },
+    {
+      "path": "backend/app/laboratory/__init__.py",
+      "bytes": 78,
+      "sha256": "77b9027ea607b9b6e49125a0e8dab270fe7bec55fc7438bd84e5b6710116eaa5"
+    },
+    {
+      "path": "backend/app/laboratory/adapters.py",
+      "bytes": 2411,
+      "sha256": "c2df5164ab6c3409601917ba7de96d10ee07f8acf1edc4ca7777a4f9f3220951"
+    },
+    {
+      "path": "backend/app/laboratory/capabilities.py",
+      "bytes": 1933,
+      "sha256": "f7d64cdb3bf77da550e9d9e67d75a46ac49306a785eccbd32e338ddb8646f8dc"
+    },
+    {
+      "path": "backend/app/laboratory/migrations.py",
+      "bytes": 2203,
+      "sha256": "d2164f0949d782ab9b0fcf6cac40893bebb410a2809b41c1c55d187bbb8c4e1b"
+    },
+    {
+      "path": "backend/app/laboratory/planner.py",
+      "bytes": 3333,
+      "sha256": "caca68e4687566df0efd2a8c56445d4875e9d46d168de9df29cce6242f4ecc35"
+    },
+    {
+      "path": "backend/app/laboratory/preflight.py",
+      "bytes": 3326,
+      "sha256": "1900ea4ff271974fbe965b981302692f2c732536d364e7f59ef69e3be5a942f8"
+    },
+    {
+      "path": "backend/app/laboratory/repository.py",
+      "bytes": 8936,
+      "sha256": "6248354f56862e5c989d34c4075eafe7ea0b3304238181c866bb475682c40f80"
+    },
+    {
+      "path": "backend/app/laboratory/runtime.py",
+      "bytes": 20962,
+      "sha256": "04d42c9cacf2cfeaee66163bebc14fe3fcae1a4d93a33e651a1fb9d45ae5be1f"
+    },
+    {
+      "path": "backend/app/laboratory/schemas.py",
+      "bytes": 3297,
+      "sha256": "f2c3855f05155dddcf5294666a67e347aab1178938d3e31d3442708f38c11507"
+    },
+    {
+      "path": "backend/app/laboratory/storage.py",
+      "bytes": 419,
+      "sha256": "d164dbb56391c2e747a465eb686d422103c203a96985487d515147547ed47c99"
+    },
+    {
+      "path": "backend/app/laboratory/worker.py",
+      "bytes": 4505,
+      "sha256": "9eae889e51d8cdddbed45a8c8a0c120368945dbf1ea7f8d36fc6c80600ebd7a1"
+    },
+    {
+      "path": "backend/app/main.py",
+      "bytes": 1267,
+      "sha256": "e1925a232c1c3d480ae719211a1a0cbb3754e460d006be26bb10267fd2860de4"
+    },
+    {
+      "path": "backend/tests/fixtures/laboratory_v1.sql",
+      "bytes": 1727,
+      "sha256": "f5c2c1bd7808e56aa72b957a221cac0df291c2e14a359c21d78427d479b4b582"
+    },
+    {
+      "path": "backend/tests/test_laboratory.py",
+      "bytes": 8379,
+      "sha256": "b5230a8708e1211a670da86f0239d3e82801e0558cab9045d1cfe04f73d670d2"
+    },
+    {
+      "path": "backend/tests/test_laboratory_preflight.py",
+      "bytes": 1811,
+      "sha256": "49148627a652ea49e6001467cceefa18ccd25c57c82b61c0a8ef35f2f3859ffe"
+    },
+    {
+      "path": "backend/tests/test_laboratory_runtime.py",
+      "bytes": 22276,
+      "sha256": "4eaf7d46ec7a83c0089b5231013682a7ce56ecd40c424d4922c4fbcad2d99191"
+    },
+    {
+      "path": "docker-compose.yml",
+      "bytes": 1868,
+      "sha256": "b376fe94b2b96e41911d3c92f51d4b4b392429208b1fffe403e2ff1dc2f756d5"
+    },
+    {
+      "path": "docs/laboratory/ENTREGA_02_MOTOR_PERSISTENTE_Y_ENSAYO.md",
+      "bytes": 14191,
+      "sha256": "589fedd22c1450d44439924352a18e1c6b3c291ec0167da6df2f1db5debcd1fa"
+    },
+    {
+      "path": "docs/PLAN_LABORATORIO_INVESTIGACION_5G.md",
+      "bytes": 53704,
+      "sha256": "65d684c52f5c4d1e689ee7d7b34baf29678122d92a227c30b9b71087bbdf01cf"
+    },
+    {
+      "path": "frontend/src/features/laboratory/index.test.tsx",
+      "bytes": 12599,
+      "sha256": "bfc5e42c52a21fee1d23bf0835b07df90860edd02f14d7b503af231bedf08349"
+    },
+    {
+      "path": "frontend/src/features/laboratory/index.tsx",
+      "bytes": 18381,
+      "sha256": "0edacc6f74dc0e6e54bdc4880e9c1f17f80e7469df8fc3b2f565977878fd9a84"
+    },
+    {
+      "path": "frontend/src/features/laboratory/requests.ts",
+      "bytes": 655,
+      "sha256": "7b8d7b1fbcac4a0cde64716e75094ab80d2dc5dbe643ca8117775486da442829"
+    },
+    {
+      "path": "frontend/src/features/laboratory/runtime.tsx",
+      "bytes": 15472,
+      "sha256": "3bdee00fc27ed64df0c3a47c0199033c703b27815d00ed274fb7225d45caa6e7"
+    },
+    {
+      "path": "run_ems.ps1",
+      "bytes": 5158,
+      "sha256": "3f319094787cfbdec819b90097d73f0d701423816fadcc5c657ab42b8d6eb461"
+    },
+    {
+      "path": "run_ems.sh",
+      "bytes": 1957,
+      "sha256": "3f2796dd10754f4eb07cabcc85dc609ae5bc4fcf7062ed0cf116d846e1ad2956"
+    }
+  ]
+}

@@ -21,10 +21,15 @@ import { Route as AuthenticatedTracesIndexRouteImport } from './routes/_authenti
 import { Route as AuthenticatedTopologyIndexRouteImport } from './routes/_authenticated/topology/index'
 import { Route as AuthenticatedSubscribersIndexRouteImport } from './routes/_authenticated/subscribers/index'
 import { Route as AuthenticatedPerformanceIndexRouteImport } from './routes/_authenticated/performance/index'
+import { Route as AuthenticatedNwdafIndexRouteImport } from './routes/_authenticated/nwdaf/index'
+import { Route as AuthenticatedLaboratoryIndexRouteImport } from './routes/_authenticated/laboratory/index'
 import { Route as AuthenticatedConfigurationIndexRouteImport } from './routes/_authenticated/configuration/index'
 import { Route as AuthenticatedCommandsIndexRouteImport } from './routes/_authenticated/commands/index'
+import { Route as AuthenticatedChargingIndexRouteImport } from './routes/_authenticated/charging/index'
 import { Route as AuthenticatedAuditIndexRouteImport } from './routes/_authenticated/audit/index'
 import { Route as AuthenticatedAlarmsIndexRouteImport } from './routes/_authenticated/alarms/index'
+import { Route as AuthenticatedTracesNodeRouteImport } from './routes/_authenticated/traces/node'
+import { Route as AuthenticatedTracesE2eRouteImport } from './routes/_authenticated/traces/e2e'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -90,6 +95,17 @@ const AuthenticatedPerformanceIndexRoute =
     path: '/performance/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedNwdafIndexRoute = AuthenticatedNwdafIndexRouteImport.update({
+  id: '/nwdaf/',
+  path: '/nwdaf/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLaboratoryIndexRoute =
+  AuthenticatedLaboratoryIndexRouteImport.update({
+    id: '/laboratory/',
+    path: '/laboratory/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedConfigurationIndexRoute =
   AuthenticatedConfigurationIndexRouteImport.update({
     id: '/configuration/',
@@ -100,6 +116,12 @@ const AuthenticatedCommandsIndexRoute =
   AuthenticatedCommandsIndexRouteImport.update({
     id: '/commands/',
     path: '/commands/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedChargingIndexRoute =
+  AuthenticatedChargingIndexRouteImport.update({
+    id: '/charging/',
+    path: '/charging/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAuditIndexRoute = AuthenticatedAuditIndexRouteImport.update({
@@ -113,6 +135,16 @@ const AuthenticatedAlarmsIndexRoute =
     path: '/alarms/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedTracesNodeRoute = AuthenticatedTracesNodeRouteImport.update({
+  id: '/traces/node',
+  path: '/traces/node',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTracesE2eRoute = AuthenticatedTracesE2eRouteImport.update({
+  id: '/traces/e2e',
+  path: '/traces/e2e',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedErrorsErrorRoute =
   AuthenticatedErrorsErrorRouteImport.update({
     id: '/errors/$error',
@@ -129,10 +161,15 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/traces/e2e': typeof AuthenticatedTracesE2eRoute
+  '/traces/node': typeof AuthenticatedTracesNodeRoute
   '/alarms/': typeof AuthenticatedAlarmsIndexRoute
   '/audit/': typeof AuthenticatedAuditIndexRoute
+  '/charging/': typeof AuthenticatedChargingIndexRoute
   '/commands/': typeof AuthenticatedCommandsIndexRoute
   '/configuration/': typeof AuthenticatedConfigurationIndexRoute
+  '/laboratory/': typeof AuthenticatedLaboratoryIndexRoute
+  '/nwdaf/': typeof AuthenticatedNwdafIndexRoute
   '/performance/': typeof AuthenticatedPerformanceIndexRoute
   '/subscribers/': typeof AuthenticatedSubscribersIndexRoute
   '/topology/': typeof AuthenticatedTopologyIndexRoute
@@ -147,10 +184,15 @@ export interface FileRoutesByTo {
   '/503': typeof errors503Route
   '/': typeof AuthenticatedIndexRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/traces/e2e': typeof AuthenticatedTracesE2eRoute
+  '/traces/node': typeof AuthenticatedTracesNodeRoute
   '/alarms': typeof AuthenticatedAlarmsIndexRoute
   '/audit': typeof AuthenticatedAuditIndexRoute
+  '/charging': typeof AuthenticatedChargingIndexRoute
   '/commands': typeof AuthenticatedCommandsIndexRoute
   '/configuration': typeof AuthenticatedConfigurationIndexRoute
+  '/laboratory': typeof AuthenticatedLaboratoryIndexRoute
+  '/nwdaf': typeof AuthenticatedNwdafIndexRoute
   '/performance': typeof AuthenticatedPerformanceIndexRoute
   '/subscribers': typeof AuthenticatedSubscribersIndexRoute
   '/topology': typeof AuthenticatedTopologyIndexRoute
@@ -167,10 +209,15 @@ export interface FileRoutesById {
   '/(errors)/503': typeof errors503Route
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/_authenticated/traces/e2e': typeof AuthenticatedTracesE2eRoute
+  '/_authenticated/traces/node': typeof AuthenticatedTracesNodeRoute
   '/_authenticated/alarms/': typeof AuthenticatedAlarmsIndexRoute
   '/_authenticated/audit/': typeof AuthenticatedAuditIndexRoute
+  '/_authenticated/charging/': typeof AuthenticatedChargingIndexRoute
   '/_authenticated/commands/': typeof AuthenticatedCommandsIndexRoute
   '/_authenticated/configuration/': typeof AuthenticatedConfigurationIndexRoute
+  '/_authenticated/laboratory/': typeof AuthenticatedLaboratoryIndexRoute
+  '/_authenticated/nwdaf/': typeof AuthenticatedNwdafIndexRoute
   '/_authenticated/performance/': typeof AuthenticatedPerformanceIndexRoute
   '/_authenticated/subscribers/': typeof AuthenticatedSubscribersIndexRoute
   '/_authenticated/topology/': typeof AuthenticatedTopologyIndexRoute
@@ -187,10 +234,15 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/errors/$error'
+    | '/traces/e2e'
+    | '/traces/node'
     | '/alarms/'
     | '/audit/'
+    | '/charging/'
     | '/commands/'
     | '/configuration/'
+    | '/laboratory/'
+    | '/nwdaf/'
     | '/performance/'
     | '/subscribers/'
     | '/topology/'
@@ -205,10 +257,15 @@ export interface FileRouteTypes {
     | '/503'
     | '/'
     | '/errors/$error'
+    | '/traces/e2e'
+    | '/traces/node'
     | '/alarms'
     | '/audit'
+    | '/charging'
     | '/commands'
     | '/configuration'
+    | '/laboratory'
+    | '/nwdaf'
     | '/performance'
     | '/subscribers'
     | '/topology'
@@ -224,10 +281,15 @@ export interface FileRouteTypes {
     | '/(errors)/503'
     | '/_authenticated/'
     | '/_authenticated/errors/$error'
+    | '/_authenticated/traces/e2e'
+    | '/_authenticated/traces/node'
     | '/_authenticated/alarms/'
     | '/_authenticated/audit/'
+    | '/_authenticated/charging/'
     | '/_authenticated/commands/'
     | '/_authenticated/configuration/'
+    | '/_authenticated/laboratory/'
+    | '/_authenticated/nwdaf/'
     | '/_authenticated/performance/'
     | '/_authenticated/subscribers/'
     | '/_authenticated/topology/'
@@ -330,6 +392,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPerformanceIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/nwdaf/': {
+      id: '/_authenticated/nwdaf/'
+      path: '/nwdaf'
+      fullPath: '/nwdaf/'
+      preLoaderRoute: typeof AuthenticatedNwdafIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/laboratory/': {
+      id: '/_authenticated/laboratory/'
+      path: '/laboratory'
+      fullPath: '/laboratory/'
+      preLoaderRoute: typeof AuthenticatedLaboratoryIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/configuration/': {
       id: '/_authenticated/configuration/'
       path: '/configuration'
@@ -342,6 +418,13 @@ declare module '@tanstack/react-router' {
       path: '/commands'
       fullPath: '/commands/'
       preLoaderRoute: typeof AuthenticatedCommandsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/charging/': {
+      id: '/_authenticated/charging/'
+      path: '/charging'
+      fullPath: '/charging/'
+      preLoaderRoute: typeof AuthenticatedChargingIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/audit/': {
@@ -358,6 +441,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAlarmsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/traces/node': {
+      id: '/_authenticated/traces/node'
+      path: '/traces/node'
+      fullPath: '/traces/node'
+      preLoaderRoute: typeof AuthenticatedTracesNodeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/traces/e2e': {
+      id: '/_authenticated/traces/e2e'
+      path: '/traces/e2e'
+      fullPath: '/traces/e2e'
+      preLoaderRoute: typeof AuthenticatedTracesE2eRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/errors/$error': {
       id: '/_authenticated/errors/$error'
       path: '/errors/$error'
@@ -371,10 +468,15 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
+  AuthenticatedTracesE2eRoute: typeof AuthenticatedTracesE2eRoute
+  AuthenticatedTracesNodeRoute: typeof AuthenticatedTracesNodeRoute
   AuthenticatedAlarmsIndexRoute: typeof AuthenticatedAlarmsIndexRoute
   AuthenticatedAuditIndexRoute: typeof AuthenticatedAuditIndexRoute
+  AuthenticatedChargingIndexRoute: typeof AuthenticatedChargingIndexRoute
   AuthenticatedCommandsIndexRoute: typeof AuthenticatedCommandsIndexRoute
   AuthenticatedConfigurationIndexRoute: typeof AuthenticatedConfigurationIndexRoute
+  AuthenticatedLaboratoryIndexRoute: typeof AuthenticatedLaboratoryIndexRoute
+  AuthenticatedNwdafIndexRoute: typeof AuthenticatedNwdafIndexRoute
   AuthenticatedPerformanceIndexRoute: typeof AuthenticatedPerformanceIndexRoute
   AuthenticatedSubscribersIndexRoute: typeof AuthenticatedSubscribersIndexRoute
   AuthenticatedTopologyIndexRoute: typeof AuthenticatedTopologyIndexRoute
@@ -384,10 +486,15 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
+  AuthenticatedTracesE2eRoute: AuthenticatedTracesE2eRoute,
+  AuthenticatedTracesNodeRoute: AuthenticatedTracesNodeRoute,
   AuthenticatedAlarmsIndexRoute: AuthenticatedAlarmsIndexRoute,
   AuthenticatedAuditIndexRoute: AuthenticatedAuditIndexRoute,
+  AuthenticatedChargingIndexRoute: AuthenticatedChargingIndexRoute,
   AuthenticatedCommandsIndexRoute: AuthenticatedCommandsIndexRoute,
   AuthenticatedConfigurationIndexRoute: AuthenticatedConfigurationIndexRoute,
+  AuthenticatedLaboratoryIndexRoute: AuthenticatedLaboratoryIndexRoute,
+  AuthenticatedNwdafIndexRoute: AuthenticatedNwdafIndexRoute,
   AuthenticatedPerformanceIndexRoute: AuthenticatedPerformanceIndexRoute,
   AuthenticatedSubscribersIndexRoute: AuthenticatedSubscribersIndexRoute,
   AuthenticatedTopologyIndexRoute: AuthenticatedTopologyIndexRoute,

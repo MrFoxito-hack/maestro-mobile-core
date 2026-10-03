@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Activity,
   ListChecks,
-  Radio,
+  Network,
   RefreshCw,
   UserRoundSearch,
 } from 'lucide-react'
@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EmsPage } from '@/features/ems-page'
-import { InterfaceTraceForm } from './components/interface-trace-form'
+import { NodeTraceView } from './components/node-trace-view'
 import { SubscriberTraceForm } from './components/subscriber-trace-form'
 import { TraceTaskDetailView } from './components/trace-task-detail'
 import { TraceTaskTable } from './components/trace-task-table'
@@ -30,14 +30,15 @@ import {
   type TraceTask,
 } from './types'
 
-type TraceTab = 'interface' | 'subscriber' | 'tasks'
+type TraceTab = 'e2e' | 'node' | 'tasks'
 
-export function TracesPage() {
+export function TracesPage({ view = 'all' }: { view?: 'all' | 'e2e' | 'node' }) {
   const queryClient = useQueryClient()
   const user = useAuthStore((state) => state.auth.user)
-  const [tab, setTab] = useState<TraceTab>('interface')
+  const [tab, setTab] = useState<TraceTab>(view === 'node' ? 'node' : 'e2e')
   const scenario = useScenarioStore((state) => state.scenario)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [nodeTaskId, setNodeTaskId] = useState<string | null>(null)
 
   const capabilities = useQuery({
     queryKey: ['trace-capabilities', scenario],
@@ -66,6 +67,28 @@ export function TracesPage() {
   })
   const resolvedTask = taskDetail.data ?? selectedTask
 
+  const resolvedNodeTaskId = nodeTaskId
+  const resolvedNodeTask = tasks.data?.find(
+    (task) => task.id === resolvedNodeTaskId
+  )
+
+  const nodeAnalysis = useQuery({
+    queryKey: ['trace-analysis', resolvedNodeTaskId],
+    queryFn: async () =>
+      (
+        await api.get<TraceAnalysis>(
+          `/traces/${resolvedNodeTaskId}/analysis`
+        )
+      ).data,
+    enabled: Boolean(
+      resolvedNodeTaskId &&
+        tab === 'node' &&
+        resolvedNodeTask?.status === 'completed'
+    ),
+    staleTime: 0,
+    retry: false,
+  })
+
   const analysis = useQuery({
     queryKey: ['trace-analysis', selectedTaskId],
     queryFn: async () =>
@@ -78,17 +101,21 @@ export function TracesPage() {
 
   const createInterface = useMutation({
     mutationFn: async (draft: InterfaceTraceDraft) =>
-      (await api.post<TraceTask>('/traces/interface', draft, { timeout: 60_000 })).data,
+      (
+        await api.post<TraceTask>('/traces/interface', draft, {
+          timeout: 60_000,
+        })
+      ).data,
     onSuccess: (created) => {
-      void queryClient.invalidateQueries({ queryKey: ['trace-tasks'] })
-      setTab('tasks')
-      setSelectedTaskId(created.id)
-      toast.success('Interface Trace iniciado', {
-        description: 'La captura se está ejecutando con un perfil autorizado.',
-      })
+      queryClient.setQueryData<TraceTask[]>(['trace-tasks'], (current) => [
+        created,
+        ...(current ?? []).filter((task) => task.id !== created.id),
+      ])
+      setNodeTaskId(created.id)
+      toast.success('Captura de nodo iniciada')
     },
     onError: (error) =>
-      toast.error(apiErrorMessage(error, 'No se pudo iniciar Interface Trace')),
+      toast.error(apiErrorMessage(error, 'No se pudo iniciar la captura de nodo')),
   })
 
   const createSubscriber = useMutation({
@@ -98,14 +125,14 @@ export function TracesPage() {
       void queryClient.invalidateQueries({ queryKey: ['trace-tasks'] })
       setTab('tasks')
       setSelectedTaskId(created.id)
-      toast.success('Subscriber Trace iniciado', {
+      toast.success('Traza General E2E iniciada', {
         description:
           'El motor capturará y correlacionará el recorrido del suscriptor.',
       })
     },
     onError: (error) =>
       toast.error(
-        apiErrorMessage(error, 'No se pudo iniciar Subscriber Trace')
+        apiErrorMessage(error, 'No se pudo iniciar la Traza General E2E')
       ),
   })
 
@@ -174,7 +201,10 @@ export function TracesPage() {
     }
   }
 
-  const activeCount = tasks.data?.filter(isActiveTrace).length ?? 0
+  const e2eTasks = tasks.data?.filter(
+    (task) => (task.trace_type ?? task.type) === 'subscriber'
+  )
+  const activeCount = e2eTasks?.filter(isActiveTrace).length ?? 0
   const subscriberSupported =
     scenario === '5g-sa' && capabilities.data?.subscriber?.enabled !== false
   const canCreate = canTrace(user?.role) && Boolean(user)
@@ -222,31 +252,46 @@ export function TracesPage() {
   return (
     <EmsPage title='Centro de trazas' description=''>
       <Tabs value={tab} onValueChange={changeTab} className='gap-5'>
-        <div className='flex flex-wrap items-center justify-between gap-2 pb-1'>
+        <div className={`flex flex-wrap items-center justify-between gap-2 pb-1 ${view === 'node' ? 'hidden' : ''}`}>
           <TabsList className='h-10'>
-            <TabsTrigger value='interface' className='px-3'>
-              <Radio /> Interface Trace
-            </TabsTrigger>
+            {view !== 'node' && (
             <TabsTrigger
-              value='subscriber'
+              value='e2e'
               className='px-3'
               disabled={!subscriberSupported}
               title={
                 scenario !== '5g-sa'
-                  ? 'Subscriber Trace solo disponible en 5G Standalone'
+                  ? 'La Traza General E2E solo está disponible en 5G Standalone'
                   : undefined
               }
             >
-              <UserRoundSearch /> Subscriber Trace
+              <UserRoundSearch /> Traza General E2E
             </TabsTrigger>
+            )}
+            {view === 'all' && (
+            <TabsTrigger
+              value='node'
+              className='px-3'
+              disabled={scenario !== '5g-sa'}
+              title={
+                scenario !== '5g-sa'
+                  ? 'Las trazas CSP están disponibles en 5G Standalone'
+                  : undefined
+              }
+            >
+              <Network /> Trazas en Nodo (CSP)
+            </TabsTrigger>
+            )}
+            {view !== 'node' && (
             <TabsTrigger value='tasks' className='px-3'>
-              <ListChecks /> Tareas
+              <ListChecks /> Historial y resultados
               {!!activeCount && (
                 <Badge className='h-5 min-w-5 justify-center px-1.5'>
                   {activeCount}
                 </Badge>
               )}
             </TabsTrigger>
+            )}
           </TabsList>
           <div className='flex items-center gap-2'>
             {activeCount > 0 && (
@@ -289,17 +334,7 @@ export function TracesPage() {
           </Alert>
         )}
 
-        <TabsContent value='interface'>
-          <InterfaceTraceForm
-            key={`interface:${scenario}`}
-            capabilities={capabilities.data}
-            isLoading={capabilities.isLoading}
-            canCreate={canCreate}
-            isSubmitting={createInterface.isPending}
-            onSubmit={(draft) => createInterface.mutate(draft)}
-          />
-        </TabsContent>
-        <TabsContent value='subscriber'>
+        <TabsContent value='e2e'>
           <SubscriberTraceForm
             capabilities={capabilities.data}
             isLoading={capabilities.isLoading}
@@ -308,9 +343,25 @@ export function TracesPage() {
             onSubmit={(draft) => createSubscriber.mutate(draft)}
           />
         </TabsContent>
+        <TabsContent value='node'>
+          <NodeTraceView
+            tasks={tasks.data ?? []}
+            taskId={resolvedNodeTaskId}
+            onTaskChange={(id) => setNodeTaskId(id)}
+            analysis={nodeAnalysis.data}
+            loading={nodeAnalysis.isLoading || nodeAnalysis.isFetching}
+            onRefresh={() => void nodeAnalysis.refetch()}
+            capabilities={capabilities.data}
+            canCreate={canCreate}
+            isSubmitting={createInterface.isPending}
+            pendingStopId={stop.variables?.id}
+            onStart={(draft) => createInterface.mutate(draft)}
+            onStop={(task) => stop.mutate(task)}
+          />
+        </TabsContent>
         <TabsContent value='tasks'>
           <TraceTaskTable
-            tasks={tasks.data}
+            tasks={e2eTasks}
             isLoading={tasks.isLoading}
             error={tasks.error}
             currentUsername={user?.username}

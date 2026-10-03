@@ -1,0 +1,2 @@
+# Optional, non-commercial research only; do not vendor or redistribute.
+itu-p1203 @ git+https://github.com/itu-p1203/itu-p1203.git@fa4a8735ca983af169c84d346c631c8f4ff7b85a

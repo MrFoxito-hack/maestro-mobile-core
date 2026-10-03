@@ -35,6 +35,6 @@ def teacher_headers(client):
 
 @pytest.fixture()
 def student_headers(client):
-    response = client.post("/api/v1/auth/login", json={"username": "alumno", "password": "student-change-me"})
+    response = client.post("/api/v1/auth/login", json={"username": "grupo1", "password": "grupo1-pass-2026"})
     assert response.status_code == 200
     return {"Authorization": f"Bearer {response.json()['access_token']}"}

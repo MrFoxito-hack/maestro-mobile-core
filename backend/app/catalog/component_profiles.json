@@ -1,83 +1,375 @@
 {
   "common:mongodb": {
-    "expected_endpoints": [{"protocol":"tcp","address":"127.0.0.1","port":27017,"interface":"DB"}],
-    "config_paths": ["/etc/mongod.conf"],
-    "procedures": ["Consulta de datos de suscriptor"]
+    "expected_endpoints": [
+      {
+        "protocol": "tcp",
+        "address": "127.0.0.1",
+        "port": 27017,
+        "interface": "DB"
+      }
+    ],
+    "config_paths": [
+      "/etc/mongod.conf"
+    ],
+    "procedures": [
+      "Consulta de datos de suscriptor"
+    ]
   },
   "5G:nrf": {
-    "expected_endpoints": [{"protocol":"tcp","address":"127.0.0.10","port":7777,"interface":"SBI"}],
-    "config_paths": ["/etc/open5gs/nrf.yaml"], "procedures": ["Registro y descubrimiento de NFs"]
+    "expected_endpoints": [
+      {
+        "protocol": "tcp",
+        "address": "127.0.0.10",
+        "port": 7777,
+        "interface": "SBI"
+      }
+    ],
+    "config_paths": [
+      "/etc/open5gs/nrf.yaml"
+    ],
+    "procedures": [
+      "Registro y descubrimiento de NFs"
+    ]
   },
   "5G:scp": {
-    "expected_endpoints": [{"protocol":"tcp","address":"127.0.0.200","port":7777,"interface":"SBI"}],
-    "config_paths": ["/etc/open5gs/scp.yaml"], "procedures": ["Enrutamiento de mensajes SBI"]
+    "expected_endpoints": [
+      {
+        "protocol": "tcp",
+        "address": "127.0.0.200",
+        "port": 7777,
+        "interface": "SBI"
+      }
+    ],
+    "config_paths": [
+      "/etc/open5gs/scp.yaml"
+    ],
+    "procedures": [
+      "Enrutamiento de mensajes SBI"
+    ]
   },
   "5G:udr": {
-    "expected_endpoints": [{"protocol":"tcp","address":"127.0.0.15","port":7777,"interface":"SBI"}],
-    "config_paths": ["/etc/open5gs/udr.yaml"], "procedures": ["Acceso a datos de suscriptor"]
+    "expected_endpoints": [
+      {
+        "protocol": "tcp",
+        "address": "127.0.0.20",
+        "port": 7777,
+        "interface": "SBI"
+      }
+    ],
+    "config_paths": [
+      "/etc/open5gs/udr.yaml"
+    ],
+    "procedures": [
+      "Acceso a datos de suscriptor"
+    ]
   },
   "5G:udm": {
-    "expected_endpoints": [{"protocol":"tcp","address":"127.0.0.12","port":7777,"interface":"SBI"}],
-    "config_paths": ["/etc/open5gs/udm.yaml"], "procedures": ["Gestión de identidad y suscripción"]
+    "expected_endpoints": [
+      {
+        "protocol": "tcp",
+        "address": "127.0.0.12",
+        "port": 7777,
+        "interface": "SBI"
+      }
+    ],
+    "config_paths": [
+      "/etc/open5gs/udm.yaml"
+    ],
+    "procedures": [
+      "Gestión de identidad y suscripción"
+    ]
   },
   "5G:ausf": {
-    "expected_endpoints": [{"protocol":"tcp","address":"127.0.0.11","port":7777,"interface":"SBI"}],
-    "config_paths": ["/etc/open5gs/ausf.yaml"], "procedures": ["Autenticación 5G-AKA"]
+    "expected_endpoints": [
+      {
+        "protocol": "tcp",
+        "address": "127.0.0.11",
+        "port": 7777,
+        "interface": "SBI"
+      }
+    ],
+    "config_paths": [
+      "/etc/open5gs/ausf.yaml"
+    ],
+    "procedures": [
+      "Autenticación 5G-AKA"
+    ]
   },
   "5G:pcf": {
-    "expected_endpoints": [{"protocol":"tcp","address":"127.0.0.13","port":7777,"interface":"SBI"}],
-    "config_paths": ["/etc/open5gs/pcf.yaml"], "procedures": ["Aplicación de políticas"]
+    "expected_endpoints": [
+      {
+        "protocol": "tcp",
+        "address": "127.0.0.13",
+        "port": 7777,
+        "interface": "SBI"
+      }
+    ],
+    "config_paths": [
+      "/etc/open5gs/pcf.yaml"
+    ],
+    "procedures": [
+      "Aplicación de políticas"
+    ]
+  },
+  "5G:bsf": {
+    "expected_endpoints": [
+      {
+        "protocol": "tcp",
+        "address": "127.0.0.16",
+        "port": 7777,
+        "interface": "SBI"
+      }
+    ],
+    "config_paths": [
+      "/etc/open5gs/bsf.yaml"
+    ],
+    "procedures": [
+      "Vinculación de sesión y políticas (Session Binding)"
+    ]
   },
   "5G:nssf": {
-    "expected_endpoints": [{"protocol":"tcp","address":"127.0.0.14","port":7777,"interface":"SBI"}],
-    "config_paths": ["/etc/open5gs/nssf.yaml"], "procedures": ["Selección de slice"]
+    "expected_endpoints": [
+      {
+        "protocol": "tcp",
+        "address": "127.0.0.14",
+        "port": 7777,
+        "interface": "SBI"
+      }
+    ],
+    "config_paths": [
+      "/etc/open5gs/nssf.yaml"
+    ],
+    "procedures": [
+      "Selección de slice"
+    ]
   },
   "5G:smf": {
     "expected_endpoints": [
-      {"protocol":"tcp","address":"127.0.0.4","port":7777,"interface":"SBI"},
-      {"protocol":"udp","address":"10.210.50.1","port":8805,"interface":"N4"}
+      {
+        "protocol": "tcp",
+        "address": "127.0.0.4",
+        "port": 7777,
+        "interface": "SBI"
+      },
+      {
+        "protocol": "udp",
+        "address": "10.210.50.1",
+        "port": 8805,
+        "interface": "N4"
+      }
     ],
-    "config_paths": ["/etc/open5gs/smf.yaml"], "procedures": ["Establecimiento de PDU Session", "Control PFCP de UPF"]
+    "config_paths": [
+      "/etc/open5gs/smf.yaml"
+    ],
+    "procedures": [
+      "Establecimiento de PDU Session",
+      "Control PFCP de UPF"
+    ]
+  },
+  "5G:smf2": {
+    "expected_endpoints": [
+      {
+        "protocol": "tcp",
+        "address": "127.0.0.15",
+        "port": 7777,
+        "interface": "SBI"
+      },
+      {
+        "protocol": "udp",
+        "address": "10.210.50.2",
+        "port": 8805,
+        "interface": "N4"
+      },
+      {
+        "protocol": "tcp",
+        "address": "127.0.0.15",
+        "port": 9091,
+        "interface": "Metrics/InfoAPI"
+      }
+    ],
+    "config_paths": [
+      "/etc/open5gs/smf2.yaml"
+    ],
+    "procedures": [
+      "PDU Session Corporate SST=1 SD=000002",
+      "Control PFCP exclusivo de UPF-02"
+    ]
   },
   "5G:upf": {
     "expected_endpoints": [
-      {"protocol":"udp","address":"10.210.50.8","port":8805,"interface":"N4"},
-      {"protocol":"udp","address":"10.210.50.8","port":2152,"interface":"N3"}
+      {
+        "protocol": "udp",
+        "address": "10.210.50.8",
+        "port": 8805,
+        "interface": "N4"
+      },
+      {
+        "protocol": "udp",
+        "address": "10.210.50.8",
+        "port": 2152,
+        "interface": "N3"
+      }
     ],
-    "config_paths": ["/etc/open5gs/upf.yaml"], "procedures": ["Creación de sesión PFCP Internet", "Transporte de plano de usuario (eMBB)"]
+    "config_paths": [
+      "/etc/open5gs/upf.yaml"
+    ],
+    "procedures": [
+      "Creación de sesión PFCP Internet",
+      "Transporte de plano de usuario (eMBB)"
+    ]
   },
   "5G:upf2": {
     "expected_endpoints": [
-      {"protocol":"udp","address":"10.210.50.9","port":8805,"interface":"N4"},
-      {"protocol":"udp","address":"10.210.50.9","port":2152,"interface":"N3"}
+      {
+        "protocol": "udp",
+        "address": "10.210.50.9",
+        "port": 8805,
+        "interface": "N4"
+      },
+      {
+        "protocol": "udp",
+        "address": "10.210.50.9",
+        "port": 2152,
+        "interface": "N3"
+      }
     ],
-    "config_paths": ["/etc/open5gs/upf.yaml"], "procedures": ["Creación de sesión PFCP Corporativa", "Transporte de plano de usuario (MEC)"]
+    "config_paths": [
+      "/etc/open5gs/upf.yaml"
+    ],
+    "procedures": [
+      "Creación de sesión PFCP Corporativa",
+      "Transporte de plano de usuario (MEC)"
+    ]
   },
   "5G:amf": {
     "expected_endpoints": [
-      {"protocol":"tcp","address":"127.0.0.5","port":7777,"interface":"SBI"},
-      {"protocol":"sctp","address":"127.0.0.5","port":38412,"interface":"N2"}
+      {
+        "protocol": "tcp",
+        "address": "127.0.0.5",
+        "port": 7777,
+        "interface": "SBI"
+      },
+      {
+        "protocol": "sctp",
+        "address": "127.0.0.5",
+        "port": 38412,
+        "interface": "N2"
+      }
     ],
-    "config_paths": ["/etc/open5gs/amf.yaml"], "procedures": ["Registration", "Autenticación", "Gestión de movilidad", "PDU Session Establishment"]
+    "config_paths": [
+      "/etc/open5gs/amf.yaml"
+    ],
+    "procedures": [
+      "Registration",
+      "Autenticación",
+      "Gestión de movilidad",
+      "PDU Session Establishment"
+    ]
   },
   "5G:gnb": {
-    "config_paths": ["/home/emsadmin/UERANSIM/config/open5gs-gnb.yaml"],
-    "procedures": ["NG Setup", "Initial UE Message", "Transporte NGAP"]
+    "config_paths": [
+      "/home/emsadmin/UERANSIM/config/open5gs-gnb.yaml"
+    ],
+    "procedures": [
+      "NG Setup",
+      "Initial UE Message",
+      "Transporte NGAP"
+    ]
   },
   "5G:ue": {
-    "config_paths": ["/home/emsadmin/UERANSIM/config/open5gs-ue.yaml"],
-    "procedures": ["Registration", "Autenticación", "PDU Session Establishment"]
+    "config_paths": [
+      "/home/emsadmin/UERANSIM/config/open5gs-ue.yaml"
+    ],
+    "procedures": [
+      "Registration",
+      "Autenticación",
+      "PDU Session Establishment"
+    ]
   },
   "4G:mme": {
-    "expected_endpoints": [{"protocol":"sctp","address":"127.0.0.2","port":36412,"interface":"S1-MME"}],
-    "config_paths": ["/etc/open5gs/mme.yaml"], "procedures": ["Attach", "Autenticación EPS", "EPS Bearer Setup"]
+    "expected_endpoints": [
+      {
+        "protocol": "sctp",
+        "address": "127.0.0.2",
+        "port": 36412,
+        "interface": "S1-MME"
+      }
+    ],
+    "config_paths": [
+      "/etc/open5gs/mme.yaml"
+    ],
+    "procedures": [
+      "Attach",
+      "Autenticación EPS",
+      "EPS Bearer Setup"
+    ]
   },
-  "4G:hss": {"config_paths":["/etc/open5gs/hss.yaml"],"procedures":["Autenticación EPS","Consulta de suscripción"]},
-  "4G:sgwc": {"config_paths":["/etc/open5gs/sgwc.yaml"],"procedures":["Create Session","Modify Bearer"]},
-  "4G:sgwu": {"config_paths":["/etc/open5gs/sgwu.yaml"],"procedures":["Transporte S1-U"]},
-  "4G:smf": {"config_paths":["/etc/open5gs/smf.yaml"],"procedures":["Gestión de sesión EPC"]},
-  "4G:upf": {"config_paths":["/etc/open5gs/upf.yaml"],"procedures":["Plano de usuario SGi"]},
-  "4G:pcrf": {"config_paths":["/etc/open5gs/pcrf.yaml"],"procedures":["Políticas de sesión"]},
-  "4G:enb": {"config_paths":["/etc/srsran/enb.conf"],"procedures":["S1 Setup","RRC Connection"]},
-  "4G:ue": {"config_paths":["/etc/srsran/ue.conf"],"procedures":["Attach","EPS Bearer Setup"]}
+  "4G:hss": {
+    "config_paths": [
+      "/etc/open5gs/hss.yaml"
+    ],
+    "procedures": [
+      "Autenticación EPS",
+      "Consulta de suscripción"
+    ]
+  },
+  "4G:sgwc": {
+    "config_paths": [
+      "/etc/open5gs/sgwc.yaml"
+    ],
+    "procedures": [
+      "Create Session",
+      "Modify Bearer"
+    ]
+  },
+  "4G:sgwu": {
+    "config_paths": [
+      "/etc/open5gs/sgwu.yaml"
+    ],
+    "procedures": [
+      "Transporte S1-U"
+    ]
+  },
+  "4G:smf": {
+    "config_paths": [
+      "/etc/open5gs/smf.yaml"
+    ],
+    "procedures": [
+      "Gestión de sesión EPC"
+    ]
+  },
+  "4G:upf": {
+    "config_paths": [
+      "/etc/open5gs/upf.yaml"
+    ],
+    "procedures": [
+      "Plano de usuario SGi"
+    ]
+  },
+  "4G:pcrf": {
+    "config_paths": [
+      "/etc/open5gs/pcrf.yaml"
+    ],
+    "procedures": [
+      "Políticas de sesión"
+    ]
+  },
+  "4G:enb": {
+    "config_paths": [
+      "/etc/srsran/enb.conf"
+    ],
+    "procedures": [
+      "S1 Setup",
+      "RRC Connection"
+    ]
+  },
+  "4G:ue": {
+    "config_paths": [
+      "/etc/srsran/ue.conf"
+    ],
+    "procedures": [
+      "Attach",
+      "EPS Bearer Setup"
+    ]
+  }
 }

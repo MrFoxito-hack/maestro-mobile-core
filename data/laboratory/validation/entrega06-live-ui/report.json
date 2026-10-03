@@ -1,0 +1,9 @@
+{
+  "execution_id": "ac1039d04fba4bb3b35323bec7aeabf6",
+  "read_only": true,
+  "status": "passed",
+  "chart_bars": 2,
+  "scientific_validity": "inconclusive",
+  "browser_errors": [],
+  "text": "Piloto operativo real: carga acotada y reproducción medida, con asignación docente y rescate remoto. La validez científica permanece separada de la limpieza de recursos y de la hipótesis.\n\nPreflight vivo · solo lectura\nAsignación para este plan\nSelecciona una asignación vigente\n\nSe ejecuta esta revisión guardada; el backend comprueba todos sus límites. Requiere el worker activo. Para repetir, crea otro plan.\n\nEnsayo completado · 13 pasos registrados\n\nEjecución: ac1039d04fba4bb3b35323bec7aeabf6\n\nValidez: inconclusive · Hipótesis: inconclusive\n\nRecuperación: Verificada\n\nEspera inicial observada (segundos)\n\nNWDAF OFF\nNWDAF ON\n\nComparación descriptiva; la gráfica no acredita causalidad ni recuperación de políticas.\n\nEnsayo\tTratamiento\tStartup (s)\tMOS estimado P.1203\tBytes recibidos\tPausas\n1\tcontroller_disabled_verified\t7.061\t4.0492\t2,160,183\t0\n2\tcontroller_enabled_verified\t3.452\t4.2814\t2,160,183\t0\n\nLimpiar recursos auxiliares no verifica la restauración de políticas del Core. Una pareja no demuestra significación estadística.\n\nDiario del ensayo"
+}

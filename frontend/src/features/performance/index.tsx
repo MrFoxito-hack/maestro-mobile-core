@@ -1,48 +1,32 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  BarChart3,
   ChevronDown,
   ChevronRight,
-  Clock3,
-  Database,
   Folder,
-  FolderPlus,
-  Gauge,
-  LineChart as LineChartIcon,
-  Network,
+  LineChart,
+  BarChart3,
+  Table2,
+  Plus,
   RefreshCw,
   Save,
   Search,
-  Server,
-  Share2,
   Trash2,
-  UserRound,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useScenarioStore } from '@/stores/scenario-store'
 import { api, apiErrorMessage } from '@/lib/api'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
@@ -50,49 +34,69 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EmsPage } from '@/features/ems-page'
-import { PerformanceChart } from './performance-chart'
-import { QueryWizard } from './query-wizard'
+import { PerformanceChart, type ChartMode } from './performance-chart'
 import { ReportDialog } from './report-dialog'
+import { UpfXdpPanel } from './upf-xdp-panel'
+import {
+  NF_GROUPS,
+  PERFORMANCE_TEMPLATES,
+  getObjectPresentation,
+  type PerformanceTemplate,
+} from './templates'
 import {
   supportsObject,
-  selectMeasurementObject,
-  isOperationalCounter,
-} from './types'
-import type {
-  Aggregation,
-  KpiFolder,
-  KpiQueryDraft,
-  KpiQueryResult,
-  PerformanceCatalog,
-  RangeKey,
-  SavedKpiQuery,
+  type Aggregation,
+  type KpiCounter,
+  type KpiQueryDraft,
+  type KpiQueryResult,
+  type PerformanceCatalog,
+  type RangeKey,
+  type SavedKpiQuery,
 } from './types'
 
-const DEFAULT_COUNTERS = ['host.cpu.percent', 'host.memory.percent']
+function matches(template: PerformanceTemplate, counter: KpiCounter) {
+  const native = counter.native_name?.replace(/^fivegs_[a-z]+function_/, '')
+  return (
+    template.matchCounters(counter) ||
+    Boolean(native && template.matchCounters({ ...counter, id: native })) ||
+    (template.id.endsWith('-health') &&
+      counter.id.startsWith('nf.process.') &&
+      (counter.object_ids ?? []).some((id) =>
+        template.defaultObjectIds.includes(id)
+      ))
+  )
+}
 
 export function PerformancePage() {
-  const queryClient = useQueryClient()
-  const scenario = useScenarioStore((state) => state.scenario)
-  const [objectIds, setObjectIds] = useState<string[] | null>(null)
-  const [activeTitle, setActiveTitle] = useState('Recursos del testbed')
-  const [counterSearch, setCounterSearch] = useState('')
-  const [objectSearch, setObjectSearch] = useState('')
-  const [libraryOpen, setLibraryOpen] = useState(true)
-  const [counterIds, setCounterIds] = useState<string[]>(DEFAULT_COUNTERS)
-  const [rangeKey, setRangeKey] = useState<RangeKey>('1h')
-  const [granularity, setGranularity] = useState(30)
+  const scenario = useScenarioStore((s) => s.scenario)
+  return <PerformanceWorkspace key={scenario} scenario={scenario} />
+}
+
+function PerformanceWorkspace({ scenario }: { scenario: '5g-sa' | '4g-epc' }) {
+  const client = useQueryClient()
+  const templates = PERFORMANCE_TEMPLATES.filter(
+    (t) => t.scenario === 'both' || t.scenario === scenario
+  )
+  const [templateId, setTemplateId] = useState(
+    scenario === '5g-sa' ? 'upf-throughput' : 'mme-attach'
+  )
+  const template = templates.find((t) => t.id === templateId) ?? templates[0]
+  const [selection, setSelection] = useState<{
+    objects: string[]
+    counters: string[]
+  } | null>(null)
+  const [savedName, setSavedName] = useState('')
+  const [range, setRange] = useState<RangeKey>('1h')
   const [aggregation, setAggregation] = useState<Aggregation>('avg')
-  const [search, setSearch] = useState('')
-  const [wizardOpen, setWizardOpen] = useState(false)
-  const [counterKind, setCounterKind] = useState('service')
+  const [granularity, setGranularity] = useState(300)
+  const [mode, setMode] = useState<ChartMode>('line')
+  const [treeSearch, setTreeSearch] = useState('')
+  const [objectSearch, setObjectSearch] = useState('')
+  const [counterSearch, setCounterSearch] = useState('')
+  const [closed, setClosed] = useState<string[]>([])
   const [saveOpen, setSaveOpen] = useState(false)
-  const [folderOpen, setFolderOpen] = useState(false)
-  const [queryName, setQueryName] = useState('')
-  const [folderName, setFolderName] = useState('')
-  const [folderId, setFolderId] = useState('none')
-  const [scope, setScope] = useState<'personal' | 'testbed'>('personal')
+  const [name, setName] = useState('')
 
   const catalog = useQuery({
     queryKey: ['performance-catalog', scenario],
@@ -101,729 +105,629 @@ export function PerformancePage() {
         .data,
     refetchInterval: 15_000,
   })
-  const folders = useQuery({
-    queryKey: ['performance-folders'],
-    queryFn: async () =>
-      (await api.get<KpiFolder[]>('/performance/folders')).data,
-  })
-  const savedQueries = useQuery({
+
+  const saved = useQuery({
     queryKey: ['performance-saved-queries'],
     queryFn: async () =>
       (await api.get<SavedKpiQuery[]>('/performance/saved-queries')).data,
   })
 
-  const defaultObject = catalog.data ? `testbed:${catalog.data.testbed_id}` : ''
-  const effectiveObjects = objectIds ?? (defaultObject ? [defaultObject] : [])
+  // Extract objects matching current template
+  const objects = (() => {
+    return [
+      ...new Map((catalog.data?.objects ?? []).map((o) => [o.id, o])).values(),
+    ].filter((o) => template.matchObjects(o))
+  })()
+
+  // Extract counters compatible with template and available objects
+  const counters = (() => {
+    return (catalog.data?.counters ?? []).filter(
+      (c) =>
+        matches(template, c) && objects.some((o) => supportsObject(c, o.id))
+    )
+  })()
+
+  const defaultObjects = objects.filter((o) =>
+    template.defaultObjectIds.includes(o.id)
+  )
+
+  const objectIds = (() => {
+    if (selection?.objects !== undefined) {
+      return selection.objects.filter((id) => objects.some((o) => o.id === id))
+    }
+    return (defaultObjects.length ? defaultObjects : objects.slice(0, 4)).map(
+      (o) => o.id
+    )
+  })()
+
+  const compatibleCounters = (() => {
+    return counters.filter((c) => objectIds.some((id) => supportsObject(c, id)))
+  })()
+
+  const defaultCounters = (() => {
+    return compatibleCounters.filter(
+      (c) =>
+        template.defaultCounterIds.includes(c.id) ||
+        template.defaultCounterIds.includes(c.native_name ?? '')
+    )
+  })()
+
+  const counterIds = (() => {
+    if (selection?.counters !== undefined) {
+      return selection.counters
+        .filter((id) => compatibleCounters.some((c) => c.id === id))
+        .slice(0, 1)
+    }
+    return (
+      defaultCounters.length ? defaultCounters : compatibleCounters.slice(0, 2)
+    )
+      .slice(0, 1)
+      .map((c) => c.id)
+  })()
+
+  const requires30m = counterIds.some((id) => {
+    const counter = catalog.data?.counters.find((c) => c.id === id)
+    return counter?.min_granularity_seconds && counter.min_granularity_seconds > 300
+  })
+
+  useEffect(() => {
+    if (requires30m && granularity < 1800) {
+      setGranularity(1800)
+    }
+  }, [requires30m, granularity])
+
   const draft: KpiQueryDraft = {
     scenario_id: scenario,
-    object_ids: effectiveObjects,
+    object_ids: objectIds,
     counter_ids: counterIds,
-    range_key: rangeKey,
-    granularity_seconds: granularity,
+    range_key: range,
     aggregation,
+    granularity_seconds: granularity,
   }
 
   const result = useQuery({
     queryKey: ['performance-result', draft],
     queryFn: async () =>
       (await api.post<KpiQueryResult>('/performance/query', draft)).data,
-    enabled: effectiveObjects.length > 0 && counterIds.length > 0,
+    enabled: catalog.isSuccess && objectIds.length > 0 && counterIds.length > 0,
     refetchInterval: 10_000,
   })
 
-  const createFolder = useMutation({
-    mutationFn: async () =>
-      (
-        await api.post<KpiFolder>('/performance/folders', {
-          name: folderName,
-          scope,
-        })
-      ).data,
-    onSuccess: (created) => {
-      void queryClient.invalidateQueries({ queryKey: ['performance-folders'] })
-      setFolderId(created.id)
-      setFolderName('')
-      setFolderOpen(false)
-      toast.success('Carpeta creada')
-    },
-    onError: (error) =>
-      toast.error(apiErrorMessage(error, 'No se pudo crear la carpeta')),
-  })
-
-  const saveQuery = useMutation({
-    mutationFn: async () =>
-      (
-        await api.post<SavedKpiQuery>('/performance/saved-queries', {
-          ...draft,
-          name: queryName,
-          folder_id: folderId === 'none' ? null : folderId,
-          scope,
-        })
-      ).data,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ['performance-saved-queries'],
-      })
-      setSaveOpen(false)
-      setQueryName('')
-      toast.success('Consulta guardada', {
-        description:
-          scope === 'testbed'
-            ? 'Disponible para quienes comparten este testbed.'
-            : 'Guardada en su biblioteca personal.',
-      })
-    },
-    onError: (error) =>
-      toast.error(apiErrorMessage(error, 'No se pudo guardar la consulta')),
-  })
-
-  const deleteQuery = useMutation({
-    mutationFn: async (id: string) =>
-      api.delete(`/performance/saved-queries/${id}`),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ['performance-saved-queries'],
-      })
-      toast.success('Consulta eliminada')
-    },
-    onError: (error) =>
-      toast.error(apiErrorMessage(error, 'No se pudo eliminar la consulta')),
-  })
-
-  const applyDraft = (next: KpiQueryDraft) => {
-    if (next.scenario_id !== scenario) {
-      toast.info(
-        'Selecciona el escenario de esta consulta en la barra superior antes de abrirla.'
-      )
-      return
-    }
-    setObjectIds(next.object_ids)
-    setCounterIds(next.counter_ids)
-    setRangeKey(next.range_key)
-    setGranularity(next.granularity_seconds)
-    setAggregation(next.aggregation)
-  }
-
-  const loadSaved = (item: SavedKpiQuery) => {
-    if (item.scenario_id !== scenario) {
-      toast.info(
-        'Selecciona el escenario de esta consulta en la barra superior antes de abrirla.'
-      )
-      return
-    }
-    setActiveTitle(item.name)
-    applyDraft({
-      scenario_id: item.scenario_id as '5g-sa' | '4g-epc',
-      object_ids: item.object_ids,
-      counter_ids: item.counter_ids,
-      range_key: item.range_key,
-      granularity_seconds: item.granularity_seconds,
-      aggregation: item.aggregation,
-    })
-  }
-
-  const loadTelcoPreset = (kind: 'mobility' | 'session' | 'throughput') => {
-    setActiveTitle(
-      kind === 'throughput'
-        ? 'Throughput por interfaz'
-        : kind === 'mobility'
-          ? scenario === '5g-sa'
-            ? 'Registration 5G'
-            : 'Attach 4G'
-          : 'Sesiones de datos'
-    )
-    if (kind === 'throughput') {
-      const interfaces =
-        catalog.data?.objects
-          .filter((item) => item.type === 'interface')
-          .map((item) => item.id) ?? []
-      applyDraft({
-        ...draft,
-        object_ids: interfaces,
-        counter_ids: ['interface.rx.kbps', 'interface.tx.kbps'],
-      })
-      return
-    }
-    const is5g = scenario === '5g-sa'
-    const procedure =
-      kind === 'mobility'
-        ? is5g
-          ? 'registration'
-          : 'attach'
-        : is5g
-          ? 'pdu-session'
-          : 'eps-bearer'
-    const prefix =
-      kind === 'mobility'
-        ? is5g
-          ? '5g.registration'
-          : '4g.attach'
-        : is5g
-          ? '5g.pdu'
-          : '4g.eps'
-    const currentCounter =
-      kind === 'mobility'
-        ? is5g
-          ? '5g.ue.registered'
-          : '4g.ue.attached'
-        : is5g
-          ? '5g.pdu.active'
-          : '4g.eps.active'
-    applyDraft({
-      ...draft,
-      object_ids: [`procedure:${procedure}`],
-      counter_ids: [
-        currentCounter,
-        `${prefix}.attempts`,
-        `${prefix}.successes`,
-        `${prefix}.rejects`,
-        `${prefix}.unresolved`,
-        `${prefix}.success_rate`,
-        `${prefix}.latency_ms`,
-      ],
-      aggregation: 'last',
-    })
+  const applyTemplate = (t: PerformanceTemplate) => {
+    setTemplateId(t.id)
+    setSelection(null)
+    setSavedName('')
+    setObjectSearch('')
+    setCounterSearch('')
+    setAggregation(t.defaultAggregation ?? 'avg')
+    setRange(t.defaultRangeKey ?? '1h')
   }
 
   const toggleObject = (id: string) => {
-    const current = effectiveObjects
-    const next = selectMeasurementObject(current, id)
-    setObjectIds(next)
-    setCounterKind('service')
-    setActiveTitle('Consulta personalizada')
-    const counters = catalog.data?.counters ?? []
-    const kept = counterIds.filter((counterId) =>
-      counters.some(
-        (c) =>
-          c.id === counterId &&
-          next.length > 0 &&
-          next.every((obj) => supportsObject(c, obj))
+    const next = objectIds.includes(id)
+      ? objectIds.filter((v) => v !== id)
+      : [...objectIds, id]
+    setSelection({
+      objects: next,
+      counters: counterIds.filter((key) =>
+        counters.some(
+          (c) => c.id === key && next.some((o) => supportsObject(c, o))
+        )
+      ),
+    })
+  }
+
+  const toggleAllObjects = () => {
+    if (objectIds.length === objects.length) {
+      setSelection({ objects: [], counters: [] })
+    } else {
+      setSelection({
+        objects: objects.map((o) => o.id),
+        counters: counterIds,
+      })
+    }
+  }
+
+  const toggleCounter = (id: string) => {
+    setSelection({
+      objects: objectIds,
+      counters: [id],
+    })
+  }
+
+  const clearCounters = () => {
+    setSelection({
+      objects: objectIds,
+      counters: [],
+    })
+  }
+
+  const save = useMutation({
+    mutationFn: async () =>
+      api.post('/performance/saved-queries', {
+        ...draft,
+        name: name.trim(),
+        folder_id: null,
+        scope: 'personal',
+      }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['performance-saved-queries'] })
+      setSaveOpen(false)
+      toast.success('Consulta guardada exitosamente')
+    },
+    onError: (e) =>
+      toast.error(apiErrorMessage(e, 'No se pudo guardar la consulta')),
+  })
+
+  const remove = useMutation({
+    mutationFn: async (id: string) =>
+      api.delete(`/performance/saved-queries/${id}`),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['performance-saved-queries'] })
+      toast.success('Consulta eliminada')
+    },
+    onError: (e) => toast.error(apiErrorMessage(e, 'No se pudo eliminar')),
+  })
+
+  const load = (query: SavedKpiQuery) => {
+    const match = templates.find(
+      (t) =>
+        query.object_ids.every((id) =>
+          catalog.data?.objects.some((o) => o.id === id && t.matchObjects(o))
+        ) &&
+        query.counter_ids.every((id) =>
+          catalog.data?.counters.some((c) => c.id === id && matches(t, c))
+        )
+    )
+    if (!match) {
+      toast.info('Esta consulta no corresponde a una plantilla disponible')
+      return
+    }
+    applyTemplate(match)
+    setSavedName(query.name)
+    setSelection({
+      objects: query.object_ids,
+      counters: query.counter_ids.slice(0, 1),
+    })
+    setRange(query.range_key)
+    setAggregation(query.aggregation)
+    setGranularity(query.granularity_seconds)
+  }
+
+  const groups = [...new Set(templates.map((t) => t.nf))]
+
+  const displayedResult = useMemo(() => {
+    if (!result.data) return undefined
+    return {
+      ...result.data,
+      series: result.data.series.map((series) => {
+        const counter = catalog.data?.counters.find(
+          (c) => c.id === series.counter_id
+        )
+        const objPres = getObjectPresentation(
+          series.object_id,
+          catalog.data?.objects
+        )
+        return {
+          ...series,
+          label: `${objPres.label} · ${counter?.label ?? series.label}`,
+        }
+      }),
+    }
+  }, [result.data, catalog.data])
+
+  const visibleObjects = (() => {
+    return objects.filter((o) => {
+      const pres = getObjectPresentation(o.id, catalog.data?.objects)
+      const q = objectSearch.toLowerCase()
+      return (
+        o.label.toLowerCase().includes(q) ||
+        pres.label.toLowerCase().includes(q) ||
+        (pres.badge && pres.badge.toLowerCase().includes(q))
       )
-    )
-    setCounterIds(kept)
-  }
+    })
+  })()
 
-  const toggleCounter = (id: string) =>
-    setCounterIds((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : current.length < 12
-          ? [...current, id]
-          : current
-    )
+  const visibleCounters = (() => {
+    return compatibleCounters.filter((c) => {
+      const q = counterSearch.toLowerCase()
+      return (
+        c.label.toLowerCase().includes(q) ||
+        (c.native_name && c.native_name.toLowerCase().includes(q)) ||
+        c.id.toLowerCase().includes(q)
+      )
+    })
+  })()
 
-  const compatibleCounters =
-    catalog.data?.counters.filter(
-      (counter) =>
-        effectiveObjects.length > 0 &&
-        effectiveObjects.every((id) => supportsObject(counter, id)) &&
-        (!effectiveObjects.some((id) => id.startsWith('nf:')) ||
-          (counterKind === 'operations'
-            ? isOperationalCounter(counter)
-            : !isOperationalCounter(counter))) &&
-        `${counter.label} ${counter.category} ${counter.native_name ?? ''}`
-          .toLowerCase()
-          .includes(counterSearch.toLowerCase())
-    ) ?? []
-  const objectGroups = useMemo(
-    () => [...new Set(catalog.data?.objects.map((item) => item.group) ?? [])],
-    [catalog.data?.objects]
-  )
-  const counterGroups = [
-    ...new Set(compatibleCounters.map((item) => item.category)),
-  ]
-
-  if (wizardOpen && catalog.data) {
-    return (
-      <EmsPage title='Nueva consulta' description=''>
-        <QueryWizard
-          onOpenChange={setWizardOpen}
-          objects={catalog.data.objects}
-          counters={catalog.data.counters}
-          initial={draft}
-          onApply={(next) => {
-            applyDraft(next)
-            setActiveTitle('Consulta personalizada')
-          }}
-        />
-      </EmsPage>
-    )
-  }
+  const title = savedName || template.title
 
   return (
-    <EmsPage
-      title='Performance'
-      description='Contadores históricos, consultas reutilizables y KPIs del testbed 4G/5G.'
-    >
-      <div className='mb-3 flex flex-wrap items-center gap-2'>
-        <Button variant='outline' onClick={() => setLibraryOpen(!libraryOpen)}>
-          <Folder /> Biblioteca
-        </Button>
-        <Button disabled={!catalog.data} onClick={() => setWizardOpen(true)}>
-          <BarChart3 /> Nueva consulta
-        </Button>
-        <Button
-          variant='outline'
-          onClick={() => setSaveOpen(true)}
-          disabled={!counterIds.length || !effectiveObjects.length}
-        >
-          <Save /> Guardar consulta
-        </Button>
-        <ReportDialog
-          draft={draft}
-          title={activeTitle}
-          savedQueries={savedQueries.data ?? []}
-          disabled={!result.data?.series.length}
-        />
-        <Button
-          variant='outline'
-          onClick={() => void result.refetch()}
-          disabled={result.isFetching}
-        >
-          <RefreshCw className={result.isFetching ? 'animate-spin' : ''} />{' '}
-          Actualizar
-        </Button>
-        <div className='ml-auto flex items-center gap-2'>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant='ghost' size='sm'>
-                Referencia
-              </Button>
-            </DialogTrigger>
-            <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-lg'>
-              <DialogHeader>
-                <DialogTitle>Referencia de Performance</DialogTitle>
-                <DialogDescription>
-                  Consulta histórica y estado del recolector.
-                </DialogDescription>
-              </DialogHeader>
-              <dl className='grid grid-cols-2 gap-3 text-sm'>
-                <dt className='text-muted-foreground'>Recolector</dt>
-                <dd>
-                  {catalog.data?.collector.last_run?.status ??
-                    'Sin información'}
-                </dd>
-                <dt className='text-muted-foreground'>Muestras almacenadas</dt>
-                <dd>{catalog.data?.collector.stored_samples ?? '—'}</dd>
-                <dt className='text-muted-foreground'>Intervalo</dt>
-                <dd>{catalog.data?.collector.interval_seconds ?? '—'} s</dd>
-                <dt className='text-muted-foreground'>Retención</dt>
-                <dd>{catalog.data?.collector.retention_days ?? '—'} días</dd>
-              </dl>
-              <div className='space-y-3 border-t pt-4 text-sm text-muted-foreground'>
-                <p>
-                  Selecciona objetos y después contadores compatibles. Elegir
-                  una NF no selecciona sus KPIs automáticamente.
-                </p>
-                <p>
-                  Los acumulados muestran la última lectura de cada intervalo.
-                  Las tasas nativas usan deltas y omiten reinicios. Una NF
-                  compartida mide el proceso completo.
-                </p>
-                <p>
-                  Las series sin muestras no se sustituyen por cero. El origen,
-                  tipo y última muestra de cada contador están disponibles al
-                  mantener el cursor sobre él.
-                </p>
-              </div>
-            </DialogContent>
-          </Dialog>
-          <span className='text-xs text-muted-foreground' role='status'>
-            Recolector:{' '}
-            {catalog.data?.collector.last_run?.status ?? 'iniciando'}
-          </span>
-        </div>
-      </div>
-
-      <div
-        className={`grid items-stretch gap-3 ${libraryOpen ? 'xl:grid-cols-[220px_minmax(0,1fr)_300px]' : 'xl:grid-cols-[minmax(0,1fr)_320px]'}`}
-      >
-        {libraryOpen && (
-          <Card className='gap-0 overflow-hidden py-0 shadow-none'>
-            <CardHeader className='border-b px-4 py-4'>
-              <div className='flex items-center justify-between'>
-                <CardTitle className='text-base'>Biblioteca KPI</CardTitle>
-                <Button
-                  size='icon'
-                  variant='ghost'
-                  onClick={() => setFolderOpen(true)}
-                  title='Nueva carpeta'
-                >
-                  <FolderPlus />
-                </Button>
-              </div>
-              <div className='relative'>
-                <Search className='absolute top-2.5 left-3 size-4 text-muted-foreground' />
-                <Input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder='Buscar consulta…'
-                  className='pl-9'
-                />
-              </div>
-            </CardHeader>
-            <ScrollArea className='h-[480px]'>
-              <CardContent className='space-y-2 p-3'>
-                <LibrarySection title='Plantillas EMS' icon={Gauge}>
-                  <PresetItem
-                    label={
-                      scenario === '5g-sa' ? 'Registration 5G' : 'Attach 4G'
-                    }
-                    onClick={() => loadTelcoPreset('mobility')}
-                  />
-                  <PresetItem
-                    label={
-                      scenario === '5g-sa' ? 'PDU Sessions' : 'EPS bearers'
-                    }
-                    onClick={() => loadTelcoPreset('session')}
-                  />
-                  <PresetItem
-                    label='Throughput por interfaz'
-                    onClick={() => loadTelcoPreset('throughput')}
-                  />
-                </LibrarySection>
-                <LibrarySection title='Mis consultas' icon={UserRound}>
-                  <QueryTree
-                    folders={folders.data ?? []}
-                    queries={
-                      savedQueries.data?.filter(
-                        (item) =>
-                          item.scope === 'personal' &&
-                          item.name.toLowerCase().includes(search.toLowerCase())
-                      ) ?? []
-                    }
-                    onLoad={loadSaved}
-                    onDelete={(id) => deleteQuery.mutate(id)}
-                  />
-                </LibrarySection>
-                <LibrarySection title='Testbed compartido' icon={Share2}>
-                  <QueryTree
-                    folders={
-                      folders.data?.filter(
-                        (item) => item.scope === 'testbed'
-                      ) ?? []
-                    }
-                    queries={
-                      savedQueries.data?.filter(
-                        (item) =>
-                          item.scope === 'testbed' &&
-                          item.name.toLowerCase().includes(search.toLowerCase())
-                      ) ?? []
-                    }
-                    onLoad={loadSaved}
-                    onDelete={(id) => deleteQuery.mutate(id)}
-                  />
-                </LibrarySection>
-                {!savedQueries.data?.length && (
-                  <div className='rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground'>
-                    Sin consultas guardadas.
-                  </div>
-                )}
-              </CardContent>
-            </ScrollArea>
-          </Card>
-        )}
-
-        <Card className='min-w-0 gap-0 py-0 shadow-none'>
-          <CardHeader className='border-b px-4 py-3'>
-            <div className='flex flex-wrap items-center justify-between gap-3'>
-              <div>
-                <CardTitle className='flex items-center gap-2 text-base'>
-                  {activeTitle}
-                </CardTitle>
-              </div>
-              <div className='flex gap-2'>
-                <Select
-                  value={rangeKey}
-                  onValueChange={(value) => setRangeKey(value as RangeKey)}
-                >
-                  <SelectTrigger className='w-28'>
-                    <Clock3 />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(['15m', '1h', '6h', '24h', '7d'] as RangeKey[]).map(
-                      (item) => (
-                        <SelectItem key={item} value={item}>
-                          {item}
-                        </SelectItem>
+    <EmsPage title='Performance'>
+      {scenario === '5g-sa' && <UpfXdpPanel />}
+      <div className='grid min-h-[600px] grid-cols-1 overflow-hidden rounded-lg border bg-card lg:h-[calc(100dvh-88px)] lg:grid-cols-[210px_minmax(0,1fr)_300px] 2xl:grid-cols-[230px_minmax(0,1fr)_340px]'>
+        <aside className='flex min-h-0 flex-col border-b lg:border-r lg:border-b-0'>
+          <div className='border-b p-3'>
+            <SearchField
+              label='Buscar plantilla'
+              value={treeSearch}
+              onChange={setTreeSearch}
+            />
+          </div>
+          <div className='min-h-0 flex-1 overflow-auto p-2'>
+            {groups.map((group) => {
+              const children = templates.filter(
+                (t) =>
+                  t.nf === group &&
+                  `${t.title} ${t.nfName}`
+                    .toLowerCase()
+                    .includes(treeSearch.toLowerCase())
+              )
+              if (!children.length) return null
+              const expanded = !closed.includes(group) || Boolean(treeSearch)
+              return (
+                <div key={group} className='mb-2'>
+                  <button
+                    className='flex w-full items-center gap-1.5 rounded px-2 py-2 text-left text-xs font-medium hover:bg-muted'
+                    aria-expanded={expanded}
+                    onClick={() =>
+                      setClosed((v) =>
+                        v.includes(group)
+                          ? v.filter((g) => g !== group)
+                          : [...v, group]
                       )
+                    }
+                  >
+                    {expanded ? (
+                      <ChevronDown className='size-3' />
+                    ) : (
+                      <ChevronRight className='size-3' />
                     )}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={aggregation}
-                  onValueChange={(value) =>
-                    setAggregation(value as Aggregation)
-                  }
-                >
-                  <SelectTrigger className='w-32'>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='avg'>Promedio</SelectItem>
-                    <SelectItem value='min'>Mínimo</SelectItem>
-                    <SelectItem value='max'>Máximo</SelectItem>
-                    <SelectItem value='sum'>Suma</SelectItem>
-                    <SelectItem value='last'>Último</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                    <Folder className='size-3.5 text-muted-foreground' />
+                    {NF_GROUPS[group]?.code ?? group.toUpperCase()}
+                  </button>
+                  {expanded && (
+                    <div className='ml-4 border-l pl-2'>
+                      {children.map((t) => (
+                        <button
+                          key={t.id}
+                          title={t.subtitle}
+                          onClick={() => applyTemplate(t)}
+                          className={`mb-0.5 block w-full rounded px-2 py-2 text-left text-xs ${template.id === t.id && !savedName ? 'bg-accent font-medium text-accent-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                        >
+                          {t.title}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+            <div className='mt-4 border-t pt-3'>
+              <div className='px-2 pb-2 text-xs font-medium'>Mis consultas</div>
+              {(saved.data ?? [])
+                .filter(
+                  (q) =>
+                    q.scenario_id === scenario &&
+                    q.name.toLowerCase().includes(treeSearch.toLowerCase())
+                )
+                .map((q) => (
+                  <div
+                    key={q.id}
+                    className='group flex items-center rounded hover:bg-muted'
+                  >
+                    <button
+                      className='min-w-0 flex-1 truncate px-2 py-2 text-left text-xs'
+                      onClick={() => load(q)}
+                    >
+                      {q.name}
+                    </button>
+                    <Button
+                      size='icon'
+                      variant='ghost'
+                      className='size-7'
+                      aria-label={`Eliminar ${q.name}`}
+                      disabled={remove.isPending}
+                      onClick={() => remove.mutate(q.id)}
+                    >
+                      <Trash2 className='size-3' />
+                    </Button>
+                  </div>
+                ))}
+              {!saved.data?.some((q) => q.scenario_id === scenario) && (
+                <p className='px-2 text-xs text-muted-foreground'>
+                  Sin consultas guardadas
+                </p>
+              )}
             </div>
-          </CardHeader>
-          <CardContent className='p-4'>
-            {!effectiveObjects.length || !counterIds.length ? (
-              <div className='flex h-[440px] items-center justify-center rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground'>
-                Seleccione al menos un objeto y un contador compatible en el
-                panel derecho.
-              </div>
-            ) : result.isError ? (
-              <div className='flex h-[440px] items-center justify-center rounded-md border border-destructive/40 bg-destructive/5 p-8 text-center text-sm text-destructive'>
+          </div>
+        </aside>
+        <main className='flex min-h-[500px] min-w-0 flex-col'>
+          <div className='flex min-h-11 items-center gap-2 border-b px-3'>
+            <span className='truncate text-sm font-medium' title={title}>
+              {title}
+            </span>
+            <div className='ml-auto flex shrink-0 items-center gap-1'>
+              <Button
+                size='sm'
+                variant='ghost'
+                className='h-8 text-xs'
+                onClick={() => {
+                  setSelection({ objects: [], counters: [] })
+                  setSavedName('Nueva consulta')
+                }}
+              >
+                <Plus className='size-3.5' />
+                Nueva consulta
+              </Button>
+              <Button
+                size='icon'
+                variant='ghost'
+                className='size-8'
+                aria-label='Guardar consulta'
+                disabled={!objectIds.length || !counterIds.length}
+                onClick={() => {
+                  setName(title)
+                  setSaveOpen(true)
+                }}
+              >
+                <Save className='size-3.5' />
+              </Button>
+              <Button
+                size='icon'
+                variant='ghost'
+                className='size-8'
+                aria-label='Actualizar consulta'
+                disabled={result.isFetching || !counterIds.length}
+                onClick={() => {
+                  void catalog.refetch()
+                  void result.refetch()
+                }}
+              >
+                <RefreshCw
+                  className={`size-3.5 ${result.isFetching ? 'animate-spin' : ''}`}
+                />
+              </Button>
+            </div>
+          </div>
+          <div className='flex flex-wrap items-center gap-2 border-b px-3 py-2'>
+            <div className='flex items-center rounded border p-0.5'>
+              {(
+                [
+                  { id: 'line', label: 'Líneas', icon: LineChart },
+                  { id: 'bar', label: 'Barras', icon: BarChart3 },
+                  { id: 'table', label: 'Datos', icon: Table2 },
+                ] as const
+              ).map((v) => (
+                <Button
+                  key={v.id}
+                  size='icon'
+                  variant={mode === v.id ? 'secondary' : 'ghost'}
+                  className='size-7'
+                  aria-label={v.label}
+                  title={v.label}
+                  aria-pressed={mode === v.id}
+                  onClick={() => setMode(v.id)}
+                >
+                  <v.icon className='size-3.5' />
+                </Button>
+              ))}
+            </div>
+            <CompactSelect
+              label='Rango'
+              value={range}
+              options={['15m', '1h', '6h', '24h', '7d'].map((v) => [v, v])}
+              onChange={(v) => setRange(v as RangeKey)}
+            />
+            <CompactSelect
+              label='Agregación'
+              value={aggregation}
+              options={[
+                ['avg', 'Promedio'],
+                ['min', 'Mínimo'],
+                ['max', 'Máximo'],
+                ['sum', 'Suma'],
+                ['last', 'Último'],
+              ]}
+              onChange={(v) => setAggregation(v as Aggregation)}
+            />
+            <CompactSelect
+              label='Resolución'
+              value={String(granularity)}
+              options={[
+                [
+                  '300',
+                  requires30m ? '5 min (Bloqueado)' : '5 min',
+                  requires30m,
+                ],
+                ['1800', '30 min', false],
+              ]}
+              onChange={(v) => setGranularity(Number(v))}
+            />
+          </div>
+          <div className='min-h-0 flex-1 p-3'>
+            {catalog.isError || result.isError ? (
+              <div className='flex h-full items-center justify-center text-sm text-destructive'>
                 {apiErrorMessage(
-                  result.error,
-                  'No se pudo ejecutar la consulta'
+                  catalog.error ?? result.error,
+                  'No se pudo cargar la consulta'
                 )}
+              </div>
+            ) : catalog.isLoading || result.isLoading ? (
+              <div className='flex h-full items-center justify-center text-xs text-muted-foreground'>
+                Cargando mediciones…
+              </div>
+            ) : !objectIds.length || !counterIds.length ? (
+              <div className='flex h-full items-center justify-center text-center text-sm text-muted-foreground'>
+                Seleccione objetos y un contador en el panel derecho.
               </div>
             ) : (
-              <PerformanceChart result={result.data} />
+              <PerformanceChart result={displayedResult} mode={mode} />
             )}
+          </div>
+          <div className='flex flex-wrap items-center gap-3 border-t px-3 py-2 text-[11px] text-muted-foreground'>
+            <span>{result.data?.series.length ?? 0} series</span>
+            <span>{result.data?.sample_count ?? 0} muestras</span>
             {!!result.data?.missing_series?.length && (
-              <p className='mt-3 rounded border border-amber-500/30 p-2 text-xs text-amber-600'>
-                {result.data.missing_series.length} series sin muestras en este
-                periodo. No se sustituyen datos ausentes por cero.
-              </p>
+              <span>
+                {result.data.missing_series.length} series sin muestras
+              </span>
             )}
-            <div className='mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t pt-3 text-xs text-muted-foreground'>
-              <span>{result.data?.sample_count ?? 0} muestras</span>
-              <span>{result.data?.series.length ?? 0} series</span>
-              <span>Resolución: {granularity}s</span>
+            <div className='ml-auto'>
+              <ReportDialog
+                draft={draft}
+                title={title}
+                savedQueries={(saved.data ?? []).filter(
+                  (q) => q.scenario_id === scenario
+                )}
+                disabled={!result.data?.series.length}
+              />
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className='gap-0 overflow-hidden py-0 shadow-none'>
-          <Tabs defaultValue='objects' className='gap-0'>
-            <div className='border-b p-2'>
-              <TabsList className='grid w-full grid-cols-2'>
-                <TabsTrigger value='objects'>
-                  Objetos ({effectiveObjects.length})
-                </TabsTrigger>
-                <TabsTrigger value='counters'>
-                  Contadores ({counterIds.length})
-                </TabsTrigger>
-              </TabsList>
+          </div>
+        </main>
+        <aside className='flex min-h-0 flex-col border-t lg:border-t-0 lg:border-l'>
+          <div className='flex h-11 shrink-0 items-center justify-between border-b px-3 text-xs font-medium'>
+            Control de consulta
+            <button
+              className='font-normal text-muted-foreground hover:text-foreground'
+              onClick={() => applyTemplate(template)}
+            >
+              Restablecer
+            </button>
+          </div>
+          <div className='flex min-h-48 flex-col border-b lg:h-[35%]'>
+            <div className='flex items-center justify-between px-3 pt-3 text-xs font-medium'>
+              <span>
+                Objetos{' '}
+                <span className='text-muted-foreground'>
+                  ({objectIds.length})
+                </span>
+              </span>
+              <button
+                className='font-normal text-muted-foreground hover:text-foreground'
+                onClick={toggleAllObjects}
+              >
+                {objectIds.length === objects.length
+                  ? 'Limpiar'
+                  : 'Seleccionar todos'}
+              </button>
             </div>
-            <TabsContent value='objects' className='m-0'>
-              <CardHeader className='border-b px-4 py-4'>
-                <Input
-                  value={objectSearch}
-                  onChange={(e) => setObjectSearch(e.target.value)}
-                  placeholder='Buscar nodo o interfaz'
-                  aria-label='Buscar objetos'
-                />
-              </CardHeader>
-              <ScrollArea className='h-[480px]'>
-                <CardContent className='space-y-2 p-2'>
-                  {objectGroups.map((group) => (
-                    <SelectorGroup
-                      key={group}
-                      title={group}
-                      icon={group === 'Testbed' ? Server : Network}
-                    >
-                      {catalog.data?.objects
-                        .filter(
-                          (item) =>
-                            item.group === group &&
-                            item.label
-                              .toLowerCase()
-                              .includes(objectSearch.toLowerCase())
-                        )
-                        .map((item) => (
-                          <label
-                            key={item.id}
-                            className='flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-muted'
-                          >
-                            <Checkbox
-                              checked={effectiveObjects.includes(item.id)}
-                              onCheckedChange={() => toggleObject(item.id)}
-                            />
-                            <span className='min-w-0 flex-1 truncate text-sm'>
-                              {item.label}
-                            </span>
-                            {item.counter_count && (
-                              <span className='text-[10px] text-muted-foreground'>
-                                {item.counter_count}
-                              </span>
-                            )}
-                            {item.status && (
-                              <span
-                                className={`size-2 rounded-full ${item.status === 'running' || item.status === 'UP' ? 'bg-emerald-500' : 'bg-muted-foreground'}`}
-                              />
-                            )}
-                          </label>
-                        ))}
-                    </SelectorGroup>
-                  ))}
-                </CardContent>
-              </ScrollArea>
-            </TabsContent>
-            <TabsContent value='counters' className='m-0'>
-              {effectiveObjects.some((id) => id.startsWith('nf:')) && (
-                <div className='flex flex-wrap gap-1 border-b p-2'>
-                  <Button
-                    size='sm'
-                    variant={counterKind === 'service' ? 'secondary' : 'ghost'}
-                    onClick={() => setCounterKind('service')}
-                  >
-                    Servicio
-                  </Button>
-                  <Button
-                    size='sm'
-                    variant={
-                      counterKind === 'operations' ? 'secondary' : 'ghost'
-                    }
-                    onClick={() => setCounterKind('operations')}
-                  >
-                    Operación y recursos
-                  </Button>
-                </div>
-              )}
-              <CardHeader className='border-b px-4 py-3'>
-                <Input
-                  value={counterSearch}
-                  onChange={(e) => setCounterSearch(e.target.value)}
-                  placeholder='Buscar contador, causa, DNN…'
-                  aria-label='Buscar contadores'
-                />
-                <p className='text-[11px] text-muted-foreground'>
-                  {compatibleCounters.length} disponibles · máximo 12
+            <div className='p-3'>
+              <SearchField
+                label='Buscar objeto'
+                value={objectSearch}
+                onChange={setObjectSearch}
+              />
+            </div>
+            <div className='min-h-0 flex-1 overflow-auto px-2 pb-2'>
+              {visibleObjects.map((o) => (
+                <label
+                  key={o.id}
+                  className='flex cursor-pointer items-center gap-2 rounded px-2 py-2 text-xs hover:bg-muted'
+                >
+                  <Checkbox
+                    checked={objectIds.includes(o.id)}
+                    onCheckedChange={() => toggleObject(o.id)}
+                  />
+                  <span className='min-w-0 flex-1 truncate' title={o.label}>
+                    {getObjectPresentation(o.id, catalog.data?.objects).label}
+                  </span>
+                </label>
+              ))}
+              {catalog.isSuccess && !objects.length && (
+                <p className='p-2 text-xs text-muted-foreground'>
+                  Sin objetos disponibles
                 </p>
-              </CardHeader>
-              <ScrollArea className='h-[460px]'>
-                <CardContent className='space-y-3 p-2'>
-                  {counterGroups.map((group) => (
-                    <SelectorGroup key={group} title={group} icon={Database}>
-                      {compatibleCounters
-                        .filter((item) => item.category === group)
-                        .map((item) => (
-                          <label
-                            key={item.id}
-                            title={`${item.source} · ${item.kind === 'counter' ? 'acumulado' : 'instantáneo'}\n${item.description ?? item.label}${item.native_name ? '\n' + item.native_name : ''}${item.last_seen ? '\nÚltima muestra: ' + new Date(item.last_seen).toLocaleString() : ''}`}
-                            className='flex cursor-pointer items-start gap-3 rounded-md px-2 py-2 hover:bg-muted'
-                          >
-                            <Checkbox
-                              className='mt-0.5'
-                              checked={counterIds.includes(item.id)}
-                              disabled={
-                                !counterIds.includes(item.id) &&
-                                counterIds.length >= 12
-                              }
-                              onCheckedChange={() => toggleCounter(item.id)}
-                            />
-                            <span className='min-w-0 flex-1'>
-                              <span className='block text-sm'>
-                                {item.label}
-                              </span>
-                            </span>
-                            <Badge variant='secondary'>{item.unit}</Badge>
-                          </label>
-                        ))}
-                    </SelectorGroup>
-                  ))}
-                  {!compatibleCounters.length && (
-                    <p className='rounded-md border border-dashed p-4 text-sm text-muted-foreground'>
-                      {effectiveObjects.some((id) => id.startsWith('nf:')) &&
-                      counterKind === 'service'
-                        ? 'Esta NF no tiene contadores de servicio disponibles en el catálogo actual. Consulta Operación y recursos.'
-                        : 'No hay contadores disponibles para esta selección.'}
-                    </p>
-                  )}
-                </CardContent>
-              </ScrollArea>
-            </TabsContent>
-          </Tabs>
-        </Card>
+              )}
+            </div>
+          </div>
+          <div className='flex min-h-0 flex-1 flex-col'>
+            <div className='flex items-center justify-between px-3 pt-3 text-xs font-medium'>
+              <span>
+                Contador{' '}
+                <span className='text-muted-foreground'>
+                  ({counterIds.length})
+                </span>
+              </span>
+              <button
+                className='font-normal text-muted-foreground hover:text-foreground'
+                onClick={clearCounters}
+              >
+                Limpiar
+              </button>
+            </div>
+            <div className='p-3'>
+              <SearchField
+                label='Buscar contador'
+                value={counterSearch}
+                onChange={setCounterSearch}
+              />
+            </div>
+            <div className='min-h-0 flex-1 overflow-auto px-2 pb-2'>
+              {visibleCounters.map((c) => (
+                <label
+                  key={c.id}
+                  title={`${c.native_name ?? c.label}\nFuente: ${c.source}\n${c.description ?? ''}`}
+                  className={`flex cursor-pointer items-start gap-2 rounded-sm border-b border-border/40 px-2 py-2.5 text-xs transition-colors ${counterIds.includes(c.id) ? 'bg-blue-500/10' : 'hover:bg-muted'}`}
+                >
+                  <input
+                    type='radio'
+                    name='performance-counter'
+                    aria-label={c.label}
+                    className='peer sr-only'
+                    checked={counterIds.includes(c.id)}
+                    onChange={() => toggleCounter(c.id)}
+                  />
+                  <span
+                    aria-hidden='true'
+                    className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border bg-transparent peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 ${counterIds.includes(c.id) ? 'border-blue-600 dark:border-blue-400' : 'border-muted-foreground/60'}`}
+                  >
+                    {counterIds.includes(c.id) && (
+                      <span className='size-2 rounded-full bg-blue-600 dark:bg-blue-400' />
+                    )}
+                  </span>
+                  <span className='min-w-0 flex-1 leading-5'>{c.label}</span>
+                  <span className='pt-0.5 text-[10px] text-muted-foreground'>
+                    {c.unit}
+                  </span>
+                </label>
+              ))}
+              {!visibleCounters.length && (
+                <p className='p-2 text-xs text-muted-foreground'>
+                  {!objectIds.length
+                    ? 'Seleccione un objeto'
+                    : 'Sin contadores disponibles'}
+                </p>
+              )}
+            </div>
+          </div>
+        </aside>
       </div>
 
-      <Dialog open={folderOpen} onOpenChange={setFolderOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nueva carpeta KPI</DialogTitle>
-            <DialogDescription>
-              Organice consultas personales o compartidas con el testbed.
-            </DialogDescription>
-          </DialogHeader>
-          <div className='space-y-4'>
-            <div className='space-y-2'>
-              <Label>Nombre</Label>
-              <Input
-                value={folderName}
-                onChange={(event) => setFolderName(event.target.value)}
-                placeholder='Ej. KPIs globales 5GC'
-              />
-            </div>
-            <ScopeSelect value={scope} onChange={setScope} />
-          </div>
-          <DialogFooter>
-            <Button variant='outline' onClick={() => setFolderOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              disabled={folderName.trim().length < 2 || createFolder.isPending}
-              onClick={() => createFolder.mutate()}
-            >
-              <FolderPlus /> Crear
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
+      {/* DIÁLOGO PARA GUARDAR CONSULTA */}
       <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
-        <DialogContent>
+        <DialogContent className='sm:max-w-md'>
           <DialogHeader>
-            <DialogTitle>Guardar consulta</DialogTitle>
+            <DialogTitle>Guardar consulta de rendimiento</DialogTitle>
             <DialogDescription>
-              Conserve la selección de objetos, contadores y periodo para volver
-              a ejecutarla.
+              Guarde los objetos, contadores seleccionados, agregación y rango
+              temporal para consultarlos rápidamente.
             </DialogDescription>
           </DialogHeader>
-          <div className='space-y-4'>
-            <div className='space-y-2'>
-              <Label>Nombre</Label>
-              <Input
-                value={queryName}
-                onChange={(event) => setQueryName(event.target.value)}
-                placeholder='Ej. Salud global del 5GC'
-              />
-            </div>
-            <div className='space-y-2'>
-              <Label>Carpeta</Label>
-              <Select value={folderId} onValueChange={setFolderId}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='none'>Sin carpeta</SelectItem>
-                  {folders.data?.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.name} ·{' '}
-                      {item.scope === 'personal' ? 'personal' : 'testbed'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <ScopeSelect value={scope} onChange={setScope} />
-          </div>
+          <Input
+            aria-label='Nombre de la consulta'
+            placeholder='Ej: Monitoreo Throughput UDG 1 y 2'
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
           <DialogFooter>
             <Button variant='outline' onClick={() => setSaveOpen(false)}>
               Cancelar
             </Button>
             <Button
-              disabled={queryName.trim().length < 3 || saveQuery.isPending}
-              onClick={() => saveQuery.mutate()}
+              disabled={!name.trim() || save.isPending}
+              onClick={() => save.mutate()}
             >
-              <Save /> Guardar
+              {save.isPending ? 'Guardando…' : 'Guardar'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -832,164 +736,65 @@ export function PerformancePage() {
   )
 }
 
-function LibrarySection({
-  title,
-  children,
-}: {
-  title: string
-  icon: typeof Folder
-  children: React.ReactNode
-}) {
-  return (
-    <Collapsible defaultOpen={title !== 'Funciones de red'}>
-      <CollapsibleTrigger className='flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm font-medium hover:bg-muted'>
-        <ChevronDown className='size-4' />
-        {title}
-      </CollapsibleTrigger>
-      <CollapsibleContent className='ml-4 border-l pl-2'>
-        {children}
-      </CollapsibleContent>
-    </Collapsible>
-  )
-}
-
-function QueryTree({
-  folders,
-  queries,
-  onLoad,
-  onDelete,
-}: {
-  folders: KpiFolder[]
-  queries: SavedKpiQuery[]
-  onLoad: (item: SavedKpiQuery) => void
-  onDelete: (id: string) => void
-}) {
-  const unfiled = queries.filter((item) => !item.folder_id)
-  return (
-    <div className='space-y-1 py-1'>
-      {folders.map((folder) => (
-        <Collapsible key={folder.id} defaultOpen>
-          <CollapsibleTrigger className='flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted'>
-            <ChevronRight className='size-3.5' />
-            <Folder className='size-4 text-amber-500' />
-            <span className='truncate'>{folder.name}</span>
-          </CollapsibleTrigger>
-          <CollapsibleContent className='ml-4'>
-            {queries
-              .filter((item) => item.folder_id === folder.id)
-              .map((item) => (
-                <QueryItem
-                  key={item.id}
-                  item={item}
-                  onLoad={onLoad}
-                  onDelete={onDelete}
-                />
-              ))}
-          </CollapsibleContent>
-        </Collapsible>
-      ))}
-      {unfiled.map((item) => (
-        <QueryItem
-          key={item.id}
-          item={item}
-          onLoad={onLoad}
-          onDelete={onDelete}
-        />
-      ))}
-    </div>
-  )
-}
-
-function QueryItem({
-  item,
-  onLoad,
-  onDelete,
-}: {
-  item: SavedKpiQuery
-  onLoad: (item: SavedKpiQuery) => void
-  onDelete: (id: string) => void
-}) {
-  return (
-    <div className='group flex items-center rounded-md hover:bg-muted'>
-      <button
-        type='button'
-        onClick={() => onLoad(item)}
-        className='flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-sm'
-      >
-        <LineChartIcon className='size-4 shrink-0 text-primary' />
-        <span className='truncate'>{item.name}</span>
-      </button>
-      <Button
-        size='icon'
-        variant='ghost'
-        className='size-7 opacity-0 group-hover:opacity-100'
-        onClick={() => onDelete(item.id)}
-      >
-        <Trash2 className='size-3.5' />
-      </Button>
-    </div>
-  )
-}
-
-function PresetItem({
+function SearchField({
   label,
-  onClick,
-}: {
-  label: string
-  onClick: () => void
-}) {
-  return (
-    <button
-      type='button'
-      onClick={onClick}
-      className='flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted'
-    >
-      <BarChart3 className='size-4 text-primary' />
-      <span className='truncate'>{label}</span>
-    </button>
-  )
-}
-
-function SelectorGroup({
-  title,
-  children,
-}: {
-  title: string
-  icon: typeof Database
-  children: React.ReactNode
-}) {
-  return (
-    <section>
-      <div className='mb-2 flex items-center gap-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase'>
-        {title}
-      </div>
-      <div>{children}</div>
-    </section>
-  )
-}
-
-function ScopeSelect({
   value,
   onChange,
 }: {
-  value: 'personal' | 'testbed'
-  onChange: (value: 'personal' | 'testbed') => void
+  label: string
+  value: string
+  onChange: (v: string) => void
 }) {
   return (
-    <div className='space-y-2'>
-      <Label>Visibilidad</Label>
-      <Select
+    <div className='relative'>
+      <Search className='absolute top-2.5 left-2.5 size-3.5 text-muted-foreground' />
+      <Input
+        aria-label={label}
+        placeholder={label}
         value={value}
-        onValueChange={(next) => onChange(next as 'personal' | 'testbed')}
-      >
-        <SelectTrigger>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value='personal'>Personal · solo yo</SelectItem>
-          <SelectItem value='testbed'>Testbed · grupo asignado</SelectItem>
-        </SelectContent>
-      </Select>
+        onChange={(e) => onChange(e.target.value)}
+        className='h-8 pl-8 text-xs'
+      />
     </div>
+  )
+}
+
+function CompactSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: string
+  options: (string[] | [string, string, boolean?])[]
+  onChange: (v: string) => void
+}) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger
+        aria-label={label}
+        className='h-7 w-auto min-w-20 text-[11px]'
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((opt) => {
+          const id = opt[0]
+          const text = opt[1]
+          const disabled = Boolean(opt[2])
+          return (
+            <SelectItem
+              key={id}
+              value={id}
+              disabled={disabled}
+              className='text-xs'
+            >
+              {text}
+            </SelectItem>
+          )
+        })}
+      </SelectContent>
+    </Select>
   )
 }

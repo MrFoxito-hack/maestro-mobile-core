@@ -88,9 +88,11 @@ def test_query_uses_last_for_cumulative_and_scopes_native_catalog(client):
 
 
 def test_report_is_docx_with_native_plot_and_missing_data_notice(client, teacher_headers):
-    now = datetime.now(timezone.utc)
+    # Isolate the fixture from the background collector running with TestClient.
+    # A current sample can share a bucket whose final provenance is a later poll.
+    now = datetime.now(timezone.utc) - timedelta(minutes=10)
     performance_repository.insert_samples([{'collected_at': now.isoformat(), 'bucket_epoch': int(now.timestamp()), 'testbed_id': 'local', 'scenario_id': '5g-sa', 'object_id': 'nf:amf', 'counter_id': 'core.nf.availability', 'value': 100, 'unit': '%', 'source': 'test-fixture', 'quality': 'simulated'}])
-    response = client.post('/api/v1/performance/report', headers=teacher_headers, json={'title': 'EMS test', 'queries': [{'name': 'AMF status', 'object_ids': ['nf:amf'], 'counter_ids': ['core.nf.availability']}]})
+    response = client.post('/api/v1/performance/report', headers=teacher_headers, json={'title': 'EMS test', 'queries': [{'name': 'AMF status', 'object_ids': ['nf:amf'], 'counter_ids': ['core.nf.availability'], 'start': (now-timedelta(seconds=1)).isoformat(), 'end': (now+timedelta(seconds=1)).isoformat()}]})
     assert response.status_code == 200, response.text[:300] if response.status_code != 200 else ''
     with ZipFile(BytesIO(response.content)) as archive:
         assert any(name.startswith('word/media/') for name in archive.namelist())

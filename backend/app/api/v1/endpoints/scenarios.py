@@ -70,3 +70,18 @@ async def stop_component(scenario_id: str, component_id: str, user: UserPublic =
         raise HTTPException(500, str(exc))
     add_audit(user.username, user.role, user.testbed, "component.stop", {"scenario_id": scenario_id, "component_id": component_id}, "success")
     return result
+
+
+@router.post("/{scenario_id}/components/{component_id}/restart")
+async def restart_component(scenario_id: str, component_id: str, user: UserPublic = Depends(operator_user)):
+    ensure_scenario(scenario_id)
+    try:
+        result = await scenario_manager.restart_component(scenario_id, component_id)
+    except KeyError:
+        raise HTTPException(404, "Componente no encontrado")
+    except Exception as exc:
+        add_audit(user.username, user.role, user.testbed, "component.restart", {"scenario_id": scenario_id, "component_id": component_id}, "failed")
+        raise HTTPException(500, str(exc))
+    add_audit(user.username, user.role, user.testbed, "component.restart", {"scenario_id": scenario_id, "component_id": component_id}, "success")
+    return result
+

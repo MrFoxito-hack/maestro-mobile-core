@@ -1,0 +1,22 @@
+{
+  "id": "ac1039d04fba4bb3b35323bec7aeabf6",
+  "campaign_id": "36fae7075b1d4307b15890fe5654c407",
+  "assignment_id": "f6f433d9529f4ff19d6202857488b001",
+  "owner": "docente",
+  "testbed": "local",
+  "mode": "real",
+  "status": "queued",
+  "cursor": 0,
+  "cancel_requested": 0,
+  "error_code": null,
+  "created_at": "2026-09-30T14:32:10.335289+00:00",
+  "updated_at": "2026-09-30T14:32:10.335289+00:00",
+  "finished_at": null,
+  "execution_status": "queued",
+  "source": "live_campaign",
+  "network_measurements": false,
+  "metrics": null,
+  "validity_status": "inconclusive",
+  "hypothesis_outcome": "not_evaluated",
+  "recovery_verified": false
+}

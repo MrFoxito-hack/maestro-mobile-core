@@ -105,6 +105,17 @@ async def trace_capabilities(scenario_id: str, user: UserPublic = Depends(curren
         raise HTTPException(502, f"No se pudieron consultar las capacidades: {exc}")
 
 
+@router.get("/traces/node-catalog/{scenario_id}")
+def trace_node_catalog(scenario_id: str, _: UserPublic = Depends(current_user)):
+    if scenario_id != "5g-sa":
+        return []
+    from app.services.trace_catalog import NODE_TRACE_CATALOG
+    return [
+        {"id": node_id, **{key: value for key, value in item.items() if key != "filter"}}
+        for node_id, item in NODE_TRACE_CATALOG.items()
+    ]
+
+
 @router.post("/traces/interface", status_code=201)
 async def start_interface_trace(payload: InterfaceTraceStart, user: UserPublic = Depends(current_user)):
     try:
@@ -208,6 +219,26 @@ async def trace_analysis(trace_id: str, user: UserPublic = Depends(current_user)
         raise HTTPException(404, str(exc))
     except TraceAccessError as exc:
         raise HTTPException(403, str(exc))
+    except TraceTaskError as exc:
+        raise HTTPException(409, str(exc))
+
+
+@router.get("/traces/{trace_id}/frames/{frame_number}/decode")
+async def decode_trace_frame(
+    trace_id: str,
+    frame_number: int,
+    user: UserPublic = Depends(current_user),
+):
+    try:
+        return await trace_service.decode_frame(trace_id, frame_number, user)
+    except KeyError:
+        raise HTTPException(404, "Captura no encontrada")
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc))
+    except TraceAccessError as exc:
+        raise HTTPException(403, str(exc))
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
     except TraceTaskError as exc:
         raise HTTPException(409, str(exc))
 

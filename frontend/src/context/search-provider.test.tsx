@@ -123,7 +123,7 @@ describe('SearchProvider and CommandMenu', () => {
 
     await openCommandPalette(screen)
 
-    await userEvent.click(getByRole('option', { name: 'Gestión Auditoría' }))
+    await userEvent.click(getByRole('option', { name: 'Sistema Auditoría' }))
 
     expect(mocks.navigate).toHaveBeenCalledWith({ to: '/audit' })
     await expect

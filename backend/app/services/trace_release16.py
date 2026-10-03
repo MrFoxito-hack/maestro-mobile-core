@@ -4,10 +4,11 @@ Stage-2 references describe permitted procedures, not evidence of packets absent
 from a capture. Keep transport endpoints and undecoded messages as observed.
 """
 import re
+from app.services.trace_charging import index_charging, charging_evidence
 from datetime import datetime, timezone
 from typing import Any
 
-POLICY_VERSION = "5gs-r16-evidence-v2"
+POLICY_VERSION = "5gs-r16-evidence-v7-heartbeats"
 # Reference values, NOT measurements or runtime configuration. See the notes
 # and access-mode exceptions in TS 24.501 V16.10.0 clause 10 tables.
 TIMER_REFERENCES = {
@@ -28,9 +29,28 @@ REFERENCES = {
 }
 
 
+# Known NF Instance UUIDs mapped to their NF Type in Open5GS testbed
+NF_INSTANCE_TO_TYPE: dict[str, str] = {
+    "c415eb7e-b95f-41f1-a2a8-fdd59457664e": "AMF",
+    "6c4a2c9f-57e2-4fdf-ba91-4417fd79ea3d": "SMF",
+    "c81cd8ae-b95f-41f1-b14c-330d8e4a7a06": "UDR",
+    "c3ef6ab2-b95f-41f1-88a0-4503de87f6ca": "UDM",
+    "c4005566-b95f-41f1-ae08-91a751bdbd35": "AUSF",
+    "c41746fe-b95f-41f1-8912-5d7f1329d5c6": "PCF",
+    "c3f32b0c-b95f-41f1-8eb7-216bcaf871f4": "BSF",
+    "c3f3226a-b95f-41f1-8541-e7f4678f166a": "NSSF",
+    "c408bfe4-b95f-41f1-806e-fb3d1a365b81": "SEPP",
+    "c3f7fd94-b95f-41f1-886d-d78902368b94": "SCP",
+}
+
+
 def procedure_for(message: str, protocol: str, path: str = "") -> str:
     text = (message + " " + path).lower()
     if "deregistration" in text:
+        return "deregistration"
+    if "release" in text or "deletion" in text:
+        if any(w in text for w in ("pdu", "session", "smf", "pfcp", "n4", "nchf", "charging")):
+            return "pdu-session-release"
         return "deregistration"
     if "security mode" in text or "authentication" in text or "nausf-auth" in text or "nudm-ueau" in text or "auth-events" in text or "authentication-status" in text:
         return "authentication"
@@ -39,6 +59,8 @@ def procedure_for(message: str, protocol: str, path: str = "") -> str:
     if "nsmf-pdusession" in text or "npcf-smpolicycontrol" in text or "pdu session" in text or "pdusessionresource" in text or "nbsf-" in text or "smf-registrations" in text or "sm-data" in text or "namf-comm" in text:
         return "pdu-session"
     if protocol == "PFCP":
+        if "deletion" in text or "release" in text:
+            return "pdu-session-release"
         return "pdu-session" if ("session" in text or "establishment" in text or "modification" in text) else "nf-management"
     if "nnrf-" in text:
         return "nf-management"
@@ -71,6 +93,7 @@ def build_release16_analysis(task: dict, output: str, *, tshark_version: str | N
         sanitize_text, subscriber_hash, mask_subscriber,
     )
     rows = parse_tshark_rows(output)
+    charging_streams = index_charging(rows)
     defaults = task.get("scenario_defaults") or {}
     target_hash = task.get("selector_hash")
 
@@ -89,7 +112,10 @@ def build_release16_analysis(task: dict, output: str, *, tshark_version: str | N
             continue
         s_key = (ts, hs)
         if s_key not in stream_info:
-            stream_info[s_key] = {"path": "", "status": "", "json_val": "", "pdu_session_id": "", "has_headers": False}
+            stream_info[s_key] = {
+                "path": "", "status": "", "json_val": "", "json_keys": "",
+                "json_numbers": "", "pdu_session_id": "", "has_headers": False,
+            }
         if r.get("http2.headers.path"):
             stream_info[s_key]["path"] = r["http2.headers.path"]
             stream_info[s_key]["has_headers"] = True
@@ -98,6 +124,17 @@ def build_release16_analysis(task: dict, output: str, *, tshark_version: str | N
             stream_info[s_key]["has_headers"] = True
         if r.get("json.value.string"):
             stream_info[s_key]["json_val"] += " " + r["json.value.string"]
+        if r.get("json.key"):
+            stream_info[s_key]["json_keys"] += " " + r["json.key"]
+        if r.get("json.value.number"):
+            stream_info[s_key]["json_numbers"] += " " + r["json.value.number"]
+        raw_data = r.get("http2.data.data", "")
+        if raw_data and ("696d73692d" in raw_data or "737563692d" in raw_data):
+            try:
+                decoded_str = bytes.fromhex(raw_data.replace(":", "").replace(",", "")).decode("utf-8", errors="ignore")
+                stream_info[s_key]["json_val"] += " " + decoded_str
+            except Exception:
+                pass
         if r.get("nas_5gs.pdu_session_id"):
             stream_info[s_key]["pdu_session_id"] = r["nas_5gs.pdu_session_id"]
 
@@ -135,23 +172,45 @@ def build_release16_analysis(task: dict, output: str, *, tshark_version: str | N
             continue
 
         refs = [REFERENCES["architecture"]]
+        charging = charging_evidence(row, charging_streams)
 
         # 1. HTTP/2 SBI Services
         if upper.startswith("HTTP") or "HTTP2" in upper or "HTTP/2" in upper or h2_s:
             protocol = "HTTP/2"
-            p_low = path.lower()
+            # HTTP/2 responses normally do not repeat the request :path. Use the
+            # pre-indexed path from the same (TCP stream, HTTP/2 stream id) so a
+            # response is attributed to the actual consumer instead of exposing
+            # the loopback transport address as a participant.
+            effective_path = path or str(s_info.get("path", ""))
+            p_low = effective_path.lower()
             m_low = message.lower()
-            is_req = bool(method or any(m in m_low for m in ("post", "get", "put", "delete", "patch")))
+            # A request carries :path; the response reuses the path only from
+            # stream_info and therefore keeps ``path`` empty here.
+            is_req = bool(
+                method
+                or path
+                or any(m in m_low for m in ("post", "get", "put", "delete", "patch"))
+            )
             status_match = re.search(r"\b(200 OK|201 Created|204 No Content|4\d\d|5\d\d)\b", message)
             status_str = status or (status_match.group(1) if status_match else "")
-            req_meta = stream_meta.get(stream_key, {})
+            req_meta = stream_meta.get(stream_key, {}) if stream_key else {}
 
-            if "/nausf-auth/" in p_low or req_meta.get("srv") == "nausf-auth":
+            if charging:
+                operation = charging['operation']
+                interface = "Nchf / N40"
+                proc = "pdu-session-release" if operation == 'Release' else "pdu-session"
+                source, target = _resolve_sbi_endpoints(src, dst, "SMF" if is_req else "CHF", "CHF" if is_req else "SMF")
+                source = ADDRESS_TO_NF.get(f"{src}:{row.get('tcp.srcport', '')}", source)
+                target = ADDRESS_TO_NF.get(f"{dst}:{row.get('tcp.dstport', '')}", target)
+                message = f"Nchf_ConvergedCharging_{operation} " + (f"Request ({method or 'method not decoded'})" if is_req else f"Response ({status_str or 'not decoded'})")
+                refs.append({'spec': 'TS 32.291', 'version': '16.17.0', 'clause': '6.1', 'source': 'ETSI TS 132 291 V16.17.0'})
+            elif "/nausf-auth/" in p_low or req_meta.get("srv") == "nausf-auth":
                 interface = "Nausf / SBI"
                 proc = "authentication"
                 if is_req:
                     is_conf = "5g-aka-confirmation" in p_low
-                    stream_meta[stream_key] = {"srv": "nausf-auth", "conf": is_conf}
+                    if stream_key:
+                        stream_meta[stream_key] = {"srv": "nausf-auth", "conf": is_conf}
                     sub = " (5G-AKA Confirmation)" if is_conf else " Request"
                     source, target = _resolve_sbi_endpoints(src, dst, "AMF", "AUSF")
                     message = f"Nausf_UEAuthentication_Authenticate{sub}"
@@ -164,7 +223,8 @@ def build_release16_analysis(task: dict, output: str, *, tshark_version: str | N
                 proc = "authentication"
                 if is_req:
                     is_conf = "auth-events" in p_low
-                    stream_meta[stream_key] = {"srv": "nudm-ueau", "conf": is_conf}
+                    if stream_key:
+                        stream_meta[stream_key] = {"srv": "nudm-ueau", "conf": is_conf}
                     sub = "ResultConfirmation (auth-events)" if is_conf else "Get (Generate Auth Data)"
                     source, target = _resolve_sbi_endpoints(src, dst, "AUSF", "UDM")
                     message = f"Nudm_UEAuthentication_{sub} Request"
@@ -177,7 +237,8 @@ def build_release16_analysis(task: dict, output: str, *, tshark_version: str | N
                 proc = "authentication"
                 if is_req:
                     is_status = "authentication-status" in p_low
-                    stream_meta[stream_key] = {"srv": "nudr-auth", "status": is_status}
+                    if stream_key:
+                        stream_meta[stream_key] = {"srv": "nudr-auth", "status": is_status}
                     sub = "Update (Authentication Status)" if is_status else "Query Request (Authentication Subscription)"
                     source, target = _resolve_sbi_endpoints(src, dst, "UDM", "UDR")
                     message = f"Nudr_DM_{sub}"
@@ -189,15 +250,24 @@ def build_release16_analysis(task: dict, output: str, *, tshark_version: str | N
                 interface = "Nudm / SBI"
                 is_smf = "smf-registrations" in p_low or req_meta.get("smf")
                 consumer = "SMF" if is_smf else "AMF"
-                proc = "pdu-session" if is_smf else "registration"
-                sub = " (SMF Registration for PDU Session)" if is_smf else " (AMF 3GPP Access)"
+                is_del = (method == "DELETE") or ("delete" in m_low) or ("delete" in p_low) or req_meta.get("del", False)
+                if is_del:
+                    proc = "pdu-session-release" if is_smf else "deregistration"
+                    sub = " (SMF Deregistration for PDU Session)" if is_smf else " (AMF 3GPP Access Deregistration)"
+                    op_title = "Nudm_UECM_Deregistration"
+                else:
+                    proc = "pdu-session" if is_smf else "registration"
+                    sub = " (SMF Registration for PDU Session)" if is_smf else " (AMF 3GPP Access)"
+                    op_title = "Nudm_UECM_Registration"
+
                 if is_req:
-                    stream_meta[stream_key] = {"srv": "nudm-uecm", "smf": is_smf}
+                    if stream_key:
+                        stream_meta[stream_key] = {"srv": "nudm-uecm", "smf": is_smf, "del": is_del}
                     source, target = _resolve_sbi_endpoints(src, dst, consumer, "UDM")
-                    message = f"Nudm_UECM_Registration{sub}"
+                    message = f"{op_title}{sub}"
                 else:
                     source, target = _resolve_sbi_endpoints(src, dst, "UDM", consumer)
-                    message = f"Nudm_UECM_Registration Response ({status_str})"
+                    message = f"{op_title} Response ({status_str})"
 
             elif "/nudm-sdm/" in p_low or req_meta.get("srv") == "nudm-sdm":
                 interface = "Nudm / SBI"
@@ -209,7 +279,8 @@ def build_release16_analysis(task: dict, output: str, *, tshark_version: str | N
                 op = "Subscribe" if is_sub else "Get"
                 label = "Session Management Data" if is_smf else "Access & Mobility Data"
                 if is_req:
-                    stream_meta[stream_key] = {"srv": "nudm-sdm", "smf": is_smf, "sub": is_sub}
+                    if stream_key:
+                        stream_meta[stream_key] = {"srv": "nudm-sdm", "smf": is_smf, "sub": is_sub}
                     source, target = _resolve_sbi_endpoints(src, dst, consumer, "UDM")
                     message = f"Nudm_SDM_{op} Request ({label})"
                 else:
@@ -219,23 +290,32 @@ def build_release16_analysis(task: dict, output: str, *, tshark_version: str | N
             elif "/nudr-dr/" in p_low or req_meta.get("srv") == "nudr-other":
                 interface = "Nudr / SBI"
                 is_policy = "policy-data" in p_low or req_meta.get("policy")
-                is_sm = "sm-data" in p_low or "smf" in p_low or req_meta.get("sm")
+                is_smf_select = "smf-selection" in p_low or "smf-select" in p_low or req_meta.get("smf_select")
+                is_sm = ("sm-data" in p_low or "smf" in p_low or req_meta.get("sm")) and not is_smf_select
                 consumer = "PCF" if is_policy else "UDM"
-                proc = "pdu-session" if is_sm else "registration"
-                label = "SM Policy Data" if (consumer == "PCF" and is_sm) else "AM Policy Data" if consumer == "PCF" else "SMF Registration Context" if is_sm else "Subscription Data"
+                is_del = (method == "DELETE") or ("delete" in m_low) or ("delete" in p_low) or req_meta.get("del", False)
+                if is_del:
+                    proc = "pdu-session-release" if is_sm else "deregistration"
+                    op = "Delete"
+                else:
+                    proc = "pdu-session" if is_sm else "registration"
+                    op = "Query"
+                label = "SM Policy Data" if (consumer == "PCF" and is_sm) else ("SMF Selection Subscription Data" if is_smf_select else ("AM Policy Data" if consumer == "PCF" else ("SMF Registration Context" if is_sm else "Subscription Data")))
                 if is_req:
-                    stream_meta[stream_key] = {"srv": "nudr-other", "policy": is_policy, "sm": is_sm}
+                    if stream_key:
+                        stream_meta[stream_key] = {"srv": "nudr-other", "policy": is_policy, "sm": is_sm, "smf_select": is_smf_select, "del": is_del}
                     source, target = _resolve_sbi_endpoints(src, dst, consumer, "UDR")
-                    message = f"Nudr_DM_Query Request ({label})"
+                    message = f"Nudr_DM_{op} Request ({label})"
                 else:
                     source, target = _resolve_sbi_endpoints(src, dst, "UDR", consumer)
-                    message = f"Nudr_DM_Query Response ({status_str})"
+                    message = f"Nudr_DM_{op} Response ({status_str})"
 
             elif "/npcf-am-policy-control/" in p_low or req_meta.get("srv") == "npcf-am":
                 interface = "Npcf / SBI"
                 proc = "registration"
                 if is_req:
-                    stream_meta[stream_key] = {"srv": "npcf-am"}
+                    if stream_key:
+                        stream_meta[stream_key] = {"srv": "npcf-am"}
                     source, target = _resolve_sbi_endpoints(src, dst, "AMF", "PCF")
                     message = "Npcf_AMPolicyControl_Create Request"
                 else:
@@ -244,37 +324,57 @@ def build_release16_analysis(task: dict, output: str, *, tshark_version: str | N
 
             elif "/npcf-smpolicycontrol/" in p_low or req_meta.get("srv") == "npcf-sm":
                 interface = "Npcf / SBI"
-                proc = "pdu-session"
+                is_del = (method == "DELETE") or ("delete" in m_low) or ("delete" in p_low) or req_meta.get("del", False)
+                proc = "pdu-session-release" if is_del else "pdu-session"
+                op = "Delete" if is_del else "Create"
                 if is_req:
-                    stream_meta[stream_key] = {"srv": "npcf-sm"}
+                    if stream_key:
+                        stream_meta[stream_key] = {"srv": "npcf-sm", "del": is_del}
                     source, target = _resolve_sbi_endpoints(src, dst, "SMF", "PCF")
-                    message = "Npcf_SMPolicyControl_Create Request"
+                    message = f"Npcf_SMPolicyControl_{op} Request"
                 else:
                     source, target = _resolve_sbi_endpoints(src, dst, "PCF", "SMF")
-                    message = f"Npcf_SMPolicyControl_Create Response ({status_str})"
+                    message = f"Npcf_SMPolicyControl_{op} Response ({status_str})"
+
+            elif "/npcf-policyauthorization/" in p_low or req_meta.get("srv") == "npcf-pa":
+                interface = "N5 / Npcf"
+                proc = "pdu-session"
+                if is_req:
+                    if stream_key:
+                        stream_meta[stream_key] = {"srv": "npcf-pa"}
+                    source, target = _resolve_sbi_endpoints(src, dst, "AF", "PCF")
+                    message = "Npcf_PolicyAuthorization_Create Request (5G+ video)"
+                else:
+                    source, target = _resolve_sbi_endpoints(src, dst, "PCF", "AF")
+                    message = f"Npcf_PolicyAuthorization_Create Response ({status_str})"
 
             elif "/nbsf-management/" in p_low or req_meta.get("srv") == "nbsf":
                 interface = "Nbsf / SBI"
-                proc = "pdu-session"
+                is_del = (method == "DELETE") or ("delete" in m_low) or ("delete" in p_low) or req_meta.get("del", False)
+                proc = "pdu-session-release" if is_del else "pdu-session"
+                op = "Deregister" if is_del else "Register"
                 if is_req:
-                    stream_meta[stream_key] = {"srv": "nbsf"}
+                    if stream_key:
+                        stream_meta[stream_key] = {"srv": "nbsf", "del": is_del}
                     source, target = _resolve_sbi_endpoints(src, dst, "PCF", "BSF")
-                    message = "Nbsf_Management_Register Request (Binding)"
+                    message = f"Nbsf_Management_{op} Request (Binding)"
                 else:
                     source, target = _resolve_sbi_endpoints(src, dst, "BSF", "PCF")
-                    message = f"Nbsf_Management_Register Response ({status_str})"
+                    message = f"Nbsf_Management_{op} Response ({status_str})"
 
             elif "/nsmf-pdusession/" in p_low or req_meta.get("srv") == "nsmf":
                 interface = "Nsmf / SBI"
-                proc = "pdu-session"
                 is_mod = "modify" in p_low or req_meta.get("mod")
+                is_rel = "release" in p_low or req_meta.get("rel")
+                proc = "pdu-session-release" if is_rel else "pdu-session"
                 if is_req:
-                    stream_meta[stream_key] = {"srv": "nsmf", "mod": is_mod}
-                    op = "UpdateSMContext Request (N2 SM Info)" if is_mod else "CreateSMContext Request"
+                    if stream_key:
+                        stream_meta[stream_key] = {"srv": "nsmf", "mod": is_mod, "rel": is_rel}
+                    op = "ReleaseSMContext Request" if is_rel else ("UpdateSMContext Request (N2 SM Info)" if is_mod else "CreateSMContext Request")
                     source, target = _resolve_sbi_endpoints(src, dst, "AMF", "SMF")
                     message = f"Nsmf_PDUSession_{op}"
                 else:
-                    op = "UpdateSMContext" if is_mod else "CreateSMContext"
+                    op = "ReleaseSMContext" if is_rel else ("UpdateSMContext" if is_mod else "CreateSMContext")
                     source, target = _resolve_sbi_endpoints(src, dst, "SMF", "AMF")
                     message = f"Nsmf_PDUSession_{op} Response ({status_str})"
 
@@ -282,12 +382,56 @@ def build_release16_analysis(task: dict, output: str, *, tshark_version: str | N
                 interface = "Namf / SBI"
                 proc = "pdu-session"
                 if is_req:
-                    stream_meta[stream_key] = {"srv": "namf"}
+                    if stream_key:
+                        stream_meta[stream_key] = {"srv": "namf"}
                     source, target = _resolve_sbi_endpoints(src, dst, "SMF", "AMF")
                     message = "Namf_Communication_N1N2MessageTransfer (PDU Session Establishment Accept)"
                 else:
                     source, target = _resolve_sbi_endpoints(src, dst, "AMF", "SMF")
                     message = f"Namf_Communication_N1N2MessageTransfer Response ({status_str})"
+            elif "/nnrf-" in p_low or req_meta.get("srv") == "nnrf":
+                interface = "Nnrf / SBI"
+                proc = "nf-management"
+                is_heartbeat = "/nf-instances/" in p_low
+                uuid_match = re.search(r"/nf-instances/([a-f0-9\-]+)", p_low)
+                extracted_uuid = uuid_match.group(1).lower() if uuid_match else ""
+
+                origin_nf = req_meta.get("origin")
+                if not origin_nf and extracted_uuid:
+                    origin_nf = NF_INSTANCE_TO_TYPE.get(extracted_uuid)
+                if not origin_nf and task.get("component_id"):
+                    origin_nf = task.get("component_id", "").upper()
+                if not origin_nf:
+                    origin_nf = "5GC NF"
+
+                is_hb = is_heartbeat or req_meta.get("is_heartbeat", False)
+
+                if is_req:
+                    if stream_key:
+                        stream_meta[stream_key] = {"srv": "nnrf", "origin": origin_nf, "is_heartbeat": is_heartbeat}
+                    # With indirect communication, Open5GS emits one hop from
+                    # the consumer to SCP and another from SCP to NRF.
+                    if dst == "127.0.0.10":
+                        source, target = "SCP", "NRF"
+                    elif dst == "127.0.0.200":
+                        source, target = origin_nf, "SCP"
+                    else:
+                        source, target = _resolve_sbi_endpoints(src, dst, origin_nf, "NRF")
+                    if is_heartbeat:
+                        message = f"Nnrf_NFManagement_NFStatus Heartbeat ({source} -> {target})"
+                    else:
+                        message = sanitize_text(f"{method or 'HTTP'} {effective_path}".strip())
+                else:
+                    if src == "127.0.0.10":
+                        source, target = "NRF", "SCP"
+                    elif src == "127.0.0.200":
+                        source, target = "SCP", origin_nf
+                    else:
+                        source, target = _resolve_sbi_endpoints(src, dst, "NRF", origin_nf)
+                    if is_hb:
+                        message = f"Nnrf_NFManagement_NFStatus Response ({status_str or '204 No Content'})"
+                    else:
+                        message = f"Nnrf Response ({status_str or 'status not decoded'})"
             else:
                 interface = "SBI"
                 endpoints = dict(ADDRESS_TO_NF)
@@ -340,6 +484,19 @@ def build_release16_analysis(task: dict, output: str, *, tshark_version: str | N
                 message, proc = "N2 PDU Session Resource Setup Request (PDU Session Establishment Accept)", "pdu-session"
             elif "pdusessionresourcesetupresponse" in m_low:
                 message, proc = "N2 PDU Session Resource Setup Response", "pdu-session"
+            elif "pdusessionresourcemodifyrequest" in m_low or "pdu session modification command" in m_low:
+                five_qi = _first_address(row.get("ngap.fiveQI"))
+                qfi = _first_address(row.get("ngap.qosFlowIdentifier"))
+                qos = ", ".join(part for part in (
+                    f"5QI: {five_qi}" if five_qi else "",
+                    f"QFI: {qfi}" if qfi else "",
+                ) if part)
+                suffix = f" ({qos})" if qos else ""
+                message, proc = f"N2 PDU Session Resource Modify Request{suffix}", "pdu-session"
+            elif "pdusessionresourcemodifyresponse" in m_low:
+                message, proc = "N2 PDU Session Resource Modify Response", "pdu-session"
+            elif "pdusessionresourcerelease" in m_low or "pdu session release" in m_low:
+                message, proc = sanitize_text(row.get("_ws.col.Info", "")), "pdu-session-release"
             elif m_low in ("uplinknastransport", "downlinknastransport"):
                 proc = procedure_for(message, protocol, path)
             else:
@@ -355,6 +512,7 @@ def build_release16_analysis(task: dict, output: str, *, tshark_version: str | N
             source = "SMF" if src in ("10.210.50.1", "127.0.0.4") else "UPF"
             target = "UPF" if dst in ("10.210.50.8", "10.210.50.9", "127.0.0.7") else "SMF"
             upf_label = " [UPF-01 / Internet]" if "10.210.50.8" in (src, dst) else (" [UPF-02 / Corporate]" if "10.210.50.9" in (src, dst) else "")
+            proc = "pdu-session"
             if "Establishment Request" in message:
                 message = "N4 Session Establishment Request" + upf_label
             elif "Establishment Response" in message:
@@ -363,7 +521,12 @@ def build_release16_analysis(task: dict, output: str, *, tshark_version: str | N
                 message = "N4 Session Modification Request" + upf_label
             elif "Modification Response" in message:
                 message = "N4 Session Modification Response" + upf_label
-            proc = "pdu-session"
+            elif "Deletion Request" in message:
+                message = "N4 Session Deletion Request" + upf_label
+                proc = "pdu-session-release"
+            elif "Deletion Response" in message:
+                message = "N4 Session Deletion Response" + upf_label
+                proc = "pdu-session-release"
 
         # 4. GTP-U (N3)
         elif row.get("gtp.teid") or "GTP" in upper:
@@ -439,6 +602,8 @@ def build_release16_analysis(task: dict, output: str, *, tshark_version: str | N
 
         low = message.lower()
         failure = bool(re.search(r"\b(registration reject|authentication reject|authentication failure|security mode reject|pdu session establishment reject)\b", low))
+        if charging and str(charging.get('http_status', '')).startswith(('4', '5')):
+            failure = True
         frame = int(row["frame.number"]) if row.get("frame.number", "").isdigit() else None
 
         events.append({
@@ -456,10 +621,12 @@ def build_release16_analysis(task: dict, output: str, *, tshark_version: str | N
             "procedure": proc,
             "status": "failure" if failure else "info",
             "packet_number": frame,
+            "length_bytes": int(row["frame.len"]) if row.get("frame.len", "").isdigit() else None,
             "evidence_type": "simulated" if task.get("source") in {"mock", "simulated"} else "pcap",
             "identifiers": identifiers,
             "standard_references": refs,
             "interpretation_policy": POLICY_VERSION,
+            **({'charging': charging} if charging else {}),
             "_epoch": epoch,
             "_target_match": matched,
             "_keys": _context_keys(row, identifiers, src, dst),

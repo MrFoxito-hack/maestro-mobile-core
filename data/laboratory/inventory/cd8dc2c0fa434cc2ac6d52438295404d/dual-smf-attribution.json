@@ -1,0 +1,30 @@
+{
+  "smf2": {
+    "sbi": [
+      {
+        "address": "127.0.0.15",
+        "port": 7777
+      }
+    ],
+    "service": {
+      "MainPID": "813",
+      "ActiveState": "active"
+    }
+  },
+  "bsf": {
+    "sbi": [
+      {
+        "address": "127.0.0.16",
+        "port": 7777
+      }
+    ],
+    "service": {
+      "MainPID": "743",
+      "ActiveState": "active"
+    }
+  },
+  "listeners": [
+    "LISTEN 0      5       127.0.0.15:7777 0.0.0.0:* users:((\"open5gs-smfd\",pid=813,fd=15)) ",
+    "LISTEN 0      5       127.0.0.16:7777 0.0.0.0:* users:((\"open5gs-bsfd\",pid=743,fd=8))  "
+  ]
+}

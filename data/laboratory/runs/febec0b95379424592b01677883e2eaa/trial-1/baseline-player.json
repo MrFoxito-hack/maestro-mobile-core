@@ -1,0 +1,1590 @@
+{
+  "phase": "baseline",
+  "client": "MAEstro Stream5G / Hls.js / HTMLVideoElement",
+  "media": [
+    {
+      "asset": "index.m3u8",
+      "bytes": 574,
+      "status": 200,
+      "path": "DN-UPF-UE-SSH-relay"
+    },
+    {
+      "asset": "seg000.m4s",
+      "bytes": 150060,
+      "status": 200,
+      "path": "DN-UPF-UE-SSH-relay"
+    },
+    {
+      "asset": "init.mp4",
+      "bytes": 1384,
+      "status": 200,
+      "path": "DN-UPF-UE-SSH-relay"
+    },
+    {
+      "asset": "seg001.m4s",
+      "bytes": 155266,
+      "status": 200,
+      "path": "DN-UPF-UE-SSH-relay"
+    },
+    {
+      "asset": "seg002.m4s",
+      "bytes": 143270,
+      "status": 200,
+      "path": "DN-UPF-UE-SSH-relay"
+    },
+    {
+      "asset": "seg003.m4s",
+      "bytes": 142168,
+      "status": 200,
+      "path": "DN-UPF-UE-SSH-relay"
+    },
+    {
+      "asset": "seg004.m4s",
+      "bytes": 141707,
+      "status": 200,
+      "path": "DN-UPF-UE-SSH-relay"
+    },
+    {
+      "asset": "seg005.m4s",
+      "bytes": 139984,
+      "status": 200,
+      "path": "DN-UPF-UE-SSH-relay"
+    },
+    {
+      "asset": "seg006.m4s",
+      "bytes": 142057,
+      "status": 200,
+      "path": "DN-UPF-UE-SSH-relay"
+    },
+    {
+      "asset": "seg007.m4s",
+      "bytes": 149110,
+      "status": 200,
+      "path": "DN-UPF-UE-SSH-relay"
+    },
+    {
+      "asset": "seg008.m4s",
+      "bytes": 141821,
+      "status": 200,
+      "path": "DN-UPF-UE-SSH-relay"
+    },
+    {
+      "asset": "seg009.m4s",
+      "bytes": 144097,
+      "status": 200,
+      "path": "DN-UPF-UE-SSH-relay"
+    },
+    {
+      "asset": "seg010.m4s",
+      "bytes": 136583,
+      "status": 200,
+      "path": "DN-UPF-UE-SSH-relay"
+    },
+    {
+      "asset": "seg011.m4s",
+      "bytes": 143253,
+      "status": 200,
+      "path": "DN-UPF-UE-SSH-relay"
+    },
+    {
+      "asset": "seg012.m4s",
+      "bytes": 145231,
+      "status": 200,
+      "path": "DN-UPF-UE-SSH-relay"
+    },
+    {
+      "asset": "seg013.m4s",
+      "bytes": 146984,
+      "status": 200,
+      "path": "DN-UPF-UE-SSH-relay"
+    },
+    {
+      "asset": "seg014.m4s",
+      "bytes": 136876,
+      "status": 200,
+      "path": "DN-UPF-UE-SSH-relay"
+    }
+  ],
+  "errors": [],
+  "status": "PLAYED_TO_END",
+  "player": {
+    "events": [
+      {
+        "type": "loadstart",
+        "monotonic_ms": 4523.89999999851,
+        "utc_ms": 1790778498424,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": true
+      },
+      {
+        "type": "play",
+        "monotonic_ms": 4975.5,
+        "utc_ms": 1790778498876,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false
+      },
+      {
+        "type": "waiting",
+        "monotonic_ms": 4975.60000000149,
+        "utc_ms": 1790778498876,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false
+      },
+      {
+        "type": "playing",
+        "monotonic_ms": 11754.5,
+        "utc_ms": 1790778505655,
+        "current_time": 0.000498,
+        "ready_state": 4,
+        "paused": false
+      },
+      {
+        "type": "pause",
+        "monotonic_ms": 41885.10000000149,
+        "utc_ms": 1790778535785,
+        "current_time": 30.08,
+        "ready_state": 4,
+        "paused": true
+      },
+      {
+        "type": "ended",
+        "monotonic_ms": 41885.39999999851,
+        "utc_ms": 1790778535785,
+        "current_time": 30.08,
+        "ready_state": 4,
+        "paused": true
+      }
+    ],
+    "samples": [
+      {
+        "monotonic_ms": 1643.1000000014901,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": true,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 1844.2000000029802,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": true,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 2044.5,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": true,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 2243.7000000029802,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": true,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 2443.60000000149,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": true,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 2643.10000000149,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": true,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 2842.89999999851,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": true,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 3043.2000000029802,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": true,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 3243,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": true,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 3445.39999999851,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": true,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 3732.10000000149,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": true,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 3842.89999999851,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": true,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 4043.60000000149,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": true,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 4243,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": true,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 4442.79999999702,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": true,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 4642.89999999851,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": true,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 4842.70000000298,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": true,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 5043.89999999851,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 5242.79999999702,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 5443.5,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 5644.10000000149,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 5844.10000000149,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 6043.5,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 6244,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 6444.10000000149,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 6642.89999999851,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 6844.10000000149,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 7043.5,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 7242.79999999702,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 7443.5,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 7644.60000000149,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 7842.70000000298,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 8043.29999999702,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 8243.39999999851,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 8442.70000000298,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 8643.20000000298,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 8842.89999999851,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 9043.60000000149,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 9243.39999999851,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 9444,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 9642.70000000298,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 9842.89999999851,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 10043.39999999851,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 10243.60000000149,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 10443.60000000149,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 10643.5,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 10842.70000000298,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 11043.29999999702,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 11243.39999999851,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 11443.70000000298,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 11643.39999999851,
+        "current_time": 0,
+        "ready_state": 0,
+        "paused": false,
+        "buffer_end": 0
+      },
+      {
+        "monotonic_ms": 11843.60000000149,
+        "current_time": 0.045043,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 1.941333
+      },
+      {
+        "monotonic_ms": 12044.39999999851,
+        "current_time": 0.245926,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 1.941333
+      },
+      {
+        "monotonic_ms": 12244.10000000149,
+        "current_time": 0.445686,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 1.941333
+      },
+      {
+        "monotonic_ms": 12444.60000000149,
+        "current_time": 0.646417,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 1.941333
+      },
+      {
+        "monotonic_ms": 12643.29999999702,
+        "current_time": 0.845456,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 1.941333
+      },
+      {
+        "monotonic_ms": 12843.20000000298,
+        "current_time": 1.044923,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 1.941333
+      },
+      {
+        "monotonic_ms": 13043.89999999851,
+        "current_time": 1.245712,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 1.941333
+      },
+      {
+        "monotonic_ms": 13243.10000000149,
+        "current_time": 1.444573,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 3.946666
+      },
+      {
+        "monotonic_ms": 13442.60000000149,
+        "current_time": 1.642921,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 3.946666
+      },
+      {
+        "monotonic_ms": 13643.20000000298,
+        "current_time": 1.843777,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 3.946666
+      },
+      {
+        "monotonic_ms": 13843,
+        "current_time": 2.043553,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 5.951999
+      },
+      {
+        "monotonic_ms": 14043.20000000298,
+        "current_time": 2.245092,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 5.951999
+      },
+      {
+        "monotonic_ms": 14243,
+        "current_time": 2.444604,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 7.957333
+      },
+      {
+        "monotonic_ms": 14443.10000000149,
+        "current_time": 2.644778,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 7.957333
+      },
+      {
+        "monotonic_ms": 14643.70000000298,
+        "current_time": 2.845535,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 9.941333
+      },
+      {
+        "monotonic_ms": 14843.5,
+        "current_time": 3.045497,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 9.941333
+      },
+      {
+        "monotonic_ms": 15044,
+        "current_time": 3.245515,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 9.941333
+      },
+      {
+        "monotonic_ms": 15243.60000000149,
+        "current_time": 3.444345,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 11.946666
+      },
+      {
+        "monotonic_ms": 15443.29999999702,
+        "current_time": 3.645684,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 11.946666
+      },
+      {
+        "monotonic_ms": 15650.89999999851,
+        "current_time": 3.853293,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 11.946666
+      },
+      {
+        "monotonic_ms": 15843.5,
+        "current_time": 4.045294,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 11.946666
+      },
+      {
+        "monotonic_ms": 16042.89999999851,
+        "current_time": 4.244923,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 11.946666
+      },
+      {
+        "monotonic_ms": 16243.29999999702,
+        "current_time": 4.445725,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 13.951999
+      },
+      {
+        "monotonic_ms": 16442.70000000298,
+        "current_time": 4.644552,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 13.951999
+      },
+      {
+        "monotonic_ms": 16644,
+        "current_time": 4.845874,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 15.957333
+      },
+      {
+        "monotonic_ms": 16843.29999999702,
+        "current_time": 5.044315,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 15.957333
+      },
+      {
+        "monotonic_ms": 17043.10000000149,
+        "current_time": 5.245142,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 15.957333
+      },
+      {
+        "monotonic_ms": 17243.29999999702,
+        "current_time": 5.445125,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 15.957333
+      },
+      {
+        "monotonic_ms": 17444.10000000149,
+        "current_time": 5.645909,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 15.957333
+      },
+      {
+        "monotonic_ms": 17643.70000000298,
+        "current_time": 5.845475,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 17.941333
+      },
+      {
+        "monotonic_ms": 17843.20000000298,
+        "current_time": 6.045099,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 17.941333
+      },
+      {
+        "monotonic_ms": 18043.79999999702,
+        "current_time": 6.243617,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 17.941333
+      },
+      {
+        "monotonic_ms": 18243.60000000149,
+        "current_time": 6.445507,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 17.941333
+      },
+      {
+        "monotonic_ms": 18442.70000000298,
+        "current_time": 6.64435,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 17.941333
+      },
+      {
+        "monotonic_ms": 18653,
+        "current_time": 6.854985,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 17.941333
+      },
+      {
+        "monotonic_ms": 18844.29999999702,
+        "current_time": 7.046607,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 17.941333
+      },
+      {
+        "monotonic_ms": 19042.79999999702,
+        "current_time": 7.243553,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 17.941333
+      },
+      {
+        "monotonic_ms": 19243.70000000298,
+        "current_time": 7.444925,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 19.946666
+      },
+      {
+        "monotonic_ms": 19443.29999999702,
+        "current_time": 7.644278,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 19.946666
+      },
+      {
+        "monotonic_ms": 19643.39999999851,
+        "current_time": 7.845162,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 19.946666
+      },
+      {
+        "monotonic_ms": 19844,
+        "current_time": 8.045935,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 19.946666
+      },
+      {
+        "monotonic_ms": 20043.10000000149,
+        "current_time": 8.244788,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 19.946666
+      },
+      {
+        "monotonic_ms": 20242.89999999851,
+        "current_time": 8.4442,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 21.951999
+      },
+      {
+        "monotonic_ms": 20444.29999999702,
+        "current_time": 8.64662,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 21.951999
+      },
+      {
+        "monotonic_ms": 20642.5,
+        "current_time": 8.844435,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 21.951999
+      },
+      {
+        "monotonic_ms": 20843.70000000298,
+        "current_time": 9.04562,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 21.951999
+      },
+      {
+        "monotonic_ms": 21043.29999999702,
+        "current_time": 9.245297,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 23.957333
+      },
+      {
+        "monotonic_ms": 21244,
+        "current_time": 9.446126,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 23.957333
+      },
+      {
+        "monotonic_ms": 21443.60000000149,
+        "current_time": 9.645501,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 25.941333
+      },
+      {
+        "monotonic_ms": 21658.5,
+        "current_time": 9.860618,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 25.941333
+      },
+      {
+        "monotonic_ms": 21843.70000000298,
+        "current_time": 10.045676,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 25.941333
+      },
+      {
+        "monotonic_ms": 22044.10000000149,
+        "current_time": 10.246025,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 27.946666
+      },
+      {
+        "monotonic_ms": 22244.20000000298,
+        "current_time": 10.445391,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 27.946666
+      },
+      {
+        "monotonic_ms": 22444.29999999702,
+        "current_time": 10.645725,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 27.946666
+      },
+      {
+        "monotonic_ms": 22644.29999999702,
+        "current_time": 10.846237,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 22843.89999999851,
+        "current_time": 11.045106,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 23042.70000000298,
+        "current_time": 11.243953,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 23244.20000000298,
+        "current_time": 11.445311,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 23444,
+        "current_time": 11.645148,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 23643.29999999702,
+        "current_time": 11.845223,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 23843,
+        "current_time": 12.045012,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 24044,
+        "current_time": 12.246005,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 24243.39999999851,
+        "current_time": 12.4456,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 24443.39999999851,
+        "current_time": 12.645659,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 24676.70000000298,
+        "current_time": 12.878234,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 24844,
+        "current_time": 13.044889,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 25042.89999999851,
+        "current_time": 13.244748,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 25244.39999999851,
+        "current_time": 13.445219,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 25443.89999999851,
+        "current_time": 13.645064,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 25643.89999999851,
+        "current_time": 13.8458,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 25843.39999999851,
+        "current_time": 14.044344,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 26043.29999999702,
+        "current_time": 14.24514,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 26243.79999999702,
+        "current_time": 14.445959,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 26443.79999999702,
+        "current_time": 14.645323,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 26659.79999999702,
+        "current_time": 14.862214,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 26843.70000000298,
+        "current_time": 15.046071,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 27042.89999999851,
+        "current_time": 15.244996,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 27243.89999999851,
+        "current_time": 15.445918,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 27443.60000000149,
+        "current_time": 15.64568,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 27679,
+        "current_time": 15.880998,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 27843.39999999851,
+        "current_time": 16.045055,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 28043.10000000149,
+        "current_time": 16.244974,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 28243.29999999702,
+        "current_time": 16.444305,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 28444.10000000149,
+        "current_time": 16.645101,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 28643.5,
+        "current_time": 16.844674,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 28867,
+        "current_time": 17.068513,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 29043.89999999851,
+        "current_time": 17.245711,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 29243.5,
+        "current_time": 17.444187,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 29443.10000000149,
+        "current_time": 17.645528,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 29643.39999999851,
+        "current_time": 17.845801,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 29843.89999999851,
+        "current_time": 18.046289,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 30044.39999999851,
+        "current_time": 18.246391,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 30243.60000000149,
+        "current_time": 18.445752,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 30443.29999999702,
+        "current_time": 18.645481,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 30689.79999999702,
+        "current_time": 18.890539,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 30843.60000000149,
+        "current_time": 19.045914,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 31043.39999999851,
+        "current_time": 19.245501,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 31243.79999999702,
+        "current_time": 19.445918,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 31443.20000000298,
+        "current_time": 19.643937,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 31643.79999999702,
+        "current_time": 19.844596,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 31869.70000000298,
+        "current_time": 20.071858,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 32043.79999999702,
+        "current_time": 20.245906,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 32243.39999999851,
+        "current_time": 20.444724,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 32443.29999999702,
+        "current_time": 20.645126,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 32642.70000000298,
+        "current_time": 20.84404,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 32843.79999999702,
+        "current_time": 21.044551,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 33043,
+        "current_time": 21.244813,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 33243.60000000149,
+        "current_time": 21.445159,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 33442.70000000298,
+        "current_time": 21.644924,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 33693.5,
+        "current_time": 21.895307,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 33843.29999999702,
+        "current_time": 22.045754,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 34043.70000000298,
+        "current_time": 22.245959,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 34243,
+        "current_time": 22.444533,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 34443.5,
+        "current_time": 22.645303,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 34643.5,
+        "current_time": 22.845704,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 34843.89999999851,
+        "current_time": 23.045077,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 35043.10000000149,
+        "current_time": 23.244969,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 35243.20000000298,
+        "current_time": 23.444929,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 35443,
+        "current_time": 23.644845,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 35643.10000000149,
+        "current_time": 23.845157,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 35843.89999999851,
+        "current_time": 24.045963,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 36043.20000000298,
+        "current_time": 24.245419,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 36243,
+        "current_time": 24.445277,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 36444.39999999851,
+        "current_time": 24.646343,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 36695,
+        "current_time": 24.896554,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 36843.89999999851,
+        "current_time": 25.046231,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 37044,
+        "current_time": 25.244791,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 37242.5,
+        "current_time": 25.44463,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 37443.60000000149,
+        "current_time": 25.644562,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 37642.89999999851,
+        "current_time": 25.843601,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 37842.5,
+        "current_time": 26.043386,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 38042.60000000149,
+        "current_time": 26.244076,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 38244,
+        "current_time": 26.445084,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 38443.79999999702,
+        "current_time": 26.645468,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 38642.70000000298,
+        "current_time": 26.844296,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 38843.60000000149,
+        "current_time": 27.045678,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 39043.10000000149,
+        "current_time": 27.24516,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 39244.10000000149,
+        "current_time": 27.445233,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 39444.20000000298,
+        "current_time": 27.646393,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 39711,
+        "current_time": 27.913073,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 39843.60000000149,
+        "current_time": 28.045954,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 40042.60000000149,
+        "current_time": 28.244446,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 40242.79999999702,
+        "current_time": 28.443367,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 40443,
+        "current_time": 28.644561,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 40643.20000000298,
+        "current_time": 28.843562,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 40843.29999999702,
+        "current_time": 29.044453,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 41043,
+        "current_time": 29.244248,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 41242.89999999851,
+        "current_time": 29.444072,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 41443.10000000149,
+        "current_time": 29.644784,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 41643.79999999702,
+        "current_time": 29.84492,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      },
+      {
+        "monotonic_ms": 41844,
+        "current_time": 30.041759,
+        "ready_state": 4,
+        "paused": false,
+        "buffer_end": 30.08
+      }
+    ],
+    "stalls": [],
+    "firstPlaying": 11754.5,
+    "waiting": null,
+    "requested": 4469.89999999851,
+    "width": 640,
+    "height": 360,
+    "duration": 30.08,
+    "startup_seconds": 7.2846000000014905,
+    "played_seconds": 30.08,
+    "quality": {},
+    "ended": true,
+    "muted": true
+  }
+}

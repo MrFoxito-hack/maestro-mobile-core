@@ -186,7 +186,7 @@ def test_trace_capabilities_are_declarative(client, student_headers):
     assert data["subscriber"]["enabled"] is True
     assert data["subscriber"]["supports_auto_trigger"] is False
     assert data["quota"]["max_active"] == 1
-    assert data["limits"]["max_megabytes"] == 25
+    assert data["limits"]["max_megabytes"] == 100
     serialized = response.text
     assert "sctp port" not in serialized
 
@@ -337,7 +337,7 @@ def test_student_can_create_and_delete_own_interface_trace(client, student_heade
     task_id = response.json()["id"]
     listing = client.get("/api/v1/traces", headers=student_headers)
     assert listing.status_code == 200
-    assert all(item["owner"] == "alumno" for item in listing.json())
+    assert all(item["owner"] == "grupo1" for item in listing.json())
     deleted = client.delete(f"/api/v1/traces/{task_id}", headers=student_headers)
     assert deleted.status_code == 204
 
@@ -582,3 +582,21 @@ def test_telco_log_parser_counts_real_5g_procedures_without_identifiers():
     assert registration_success["duration_ms"] == 48.0
     assert pdu_success["duration_ms"] == 221.0
     assert rejected["cause"] == "dnn"
+
+
+def test_node_trace_catalog_exposes_supported_csp_nodes_without_bpf_filters(
+    client, teacher_headers
+):
+    response = client.get(
+        "/api/v1/traces/node-catalog/5g-sa", headers=teacher_headers
+    )
+    assert response.status_code == 200
+    catalog = response.json()
+    assert {item["id"] for item in catalog} == {"amf", "smf", "smf2", "upf", "nrf", "scp"}
+    assert all("filter" not in item for item in catalog)
+    assert any(
+        interface["id"] == "n2"
+        for item in catalog
+        if item["id"] == "amf"
+        for interface in item["interfaces"]
+    )

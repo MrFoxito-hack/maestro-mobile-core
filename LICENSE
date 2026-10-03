@@ -1,0 +1,53 @@
+AVISO DE DERECHOS DE AUTOR Y LICENCIA PROPIETARIA EXCLUSIVA
+=============================================================
+PROYECTO DE INVESTIGACIÓN Y DESARROLLO PRIVADO: PLATAFORMA 5G SA "MAESTRO"
+EN DESARROLLO PARA TRABAJO DE EGRESO EN INGENIERÍA DE LAS TELECOMUNICACIONES
+PONTIFICIA UNIVERSIDAD CATÓLICA DEL PERÚ (PUCP)
+
+Autor y Titular Exclusivo de los Derechos de Autor:
+Miguel Angel Alvizuri Yucra
+Lima, Perú - Año 2026.
+Todos los derechos reservados (All Rights Reserved).
+
+1. DECLARACIÓN DE AUTORÍA Y PROPIEDAD INTELECTUAL INDEPENDIENTE
+El presente proyecto, su código fuente, arquitectura de software, módulos de ingeniería,
+algoritmos de bucle cerrado, parches en lenguaje C, programas de aceleración eBPF/XDP
+para el plano de usuario (UPF), motor de tarificación convergente 5G (CHF Nchf),
+adaptadores de observabilidad y telemetría, datasets de medición, benchmark empírico,
+manuales, guiones de exposición y documentación técnica asociada constituyen una obra
+intelectual original, independiente y exclusiva de MIGUEL ANGEL ALVIZURI YUCRA.
+
+En esta fase de desarrollo previo a la entrega y sustentación formal, la titularidad
+patrimonial y moral de los derechos de autor pertenece íntegra y exclusivamente al autor,
+sin que la universidad ni entidad alguna ostente titularidad compartida, ni exista coautoría
+ni cesión de derechos a terceros no autorizados.
+
+2. TÉRMINOS Y PROHIBICIONES ESTRICTAS DE USO
+Queda TERMINANTEMENTE PROHIBIDO a cualquier persona natural o jurídica, incluyendo
+terceros ajenos al titular, estudiantes, investigadores o entidades:
+
+a) Copiar, clonar, bifurcar (fork), descargar, transferir o alojar parcial o totalmente
+   este código fuente, módulos o documentación en repositorios públicos o privados
+   (GitHub, GitLab, Bitbucket, servicios de almacenamiento en la nube o discos locales).
+b) Presentar, sustentar, evaluar, defender, citar sin atribución o someter este proyecto,
+   código, datos experimentales de benchmark (+227% eBPF/XDP, pruebas de idempotencia C)
+   o arquitectura como trabajo propio, tesis de grado, tesina, artículo científico,
+   informe de laboratorio o trabajo final ante la Pontificia Universidad Católica del
+   Perú (PUCP) o cualquier otra institución académica nacional o extranjera.
+c) Ejecutar, compilar, modificar, distribuir, comercializar o realizar obras derivadas
+   a partir de los componentes desarrollados en esta plataforma sin autorización
+   expresa, previa y por escrito del autor titular.
+
+3. CONSECUENCIAS LEGALES Y ACADÉMICAS
+Cualquier uso, apropiación o presentación indebida de este material constituirá:
+- Infracción muy grave a los Reglamentos Académicos y Códigos de Ética e Integridad
+  de la Pontificia Universidad Católica del Perú (PUCP), que conlleva procesos
+  disciplinarios inmediatos, anulación de proyectos de titulación y expulsión académica.
+- Delito contra los Derechos de Autor y la Propiedad Intelectual tipificado en el
+  Decreto Legislativo N° 822 de la República del Perú y la Decisión 486 de la Comunidad
+  Andina, reservándose el autor el derecho de interponer las denuncias administrativas
+  ante INDECOPI y las acciones penales que correspondan.
+
+Para cualquier consulta formal o solicitud de colaboración académica:
+Contactar directamente con el autor y titular exclusivo:
+Miguel Angel Alvizuri Yucra

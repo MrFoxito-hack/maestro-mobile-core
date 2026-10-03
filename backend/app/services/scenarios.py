@@ -124,5 +124,23 @@ class ScenarioManager:
         await self.adapter.stop_service(component["unit"])
         return await self.status(scenario_id)
 
+    async def restart_component(self, scenario_id: str, component_id: str) -> ScenarioStatus:
+        component = self.component(scenario_id, component_id)
+        await self.adapter.stop_service(component["unit"])
+        await asyncio.sleep(0.5)
+        await self.adapter.start_service(component["unit"])
+        if component_id in ("gnb", "amf"):
+            # Permite a gNodeB o AMF reestablecer NGAP (SCTP) antes de reconectar el terminal
+            await asyncio.sleep(2)
+            try:
+                ue_comp = next((c for c in CATALOG[scenario_id]["components"] if c["id"] == "ue"), None)
+                if ue_comp:
+                    await self.adapter.stop_service(ue_comp["unit"])
+                    await asyncio.sleep(0.5)
+                    await self.adapter.start_service(ue_comp["unit"])
+            except Exception:
+                pass
+        return await self.status(scenario_id)
+
 
 scenario_manager = ScenarioManager()

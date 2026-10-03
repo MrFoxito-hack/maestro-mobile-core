@@ -9,11 +9,13 @@ from app.db import initialize
 from app.services.trace_tasks import trace_task_service
 from app.services.performance import metrics_collector
 from app.services.alarm_center import alarm_observer
+from app.laboratory.storage import repository as laboratory_repository
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     initialize()
+    laboratory_repository().initialize()
     await trace_task_service.initialize()
     await metrics_collector.start()
     await alarm_observer.start()

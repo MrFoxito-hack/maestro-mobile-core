@@ -1,0 +1,19 @@
+# Merge under the existing smf: mapping; do not replace the complete SMF config.
+# Keep disabled in installed services until the deployment's acceptance gates pass.
+smf:
+  chf:
+    enabled: false
+    sbi:
+      - addr: 127.0.0.1
+        port: 8081
+    timeout_ms: 2000
+    retries: 2
+    rating_group: 1
+    requested_units: 1048576
+    token_env: SMF_CHF_TOKEN
+    lab_no_auth: false
+    # Must be persistent, private (0700), and owned by the SMF service user.
+    # Contains SUPI-bearing recovery evidence and non-reusable ID allocation state.
+    journal_dir: /var/lib/maestro-smf/chf-journal
+    # Set a distinct stable REAL SMF UUID and map its token at CHF_SBI_TOKENS.
+    # nf_instance_id: <SMF UUID>

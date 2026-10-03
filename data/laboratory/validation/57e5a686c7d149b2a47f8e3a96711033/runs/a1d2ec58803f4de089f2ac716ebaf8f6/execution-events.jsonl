@@ -1,0 +1,10 @@
+{"created_at":"2026-09-30T09:06:09.224535+00:00","cursor":0,"detail":{"mode":"real","resource":"real-core:configured-vms"},"event":"queued","id":1}
+{"created_at":"2026-09-30T09:06:09.240283+00:00","cursor":0,"detail":{"baseline":"operational_regime"},"event":"claimed","id":2}
+{"created_at":"2026-09-30T09:06:09.262825+00:00","cursor":0,"detail":{"action":"preflight","run":null},"event":"step_intent","id":3}
+{"created_at":"2026-09-30T09:06:11.176785+00:00","cursor":0,"detail":{"error_code":"real_actuator_not_accepted"},"event":"recovery_required","id":4}
+{"created_at":"2026-09-30T09:06:11.198348+00:00","cursor":0,"detail":{},"event":"recovery_claimed","id":5}
+{"created_at":"2026-09-30T09:06:11.232739+00:00","cursor":0,"detail":{"action":"restore","recovery":true,"run":null},"event":"step_intent","id":6}
+{"created_at":"2026-09-30T09:06:11.274945+00:00","cursor":0,"detail":{"action":"restore","result":{"compensation_attempted":true,"scope":"nwdaf_operational_regime"},"run_ordinal":null,"source":"live_campaign"},"event":"step_result","id":7}
+{"created_at":"2026-09-30T09:06:11.296510+00:00","cursor":1,"detail":{"action":"verify_restored","recovery":true,"run":null},"event":"step_intent","id":8}
+{"created_at":"2026-09-30T09:06:11.333281+00:00","cursor":1,"detail":{"action":"verify_restored","result":{"bit_exact_policy_snapshot":false,"policy_recovery_verified":false,"scope":"no_mutation_attempted","trials":[],"verified":true},"run_ordinal":null,"source":"live_campaign"},"event":"step_result","id":9}
+{"created_at":"2026-09-30T09:06:11.343160+00:00","cursor":2,"detail":{"network_measurements":false,"status":"failed"},"event":"finished","id":10}

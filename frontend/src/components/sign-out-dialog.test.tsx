@@ -3,10 +3,11 @@ import { render } from 'vitest-browser-react'
 import { userEvent } from 'vitest/browser'
 import { SignOutDialog } from './sign-out-dialog'
 
-const navigate = vi.fn()
-const reset = vi.fn()
-
-const MOCK_HREF = 'https://app.test/dashboard?tab=1'
+const { navigate, reset, MOCK_HREF } = vi.hoisted(() => ({
+  navigate: vi.fn(),
+  reset: vi.fn(),
+  MOCK_HREF: 'https://app.test/dashboard?tab=1',
+}))
 
 vi.mock('@/stores/auth-store', () => ({
   useAuthStore: () => ({
@@ -33,7 +34,7 @@ describe('SignOutDialog', () => {
       <SignOutDialog open onOpenChange={vi.fn()} />
     )
 
-    await userEvent.click(getByRole('button', { name: /^Sign out$/i }))
+    await userEvent.click(getByRole('button', { name: /^Cerrar sesión$/i }))
 
     expect(reset).toHaveBeenCalledOnce()
     expect(navigate).toHaveBeenCalledWith({
