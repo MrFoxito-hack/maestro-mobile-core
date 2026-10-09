@@ -8,6 +8,13 @@ from app.core.config import get_settings
 
 
 def control_request(payload: dict) -> dict:
+    if payload.get('operation') not in {'status', 'laboratory_snapshot'}:
+        from app.services.policy_authority_client import request
+        authority = payload.get('authority')
+        if not isinstance(authority, dict):
+            raise HTTPException(428, 'policy_authority_lease_required')
+        return request({**authority, 'operation': 'submit',
+                        'command': {k: v for k, v in payload.items() if k != 'authority'}})
     from app.services.execution import RemoteExecutionAdapter
     from app.services.scenarios import scenario_manager
     adapter = scenario_manager.adapter

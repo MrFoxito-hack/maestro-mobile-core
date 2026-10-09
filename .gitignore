@@ -1,4 +1,6 @@
-# Environments & Dependencies
+# Environments & Secrets
+.env
+*.env
 backend/.venv/
 backend/.env
 backend/data/
@@ -13,6 +15,8 @@ chf/.env
 frontend/node_modules/
 frontend/dist/
 frontend/.tanstack/
+frontend/.vitest-attachments/
+frontend/.work/
 
 # Python Cache
 __pycache__/
@@ -27,22 +31,43 @@ __pycache__/
 *.log
 data/captures/
 data/backups/
+data/laboratory/
 
-# Local Dev Configs (Ignored for Collab)
+# Local Dev Configs & Scratch
 docker-compose.override.yml
 docker-compose.local_backup.yml
 frontend/Dockerfile.local
 frontend/nginx.local.conf
+*.cjs
 
-# Exclude reports, papers and research documents
+# Exclude reports, papers, thesis docs & presentation plans
 reportes/
+backend/reportes/
+docs/
 *.pdf
 *.docx
+*.doc
+*.pptx
+PLAN_*.md
+GUION_*.md
+IMPLEMENTATION_PLAN.md
+*.md
+!README.md
+!frontend/README.md
+!frontend/CHANGELOG.md
+!nwdaf/README.md
+!chf/README.md
+!infra/charging/README.md
 
-# Exclude images and media assets
+# Exclude general images, but preserve frontend public assets and 3D models
 *.png
 *.jpg
 *.jpeg
 *.ico
 *.bmp
-frontend/public/images/
+frontend/src/**/__screenshots__/
+
+!frontend/public/images/
+!frontend/public/images/**
+!frontend/public/models/
+!frontend/public/models/**

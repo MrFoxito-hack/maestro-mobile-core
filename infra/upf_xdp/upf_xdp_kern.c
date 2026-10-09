@@ -7,6 +7,9 @@
 #include <linux/tcp.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_endian.h>
+#ifdef MAESTRO_C4
+#include "c4_policy_bpf.h"
+#endif
 
 struct gtpv1_hdr { __u8 flags, type; __be16 length; __be32 teid; };
 struct session {
@@ -15,6 +18,9 @@ struct session {
     __u8 n3_mac[6], gnb_mac[6], n6_mac[6], gateway_mac[6];
     __u8 qfi, pad[3];
     __u64 expires_ns;
+#ifdef MAESTRO_C4
+    struct c4_key policy;
+#endif
 };
 #define SESSION_MAP(name) struct { __uint(type, BPF_MAP_TYPE_HASH); \
     __uint(max_entries, 1024); __type(key, __be32); \
@@ -34,6 +40,24 @@ static __always_inline int count(struct xdp_md *ctx, __u32 reason, int action) {
     if (c) { c->packets++; c->bytes += ctx->data_end - ctx->data; }
     return action;
 }
+#ifdef MAESTRO_URLLC
+/* URLLC accounting is inner IPv4 bytes; redirects are requests, not delivery. */
+static __always_inline void count_inner(__u32 reason, __u32 bytes) {
+    struct counter *c = bpf_map_lookup_elem(&counters, &reason);
+    if (c) { c->packets++; c->bytes += bytes; }
+}
+static __always_inline int mec_flow(struct iphdr *ip, void *end, int uplink) {
+    if (uplink ? ip->daddr != bpf_htonl(0xac1f3002) : ip->saddr != bpf_htonl(0xac1f3002)) return 0;
+    if (ip->protocol == 17) {
+        struct udphdr *u = (void *)(ip + 1);
+        if ((void *)(u + 1) > end || bpf_ntohs(u->len) != bpf_ntohs(ip->tot_len) - 20) return 0;
+        return uplink ? u->dest == bpf_htons(8765) : u->source == bpf_htons(8765);
+    }
+    if (ip->protocol == 1 && (void *)(ip + 1) + 8 <= end)
+        return *(__u8 *)(ip + 1) == (uplink ? 8 : 0);
+    return 0;
+}
+#endif
 static __always_inline __be16 fold(__u32 sum) {
     sum = (sum & 65535) + (sum >> 16);
     sum = (sum & 65535) + (sum >> 16);
@@ -91,6 +115,9 @@ SEC("xdp") int xdp_upf(struct xdp_md *ctx) {
         return count(ctx, PASS, XDP_PASS);
     struct iphdr *ip = (void *)(eth + 1);
     if ((void *)(ip + 1) > end || ip->ihl < 5) return count(ctx, INVALID, XDP_PASS);
+#ifdef MAESTRO_URLLC
+    if (ip->version != 4 || ip->ihl != 5) return count(ctx, UNSUPPORTED, XDP_PASS);
+#endif
     __u32 ihl = ip->ihl * 4;
     struct udphdr *udp = (void *)ip + ihl;
     if (ip->protocol == 17 && (void *)(udp + 1) <= end && udp->dest == bpf_htons(2152)) {
@@ -100,6 +127,10 @@ SEC("xdp") int xdp_upf(struct xdp_md *ctx) {
         __be32 key = gtp->teid;
         struct session *s = bpf_map_lookup_elem(&sessions_uplink_map, &key);
         if (!s) return count(ctx, UNKNOWN, XDP_PASS);
+#ifdef MAESTRO_URLLC
+        if (s->nat || (bpf_ntohl(s->ue) & 0xffff0000) != 0x0a2f0000 ||
+            s->upf != bpf_htonl(0x0ad23216)) return count(ctx, INVALID, XDP_PASS);
+#endif
         if (bpf_ktime_get_ns() > s->expires_ns) return count(ctx, EXPIRED, XDP_PASS);
         if (ctx->ingress_ifindex != s->n3 || ip->saddr != s->gnb || ip->daddr != s->upf)
             return count(ctx, INVALID, XDP_PASS);
@@ -107,6 +138,9 @@ SEC("xdp") int xdp_upf(struct xdp_md *ctx) {
         if (bpf_ntohs(udp->len) != 16 + glen || bpf_ntohs(ip->tot_len) != ihl + 16 + glen)
             return count(ctx, INVALID, XDP_PASS);
         __u8 next = 0;
+#ifdef MAESTRO_URLLC
+        __u8 observed_qfi = 0, psc_count = 0;
+#endif
         if (gtp->flags & 7) {
             __u8 *opt = (void *)(gtp + 1);
             if (opt + 4 > (__u8 *)end) return count(ctx, INVALID, XDP_PASS);
@@ -120,6 +154,12 @@ SEC("xdp") int xdp_upf(struct xdp_md *ctx) {
             if (ext + 1 > (__u8 *)end) return count(ctx, INVALID, XDP_PASS);
             __u32 size = ext[0] * 4;
             if (size < 4 || ext + size > (__u8 *)end) return count(ctx, INVALID, XDP_PASS);
+#ifdef MAESTRO_URLLC
+            if (ext + 4 > (__u8 *)end) return count(ctx, INVALID, XDP_PASS);
+            if (next != 0x85 || size != 4 || ext[1] != 0x10 || (ext[2] & 0xc0))
+                return count(ctx, UNSUPPORTED, XDP_PASS);
+            observed_qfi = ext[2] & 63; psc_count++;
+#endif
             __u32 last_offset = (size - 1) & 1023;
             __u8 *last = ext + last_offset;
             if (last + 1 > (__u8 *)end) return count(ctx, INVALID, XDP_PASS);
@@ -128,6 +168,10 @@ SEC("xdp") int xdp_upf(struct xdp_md *ctx) {
         if (next || off > 264 || off > glen + 8) return count(ctx, UNSUPPORTED, XDP_PASS);
         struct iphdr *inner = (void *)gtp + off;
         if (!supported(inner, end)) return count(ctx, UNSUPPORTED, XDP_PASS);
+#ifdef MAESTRO_URLLC
+        if (psc_count != 1 || observed_qfi != s->qfi || !mec_flow(inner, end, 1))
+            return count(ctx, UNSUPPORTED, XDP_PASS);
+#endif
         if (inner->saddr != s->ue || bpf_ntohs(inner->tot_len) != glen + 8 - off)
             return count(ctx, INVALID, XDP_PASS);
         // Local/control destinations stay in Open5GS. The fast path uses N6's default gateway.
@@ -135,6 +179,11 @@ SEC("xdp") int xdp_upf(struct xdp_md *ctx) {
         if ((dest & 0xffff0000) == 0x0a2d0000 || (dest & 0xffffff00) == 0x0ad23200 ||
             bpf_ntohs(inner->tot_len) > s->mtu) return count(ctx, UNSUPPORTED, XDP_PASS);
         struct session copy = *s;
+#ifdef MAESTRO_C4
+        int verdict = c4_consume(&copy.policy, 0, C4_XDP, bpf_ntohs(inner->tot_len));
+        if (verdict != C4_ALLOW)
+            return verdict == C4_DENY ? XDP_DROP : XDP_PASS;
+#endif
         if (bpf_xdp_adjust_head(ctx, ihl + 8 + off)) return count(ctx, ADJUST_FAIL, XDP_DROP);
         data = (void *)(long)ctx->data; end = (void *)(long)ctx->data_end;
         eth = data; ip = (void *)(eth + 1);
@@ -145,7 +194,11 @@ SEC("xdp") int xdp_upf(struct xdp_md *ctx) {
         __be32 old = ip->saddr, addr = copy.nat ? copy.nat : old;
         ip->saddr = addr;
         rewrite(ip, end, old, addr);
+#ifdef MAESTRO_URLLC
+        count_inner(UL_OK, bpf_ntohs(ip->tot_len));
+#else
         count(ctx, UL_OK, XDP_REDIRECT);
+#endif
         return bpf_redirect(copy.n6, 0);
     }
     __be32 key = ip->daddr;
@@ -155,8 +208,18 @@ SEC("xdp") int xdp_upf(struct xdp_md *ctx) {
     if (bpf_ktime_get_ns() > s->expires_ns) return count(ctx, EXPIRED, XDP_PASS);
     if (!supported(ip, end) || bpf_ntohs(ip->tot_len) + 44 > s->mtu)
         return count(ctx, UNSUPPORTED, XDP_PASS);
+#ifdef MAESTRO_URLLC
+    if (s->nat || (bpf_ntohl(s->ue) & 0xffff0000) != 0x0a2f0000 ||
+        s->upf != bpf_htonl(0x0ad23216) || !mec_flow(ip, end, 0))
+        return count(ctx, UNSUPPORTED, XDP_PASS);
+#endif
     struct session copy = *s;
     __u16 len = bpf_ntohs(ip->tot_len);
+#ifdef MAESTRO_C4
+    int verdict = c4_consume(&copy.policy, 1, C4_XDP, len);
+    if (verdict != C4_ALLOW)
+        return verdict == C4_DENY ? XDP_DROP : XDP_PASS;
+#endif
     __be32 old = ip->daddr;
     ip->daddr = copy.ue; rewrite(ip, end, old, copy.ue);
     if (bpf_xdp_adjust_head(ctx, -44)) return count(ctx, ADJUST_FAIL, XDP_DROP);
@@ -177,7 +240,11 @@ SEC("xdp") int xdp_upf(struct xdp_md *ctx) {
     gtp->flags = 0x34; gtp->type = 255; gtp->length = bpf_htons(len + 8); gtp->teid = copy.dl_teid;
     opt[0] = 0; opt[1] = 0; opt[2] = 0; opt[3] = 0x85;
     opt[4] = 1; opt[5] = 0; opt[6] = copy.qfi & 63; opt[7] = 0;
+#ifdef MAESTRO_URLLC
+    count_inner(DL_OK, len);
+#else
     count(ctx, DL_OK, XDP_REDIRECT);
+#endif
     return bpf_redirect(copy.n3, 0);
 }
 char LICENSE[] SEC("license") = "GPL";

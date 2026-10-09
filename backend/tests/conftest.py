@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 TEST_ROOT = Path(tempfile.mkdtemp(prefix="ems-educativo-tests-"))
 
 os.environ["EMS_EXECUTION_MODE"] = "simulated"
+os.environ["EMS_MULTI_UPF_ENABLED"] = "false"
 os.environ["EMS_ENABLE_REAL_CAPTURES"] = "false"
 os.environ["EMS_DATABASE_PATH"] = str(TEST_ROOT / "test-ems.db")
 os.environ["EMS_CAPTURE_DIR"] = str(TEST_ROOT / "captures")

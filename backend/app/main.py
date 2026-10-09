@@ -9,6 +9,7 @@ from app.db import initialize
 from app.services.trace_tasks import trace_task_service
 from app.services.performance import metrics_collector
 from app.services.alarm_center import alarm_observer
+from app.services.upf_pm import upf_collector
 from app.laboratory.storage import repository as laboratory_repository
 
 
@@ -19,7 +20,9 @@ async def lifespan(_: FastAPI):
     await trace_task_service.initialize()
     await metrics_collector.start()
     await alarm_observer.start()
+    await upf_collector.start()
     yield
+    await upf_collector.stop()
     await alarm_observer.stop()
     await metrics_collector.stop()
     await trace_task_service.shutdown()

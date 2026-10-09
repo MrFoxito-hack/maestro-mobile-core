@@ -37,7 +37,10 @@ import {
 import { EmsPage } from '@/features/ems-page'
 import { PerformanceChart, type ChartMode } from './performance-chart'
 import { ReportDialog } from './report-dialog'
+import { exportPerformance } from './export'
 import { UpfXdpPanel } from './upf-xdp-panel'
+import { UpfTelemetryPanel } from './upf-telemetry-panel'
+import { AbObservationsPanel } from './ab-observations-panel'
 import {
   NF_GROUPS,
   PERFORMANCE_TEMPLATES,
@@ -201,6 +204,11 @@ function PerformanceWorkspace({ scenario }: { scenario: '5g-sa' | '4g-epc' }) {
     setCounterSearch('')
     setAggregation(t.defaultAggregation ?? 'avg')
     setRange(t.defaultRangeKey ?? '1h')
+    setGranularity(
+      t.id === 'upf-slice-performance' || t.id === 'upf-xdp-acceleration'
+        ? 5
+        : 300
+    )
   }
 
   const toggleObject = (id: string) => {
@@ -343,7 +351,8 @@ function PerformanceWorkspace({ scenario }: { scenario: '5g-sa' | '4g-epc' }) {
 
   return (
     <EmsPage title='Performance'>
-      {scenario === '5g-sa' && <UpfXdpPanel />}
+      <UpfTelemetryPanel />
+      <AbObservationsPanel />
       <div className='grid min-h-[600px] grid-cols-1 overflow-hidden rounded-lg border bg-card lg:h-[calc(100dvh-88px)] lg:grid-cols-[210px_minmax(0,1fr)_300px] 2xl:grid-cols-[230px_minmax(0,1fr)_340px]'>
         <aside className='flex min-h-0 flex-col border-b lg:border-r lg:border-b-0'>
           <div className='border-b p-3'>
@@ -534,6 +543,10 @@ function PerformanceWorkspace({ scenario }: { scenario: '5g-sa' | '4g-epc' }) {
               label='Resolución'
               value={String(granularity)}
               options={[
+                ...(template.id === 'upf-slice-performance' ||
+                template.id === 'upf-xdp-acceleration'
+                  ? [['5', '5 s'], ['30', '30 s'], ['60', '1 min']]
+                  : []),
                 [
                   '300',
                   requires30m ? '5 min (Bloqueado)' : '5 min',
@@ -543,7 +556,26 @@ function PerformanceWorkspace({ scenario }: { scenario: '5g-sa' | '4g-epc' }) {
               ]}
               onChange={(v) => setGranularity(Number(v))}
             />
+            {(['csv', 'json'] as const).map((format) => (
+              <Button key={format} size='sm' variant='ghost'
+                aria-label={`Exportar ${format.toUpperCase()}`}
+                disabled={!result.data?.series.length}
+                onClick={() => result.data && exportPerformance(result.data, format)}>
+                {format.toUpperCase()}
+              </Button>
+            ))}
           </div>
+
+          {template.id === 'upf-xdp-acceleration' && (
+
+            <div className='border-b bg-muted/10 p-3'>
+
+              <UpfXdpPanel />
+
+            </div>
+
+          )}
+
           <div className='min-h-0 flex-1 p-3'>
             {catalog.isError || result.isError ? (
               <div className='flex h-full items-center justify-center text-sm text-destructive'>

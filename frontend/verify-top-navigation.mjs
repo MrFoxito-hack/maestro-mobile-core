@@ -29,9 +29,7 @@ try {
   }
   await page.getByRole('button',{name:'Menú de usuario'}).click()
   await page.getByRole('menuitem',{name:'Cerrar sesión'}).waitFor()
-  await page.keyboard.press('Escape')
-  await page.getByRole('button',{name:'Toggle theme'}).click()
-  await page.getByRole('menuitem',{name:'Dark',exact:true}).click()
+  assert.equal(await page.getByRole('button',{name:'Toggle theme'}).count(),0)
   assert.ok(await page.locator('html').evaluate(el=>el.classList.contains('dark')))
   await page.screenshot({path:'../reportes/navegacion-superior.png',fullPage:true})
   for (const width of [1280,768,390]) {

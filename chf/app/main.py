@@ -15,7 +15,7 @@ from app.body_limit import BodyLimitMiddleware
 from app.config import Settings, get_settings
 from app.errors import ChargingError
 from app.metrics import RequestMetrics
-from app.models import AccountUpsert, ChargingDataRequest, ChargingDataResponse, ReconcileRequest, TopupRequest
+from app.models import AccountUpsert, ChargingDataRequest, ChargingDataResponse, ReconcileRequest, TopupRequest, ServicePolicy, MessageAccountUpsert
 from app.repository import ChargingRepository
 from app.service import ChargingService
 
@@ -154,6 +154,18 @@ def create_app(settings: Settings | None = None, *, management=False):
         @application.post('/admin/v1/accounts/{supi}/topup')
         def account_topup(supi: str, payload: TopupRequest, actor=Depends(require_admin)):
             return repository.topup(supi, payload.amountBytes, payload.requestId, actor)
+
+        @application.put('/admin/v1/service-policies')
+        def policy_put(payload: ServicePolicy, actor=Depends(require_admin)):
+            return repository.upsert_policy(payload, actor)
+
+        @application.get('/admin/v1/service-policies', dependencies=[Depends(require_reader)])
+        def policies_get():
+            return {'items': repository.list_policies()}
+
+        @application.put('/admin/v1/accounts/{supi}/messages')
+        def message_account_put(supi: str, payload: MessageAccountUpsert, actor=Depends(require_admin)):
+            return repository.upsert_message_account(supi, payload.quotaMessages, actor)
 
         @application.put("/admin/v1/accounts/{supi}")
         def account_put(supi: str, payload: AccountUpsert, actor=Depends(require_admin)):

@@ -11,26 +11,32 @@ from fastapi import HTTPException
 from app.core.config import get_settings
 from app.db import transaction
 from app.services import terminal
+from app.services.upf_inventory import profile
 
 POOLS = {'internet': ipaddress.ip_network('10.45.0.0/16'),
+         '5g-plus': ipaddress.ip_network('10.47.0.0/16'),
          'corporate': ipaddress.ip_network('10.46.0.0/16')}
 
-SINGLE_SESSION_SCRIPT = r'''
-import os,pathlib,shutil,sys,yaml
-apn=sys.argv[1]
-if apn not in ('internet','corporate'):
- raise SystemExit('invalid DNN')
-path=pathlib.Path('/home/emsadmin/UERANSIM/config/open5gs-ue.yaml')
-backup=path.with_name(path.name+'.before-single-session')
-data=yaml.safe_load(path.read_text())
-if not backup.exists():
- shutil.copy2(path,backup)
-data['sessions']=[{'type':'IPv4','apn':apn,'slice':{'sst':1,'sd':1 if apn=='internet' else 2}}]
-tmp=path.with_name(path.name+'.maestro.tmp')
-tmp.write_text(yaml.safe_dump(data,sort_keys=False))
-os.chmod(tmp,path.stat().st_mode)
-os.replace(tmp,path)
-'''
+def expected_slice(apn):
+    if not get_settings().multi_upf_enabled:
+        if apn == '5g-plus':
+            raise HTTPException(409, 'Perfil URLLC pendiente de migración y aceptación del core')
+        return {'sst': 1, 'sd': 1 if apn == 'internet' else 2}
+    target = profile(apn)
+    if target is None:
+        raise HTTPException(422, 'DNN no permitido')
+    return {'sst': target['sst'], 'sd': int(target['sd'], 16)}
+
+
+def matches_slice(observed, expected):
+    if not isinstance(observed, dict):
+        return False
+    sd = observed.get('sd')
+    try:
+        sd = int(sd, 16) if isinstance(sd, str) else sd
+    except ValueError:
+        return False
+    return observed.get('sst') == expected['sst'] and sd == expected['sd']
 
 
 def key(data):
@@ -82,7 +88,9 @@ def describe(data):
 
 
 async def resolve(imsi=None, required=None):
+    imsi = terminal.normalize_imsi(imsi)
     data = await terminal.read_terminal(imsi)
+    terminal.confirm_identity(data, imsi)
     selection = describe(data)
     if required and selection['active_apn'] != required:
         raise HTTPException(403, 'Servicio no permitido en el DNN seleccionado')
@@ -95,13 +103,17 @@ async def resolve(imsi=None, required=None):
 async def select(apn, imsi=None):
     if apn not in POOLS:
         raise HTTPException(422, 'DNN no permitido')
-    async with terminal._control_lock:
+    expected = expected_slice(apn)
+    async with terminal.control_lock(imsi):
         data = await terminal.read_terminal(imsi)
+        terminal.confirm_identity(data, imsi)
         matches = [s for s in sessions(data) if s['apn'] == apn]
         if len(matches) != 1 and len(sessions(data)) == 1:
             matches = [await _switch_single_session(apn, data)]
         if len(matches) != 1:
             raise HTTPException(409, 'DNN sin una sesión PDU activa inequívoca')
+        if get_settings().multi_upf_enabled and not matches_slice(matches[0]['snssai'], expected):
+            raise HTTPException(409, 'El S-NSSAI observado no coincide con el perfil solicitado')
         with transaction() as conn:
             conn.execute('INSERT INTO terminal_preferences VALUES(?,?,?) ON CONFLICT(terminal_key) '
                          'DO UPDATE SET apn=excluded.apn, updated_at=excluded.updated_at',
@@ -111,9 +123,9 @@ async def select(apn, imsi=None):
 
 async def _switch_single_session(apn, data):
     """Release the current UE context and reconnect with one requested DNN."""
+    expected = expected_slice(apn)
     supi = data.get('supi')
-    if supi != 'imsi-999700000000001':
-        raise HTTPException(409, 'La conmutaciÃ³n de DNN estÃ¡ habilitada solo para el UE primario')
+    await terminal.terminal_runtime.control(supi, 'inspect')
     remote = terminal.adapter()
     settings = get_settings()
     try:
@@ -124,12 +136,11 @@ async def _switch_single_session(apn, data):
     except Exception:
         pass
 
-    await remote.stop_service('ueransim-ue')
-    command = 'python3 -c ' + shlex.quote(SINGLE_SESSION_SCRIPT) + ' ' + shlex.quote(apn)
+    await terminal.terminal_runtime.control(supi, 'stop')
     try:
-        await remote._run(command, port=settings.ue_ssh_port)
+        await terminal.terminal_runtime.control(supi, 'configure', apn=apn, expected=expected)
     finally:
-        await remote.start_service('ueransim-ue')
+        await terminal.terminal_runtime.control(supi, 'start')
 
     terminal._af_boost_sessions.pop(supi, None)
     terminal.clear_dynamic_pcc_qos(supi)
@@ -140,7 +151,8 @@ async def _switch_single_session(apn, data):
         except Exception:
             continue
         selected = [session for session in observed if session['apn'] == apn]
-        if len(observed) == 1 and len(selected) == 1:
+        if (len(observed) == 1 and len(selected) == 1 and
+                matches_slice(selected[0]['snssai'], expected)):
             return selected[0]
     raise HTTPException(504, f'El UE no confirmÃ³ la sesiÃ³n PDU {apn} dentro del plazo')
 

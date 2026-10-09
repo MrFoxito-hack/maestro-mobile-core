@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse
 
-from app.api.deps import current_user
+from app.api.deps import current_user, operator_user
 from app.db import add_audit
 from app.models import OperationExecute, UserPublic
 from app.services.operations import OperationError, operations_service, _safe_value
@@ -34,6 +35,7 @@ async def execute(payload: OperationExecute, user: UserPublic = Depends(current_
             payload.operation_id,
             payload.parameters,
             user,
+            authority=payload.authority.model_dump() if payload.authority else None,
         )
         add_audit(
             user.username,
@@ -52,7 +54,31 @@ async def execute(payload: OperationExecute, user: UserPublic = Depends(current_
         raise HTTPException(403, str(exc)) from exc
     except OperationError as exc:
         add_audit(user.username, user.role, user.testbed, "operation.execute", audit_parameters, "failed")
-        raise HTTPException(422, str(exc)) from exc
+        if exc.result is not None:
+            return JSONResponse(status_code=exc.status_code, content={"detail": str(exc), "result": exc.result})
+        raise HTTPException(exc.status_code, str(exc)) from exc
+
+
+@router.get('/policy-authority')
+def authority_status(user: UserPublic = Depends(operator_user)):
+    from app.services.policy_authority_client import request
+    return request({'operation': 'status'})
+
+
+@router.post('/policy-authority/lease')
+def authority_acquire(expected_version: int = Query(ge=0), ttl: int = Query(default=30, ge=5, le=60),
+                      user: UserPublic = Depends(operator_user)):
+    from app.services.policy_authority_client import request, owner_for
+    return request({'operation': 'acquire', 'owner': owner_for(user),
+                    'expected_version': expected_version, 'ttl': ttl})
+
+
+@router.post('/policy-authority/commit')
+def authority_commit(token: int = Query(ge=1), expected_version: int = Query(ge=0),
+                     user: UserPublic = Depends(operator_user)):
+    from app.services.policy_authority_client import request, owner_for
+    return request({'operation': 'commit', 'owner': owner_for(user),
+                    'token': token, 'expected_version': expected_version})
 
 
 @router.get("/history")

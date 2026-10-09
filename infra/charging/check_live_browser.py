@@ -18,7 +18,9 @@ if not user:
     raise SystemExit('No enabled teacher')
 env = os.environ | {'MAESTRO_CHECK_TOKEN': create_token(user['username'], user['role']),
                     'MAESTRO_CHECK_USER': user['username']}
-script = ('tools/check-terminal-apn.mjs' if '--apn' in sys.argv else
+script = ('tools/check-verticals.mjs' if '--verticals' in sys.argv else
+          'tools/check-terminal-triad.mjs' if '--triad' in sys.argv else
+          'tools/check-terminal-apn.mjs' if '--apn' in sys.argv else
           'tools/check-terminal-video.mjs' if '--video' in sys.argv else
           'tools/check-terminal.mjs' if '--terminal' in sys.argv else 'tools/check-chf-live.mjs')
 raise SystemExit(subprocess.call(['node', script], cwd=ROOT / 'frontend', env=env))

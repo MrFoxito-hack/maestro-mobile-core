@@ -287,8 +287,12 @@ export function VideoLab({
 
     stop()
     const runId = ++generation.current
-    const activeImsi = (selectedImsi || 'imsi-999700000000001').startsWith('imsi-')
-      ? (selectedImsi || 'imsi-999700000000001')
+    if (!selectedImsi) {
+      setNotice('Seleccione un terminal autorizado.')
+      return
+    }
+    const activeImsi = selectedImsi.startsWith('imsi-')
+      ? selectedImsi
       : `imsi-${selectedImsi}`
     observation.current = observePlayback(video.current, activeImsi, targetProfile, (data) => {
       void api.post('/terminal/media/experience', data).catch(() => {

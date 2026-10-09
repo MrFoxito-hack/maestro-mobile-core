@@ -20,6 +20,7 @@ import {
   Wrench,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { isAxiosError } from 'axios'
 import { useScenarioStore } from '@/stores/scenario-store'
 import { api, apiErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -245,8 +246,27 @@ export function CommandsPage() {
     mutationFn: async ({
       original_command: _original,
       ...payload
-    }: OperationExecutePayload) =>
-      (await api.post<OperationResult>('/operations/execute', payload)).data,
+    }: OperationExecutePayload) => {
+      if (!['pcf.qos', 'nwdaf.mode'].includes(payload.operation_id)) {
+        return (await api.post<OperationResult>('/operations/execute', payload)).data
+      }
+      const state = (await api.get<{ version: number }>('/operations/policy-authority')).data
+      const lease = (await api.post<{ token: number; expected_version: number }>(
+        `/operations/policy-authority/lease?expected_version=${state.version}`
+      )).data
+      // Keep the identity of this action through the request. Never obtain a
+      // new lease or repeat a mutation automatically after an unknown outcome.
+      const result = (await api.post<OperationResult>('/operations/execute', {
+        ...payload,
+        authority: { ...lease, action_id: crypto.randomUUID() },
+      })).data
+      const receipt = result.data as { version?: number; effective_policy_verified?: boolean } | null
+      if (receipt?.effective_policy_verified !== true || receipt.version === undefined) {
+        throw new Error('La política efectiva no está confirmada; recuperación pendiente.')
+      }
+      await api.post(`/operations/policy-authority/commit?token=${lease.token}&expected_version=${receipt.version}`)
+      return result
+    },
     onSuccess: (result, variables) => {
       const component = components.find(
         (item) => item.id === variables.component_id
@@ -283,7 +303,13 @@ export function CommandsPage() {
       executionLock.current = false
     },
     onError: (error, variables) => {
-      showCommandError(
+      const result = isAxiosError<{ result?: OperationResult }>(error) ? error.response?.data.result : undefined
+      if (result?.id && result.status === 'failed') {
+        setLastResult(result)
+        setLastMmlCommand(redactMml(variables.original_command ?? commandInput))
+        setResultTab('result')
+        void queryClient.invalidateQueries({ queryKey: ['operations-history', scenario] })
+      } else showCommandError(
         apiErrorMessage(error, 'El nodo rechazó el comando.'),
         variables.original_command ?? commandInput
       )
@@ -842,6 +868,11 @@ export function CommandsPage() {
                   </div>
                 )}
 
+                {/^\s*ADD\s+5G-SUB\b/i.test(commandInput) && (
+                  <p role='note' className='text-xs text-amber-600'>
+                    Los UEs 001–006 están reservados. ADD rechaza un IMSI existente sin sobrescribir su suscripción.
+                  </p>
+                )}
                 <form
                   className='flex items-center gap-2'
                   onSubmit={(event) => {

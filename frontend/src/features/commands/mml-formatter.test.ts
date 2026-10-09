@@ -28,12 +28,12 @@ const subscriber: OperationDefinition = {
     },
     { id: 'key', label: 'K', type: 'text' },
     { id: 'sd', label: 'SD', type: 'text', pattern: '^[0-9a-fA-F]{6}$' },
-    { id: 'sst', label: 'SST', type: 'number', default: 1 },
+    { id: 'sst', label: 'SST', type: 'number', required: true, minimum: 0, maximum: 255 },
     {
       id: 'apn_dnn',
       label: 'DNN',
       type: 'select',
-      options: [{ value: 'corporate', label: 'corporate' }],
+      options: ['internet', '5g-plus', 'corporate'].map(value => ({ value, label: value })),
     },
   ],
 }
@@ -87,11 +87,30 @@ const catalog: OperationsCatalog = {
     id: ['udm', 'nwdaf', 'pcf'][index],
     label: ['UDM', 'NWDAF', 'PCF'][index],
     unit: '',
-    operations: [op],
+    operations: index === 0 ? [op, { ...op, id: 'subscriber.update', label: 'SET 5G-SUB' }, { ...op, id: 'subscriber.delete', label: 'RMV 5G-SUB', parameters: [op.parameters[0]] }] : [op],
   })),
 }
 
 describe('MML transactions', () => {
+  it.each([
+    ['001', 1, '000001', 'internet'], ['004', 1, '000001', 'internet'],
+    ['002', 2, '000002', '5g-plus'], ['005', 2, '000002', '5g-plus'],
+    ['003', 3, '000003', 'corporate'], ['006', 3, '000003', 'corporate'],
+  ])('parses complete slicing triplets for UE %s', (suffix, sst, sd, dnn) => {
+    for (const verb of ['ADD', 'SET', 'MOD']) {
+      const result = parseMmlCommand(`${verb} 5G-SUB: IMSI="999700000000${suffix}", SST=${sst}, SD="${sd}", DNN="${dnn}";`, catalog)
+      expect(result).toMatchObject({ success: true, parameters: { sst, sd, apn_dnn: dnn } })
+      if (result.success) expect(parseMmlCommand(result.normalizedMml, catalog)).toEqual(result)
+    }
+    expect(parseMmlCommand(`RMV 5G-SUB: IMSI="999700000000${suffix}";`, catalog).success).toBe(true)
+  })
+  it.each([
+    'SST=1, SD="000003", DNN="corporate"', 'SST=2, SD="000002", DNN="internet"',
+    'SST=3, DNN="corporate"', 'SD="000003", DNN="corporate"', 'SST=3, SD="000003"',
+    'SST=3, SST=2, SD="000003", DNN="corporate"', 'SST=3, SD="00003", DNN="corporate"',
+  ])('rejects incomplete, incompatible or duplicated triplets: %s', (parameters) => {
+    expect(parseMmlCommand(`SET 5G-SUB: IMSI="999700000000006", ${parameters};`, catalog).success).toBe(false)
+  })
   const smfCatalog: OperationsCatalog = {
     ...catalog,
     components: ['smf', 'smf2'].map((id, index) => ({
@@ -126,15 +145,15 @@ describe('MML transactions', () => {
 
   it('preserves identifiers and leading zeros while mapping aliases', () => {
     const result = parseMmlCommand(
-      'ADD 5G-SUB: IMSI="099700000000007", SD="000002", K="00000000000000000000000000000001", DNN="corporate";',
+      'ADD 5G-SUB: IMSI="099700000000007", SST=3, SD="000003", K="00000000000000000000000000000001", DNN="corporate";',
       catalog
     )
     expect(result.success).toBe(true)
     if (!result.success) return
     expect(result.parameters).toMatchObject({
       imsi: '099700000000007',
-      sd: '000002',
-      sst: 1,
+      sd: '000003',
+      sst: 3,
       apn_dnn: 'corporate',
     })
     expect(result.parameters.key).toBe('00000000000000000000000000000001')

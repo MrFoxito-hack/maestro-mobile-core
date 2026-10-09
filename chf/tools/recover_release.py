@@ -45,13 +45,16 @@ def parse_journal(data):
         if event == 'pfcp_usage':
             report = json.loads(entry['body'])
             sequence, ul, dl = (report[k] for k in ('sequence', 'uplink', 'downlink'))
+            packets = report.get('serviceSpecificUnits')
+            if packets is not None and (type(packets) is not int or not 0 <= packets <= 2**53-1):
+                raise ValueError('Invalid PFCP packet evidence')
             if any(type(x) is not int or x < 0 for x in (sequence, ul, dl)):
                 raise ValueError('Invalid PFCP volume evidence')
-            if sequence in reports and reports[sequence] != (ul, dl):
+            if sequence in reports and reports[sequence] != (ul, dl, packets):
                 raise ValueError('Conflicting PFCP retransmission')
             if sequence not in reports and sequence != len(reports):
                 raise ValueError('PFCP sequence gap; no automatic settlement')
-            reports[sequence] = (ul, dl)
+            reports[sequence] = (ul, dl, packets)
         elif event == 'invalid_final_usage':
             raise ValueError('Final PFCP evidence unavailable')
         elif event == 'release_queued':
@@ -71,7 +74,7 @@ def parse_journal(data):
                 raise ValueError('Journal/request sequence differs')
             for unit in request.multipleUnitUsage:
                 for used in unit.usedUnitContainer:
-                    if reports.get(used.localSequenceNumber) != (used.uplinkVolume, used.downlinkVolume):
+                    if reports.get(used.localSequenceNumber) != (used.uplinkVolume, used.downlinkVolume, used.serviceSpecificUnits):
                         raise ValueError('Request volume differs from durable PFCP evidence')
             pending = (entry, request)
             last_sequence = sequence

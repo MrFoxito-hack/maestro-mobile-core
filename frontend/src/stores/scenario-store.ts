@@ -11,6 +11,14 @@ export const useScenarioStore = create<{
       scenario: '5g-sa',
       setScenario: (scenario) => set({ scenario }),
     }),
-    { name: 'ems-scenario', partialize: ({ scenario }) => ({ scenario }) }
+    {
+      name: 'ems-scenario',
+      partialize: ({ scenario }) => ({ scenario }),
+      onRehydrateStorage: () => (state) => {
+        if (state && state.scenario !== '5g-sa') {
+          state.scenario = '5g-sa'
+        }
+      },
+    }
   )
 )

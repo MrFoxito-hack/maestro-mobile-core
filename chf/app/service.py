@@ -3,7 +3,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
-from app.engine import settle
+from app.engine import settle, settle_zero_rated
 from app.errors import ChargingError
 from app.models import (MAX_BYTES, ChargingDataRequest, ChargingDataResponse,
                         FinalUnitIndication, GrantedUnit, MultipleUnitInformation)
@@ -27,11 +27,15 @@ def create_key(request):
                         request.subscriberIdentifier, request.chargingId])
 
 
-def requested_volume(request, default_grant):
+def requested_volume(request, default_grant, mode='BYTE_QUOTA'):
     if not request.multipleUnitUsage:
         raise ChargingError(400, "MANDATORY_IE_MISSING", "one ratingGroup is required")
     usage = request.multipleUnitUsage[0]
-    wanted = usage.requestedUnit.totalVolume if usage.requestedUnit else None
+    unit = usage.requestedUnit
+    messages = mode == 'MESSAGE_QUOTA'
+    if unit and (unit.totalVolume is not None if messages else unit.serviceSpecificUnits is not None):
+        raise ChargingError(400, 'UNIT_TYPE_MISMATCH', 'requested units differ from the service policy')
+    wanted = (unit.serviceSpecificUnits if messages else unit.totalVolume) if unit else None
     return usage.ratingGroup, default_grant if wanted is None else wanted
 
 
@@ -41,13 +45,14 @@ class ChargingService:
         self.default_grant = default_grant
         self.validity_time = validity_time
 
-    def _response(self, request, rating_group, grant, final, *, denied=False):
+    def _response(self, request, rating_group, grant, final, *, denied=False, messages=False):
         return ChargingDataResponse(
             invocationTimeStamp=datetime.now(timezone.utc),
             invocationSequenceNumber=request.invocationSequenceNumber,
             multipleUnitInformation=[MultipleUnitInformation(
                 resultCode="END_USER_SERVICE_DENIED" if denied else ("SUCCESS" if grant else "QUOTA_LIMIT_REACHED"),
-                ratingGroup=rating_group, grantedUnit=GrantedUnit(totalVolume=grant),
+                ratingGroup=rating_group, grantedUnit=GrantedUnit(**{
+                    'serviceSpecificUnits' if messages else 'totalVolume': grant}),
                 validityTime=self.validity_time,
                 # FUI with a positive grant applies AFTER those last units are used.
                 finalUnitIndication=FinalUnitIndication(finalUnitAction="TERMINATE") if final else None,
@@ -75,7 +80,9 @@ class ChargingService:
             raise ChargingError(400, "SEQUENCE_OUT_OF_ORDER", "initial invocation is 1 (0 accepted for legacy clients)")
         if not request.notifyUri:
             raise ChargingError(400, "MANDATORY_IE_MISSING", "notifyUri is required for session Create")
-        rating_group, wanted = requested_volume(request, self.default_grant)
+        if not request.multipleUnitUsage:
+            raise ChargingError(400, 'MANDATORY_IE_MISSING', 'one ratingGroup is required')
+        rating_group = request.multipleUnitUsage[0].ratingGroup
         unit = request.multipleUnitUsage[0]
         if unit.usedUnitContainer:
             raise ChargingError(400, "UNSUPPORTED_PROFILE", "initial usage on Create is not supported by this pre-delivery profile")
@@ -94,24 +101,41 @@ class ChargingService:
             account = self.repository.account_snapshot(conn, supi)
             if not account or not account['enabled']:
                 raise ChargingError(403, "USER_UNKNOWN", "subscriber has no enabled charging account")
-            value = settle(quota=account['quota_bytes'], consumed=account['consumed_bytes'],
-                           other_reserved=account['reserved_bytes'], reserved=0, used=0,
-                           wanted=wanted, enabled=True)
-            ref, now = str(uuid4()), utc_now()
             context = request.pDUSessionChargingInformation
+            policy = self.repository.resolve_policy(conn, context, rating_group)
+            mode = policy['mode']
+            messages = mode == 'MESSAGE_QUOTA'
+            _, wanted = requested_volume(request, policy['grantBlockSize'] if messages else self.default_grant, mode)
+            if mode == 'ZERO_RATED':
+                value = settle_zero_rated(authorized=0, used=0, wanted=wanted, enabled=True)
+            else:
+                wallet = self.repository.message_snapshot(conn, supi) if messages else account
+                if not wallet:
+                    raise ChargingError(403, 'USER_UNKNOWN', 'message quota account is required')
+                suffix = 'messages' if messages else 'bytes'
+                value = settle(quota=wallet['quota_' + suffix], consumed=wallet['consumed_' + suffix],
+                               other_reserved=wallet['reserved_' + suffix], reserved=0, used=0,
+                               wanted=min(wanted, policy['grantBlockSize']) if messages else wanted, enabled=True)
+            ref, now = str(uuid4()), utc_now()
             conn.execute("""INSERT INTO charging_sessions(charging_data_ref,create_key,supi,rating_group,
                 status,reserved_bytes,consumed_bytes,last_invocation_sequence,created_at,updated_at,
                 owner_nf,charging_id,notify_uri,context_json,upf_id,granted_bytes,valid_until)
                 VALUES(?,?,?,?,'OPEN',?,0,?,?,?,?,?,?,?,?,?,?)""",
-                (ref, identity, supi, rating_group, value.reservation, request.invocationSequenceNumber,
+                (ref, identity, supi, rating_group, value.reservation if mode == 'BYTE_QUOTA' else 0, request.invocationSequenceNumber,
                  now, now, owner, request.chargingId, str(request.notifyUri),
                  context.model_dump_json(exclude_none=True) if context else None,
-                 str(unit.uPFID) if unit.uPFID else "", value.reservation, self._valid_until()))
-            result = self._response(request, rating_group, value.reservation, value.final)
-            self._event(conn, ref, "CREATE", request, result, 0, value.reservation, result.multipleUnitInformation[0].resultCode)
+                 str(unit.uPFID) if unit.uPFID else "", 0 if messages else value.reservation, self._valid_until()))
+            conn.execute('''UPDATE charging_sessions SET policy_json=?,authorized_bytes=?,
+                reserved_messages=?,granted_messages=? WHERE charging_data_ref=?''',
+                (json.dumps(policy, sort_keys=True), 0 if messages else value.reservation,
+                 value.reservation if messages else 0, value.reservation if messages else 0, ref))
+            result = self._response(request, rating_group, value.reservation, value.final, messages=messages)
+            self._event(conn, ref, "CREATE", request, result, 0, 0 if messages else value.reservation, result.multipleUnitInformation[0].resultCode)
             self.repository.append_ledger(conn, supi, ref, "CREATE", owner,
                 {"before": account, "after": self.repository.account_snapshot(conn, supi),
-                 "grant": value.reservation})
+                 "grant": value.reservation, 'policy': policy,
+                 'unit': 'MESSAGE' if messages else 'BYTE',
+                 'walletReservation': value.reservation if mode != 'ZERO_RATED' else 0})
         return ref, result
 
     @staticmethod
@@ -134,7 +158,8 @@ class ChargingService:
 
     @staticmethod
     def _usage(conn, session, request):
-        totals = dict(total=0, ul=0, dl=0)
+        totals = dict(total=0, ul=0, dl=0, messages=0)
+        message_policy = json.loads(session['policy_json'])['mode'] == 'MESSAGE_QUOTA'
         last = session['last_usage_sequence']
         if not request.multipleUnitUsage:
             return totals, last
@@ -142,6 +167,8 @@ class ChargingService:
         if unit.ratingGroup != session['rating_group'] or (str(unit.uPFID) if unit.uPFID else "") != session['upf_id']:
             raise ChargingError(409, "CONTEXT_MISMATCH", "ratingGroup or UPF differs from Create")
         for report in unit.usedUnitContainer:
+            if (report.serviceSpecificUnits is None) == message_policy:
+                raise ChargingError(400, 'UNIT_TYPE_MISMATCH', 'usage units differ from the service policy')
             payload = report.model_dump(mode="json", exclude_none=True)
             digest = digest_json(payload)
             previous = conn.execute("SELECT payload_hash FROM usage_events WHERE charging_data_ref=? AND local_sequence=?",
@@ -160,8 +187,11 @@ class ChargingService:
             totals['total'] += report.volume()
             totals['ul'] += ul
             totals['dl'] += dl
+            totals['messages'] += report.serviceSpecificUnits or 0
         if session['observed_bytes'] + totals['total'] > MAX_BYTES:
             raise ChargingError(400, "VOLUME_LIMIT", "session exceeds the exact-integer profile limit")
+        if session['observed_messages'] + totals['messages'] > MAX_BYTES:
+            raise ChargingError(400, 'VOLUME_LIMIT', 'message count exceeds the exact-integer profile limit')
         return totals, last
 
     def update(self, ref, request):
@@ -188,15 +218,26 @@ class ChargingService:
                 raise ChargingError(410, "CONTEXT_NOT_FOUND", "resource already closed; replay the exact Release for a retry")
             if request.invocationSequenceNumber != session['last_invocation_sequence'] + 1:
                 raise ChargingError(409, "SEQUENCE_OUT_OF_ORDER", "invocation sequence must advance by exactly one")
-            rating_group, wanted = (session['rating_group'], 0) if release else requested_volume(request, self.default_grant)
+            policy = json.loads(session['policy_json'])
+            mode = policy['mode']
+            messages = mode == 'MESSAGE_QUOTA'
+            rating_group, wanted = (session['rating_group'], 0) if release else requested_volume(
+                request, policy['grantBlockSize'] if messages else self.default_grant, mode)
             totals, last = self._usage(conn, session, request)
             account = self.repository.account_snapshot(conn, session['supi'])
-            allowed = bool(account['enabled']) and not session['overrun_bytes']
-            value = settle(quota=account['quota_bytes'], consumed=account['consumed_bytes'],
-                           other_reserved=account['reserved_bytes']-session['reserved_bytes'],
-                           reserved=session['reserved_bytes'], used=totals['total'],
-                           wanted=wanted, enabled=allowed, release=release)
-            if session['granted_bytes'] + value.reservation > MAX_BYTES:
+            allowed = bool(account['enabled']) and (mode == 'ZERO_RATED' or not session['overrun_messages' if messages else 'overrun_bytes'])
+            if mode == 'ZERO_RATED':
+                value = settle_zero_rated(authorized=session['authorized_bytes'], used=totals['total'],
+                                         wanted=wanted, enabled=allowed, release=release)
+            else:
+                wallet = self.repository.message_snapshot(conn, session['supi']) if messages else account
+                suffix = 'messages' if messages else 'bytes'
+                value = settle(quota=wallet['quota_' + suffix], consumed=wallet['consumed_' + suffix],
+                               other_reserved=wallet['reserved_' + suffix]-session['reserved_' + suffix],
+                               reserved=session['reserved_' + suffix], used=totals['messages' if messages else 'total'],
+                               wanted=min(wanted, policy['grantBlockSize']) if messages else wanted,
+                               enabled=allowed, release=release)
+            if session['granted_messages' if messages else 'granted_bytes'] + value.reservation > MAX_BYTES:
                 raise ChargingError(400, 'VOLUME_LIMIT', 'allocation history exceeds the exact-integer profile limit')
             now = utc_now()
             reason = self._release_reason(request) if release else None
@@ -207,20 +248,33 @@ class ChargingService:
                 unclassified_bytes=unclassified_bytes+?,overrun_bytes=overrun_bytes+?,
                 granted_bytes=granted_bytes+?,last_usage_sequence=?,last_invocation_sequence=?,
                 updated_at=?,released_at=?,valid_until=?,closure_reason=? WHERE charging_data_ref=?""",
-                ("RELEASED" if release else "OPEN", value.reservation, value.debit, totals['total'],
+                ("RELEASED" if release else "OPEN", value.reservation if mode == 'BYTE_QUOTA' else 0,
+                 0 if messages else value.debit, totals['total'],
                  totals['ul'], totals['dl'], totals['total']-totals['ul']-totals['dl'],
-                 value.overrun, value.reservation, last, request.invocationSequenceNumber,
+                 0 if messages else value.overrun, 0 if messages else value.reservation, last, request.invocationSequenceNumber,
                  now, now if release else None, self._valid_until(), reason, ref))
-            conn.execute("UPDATE charging_accounts SET consumed_bytes=consumed_bytes+?,updated_at=? WHERE supi=?",
-                         (value.debit, now, session['supi']))
-            result = None if release else self._response(request, rating_group, value.reservation, value.final, denied=not allowed)
-            self._event(conn, ref, operation, request, result, totals['total'], value.reservation,
+            conn.execute('''UPDATE charging_sessions SET authorized_bytes=?,reserved_messages=?,
+                consumed_messages=consumed_messages+?,observed_messages=observed_messages+?,
+                overrun_messages=overrun_messages+?,granted_messages=granted_messages+?
+                WHERE charging_data_ref=?''',
+                (0 if messages else value.reservation, value.reservation if messages else 0,
+                 value.debit if messages else 0, totals['messages'], value.overrun if messages else 0,
+                 value.reservation if messages else 0, ref))
+            if messages:
+                conn.execute('UPDATE message_accounts SET consumed_messages=consumed_messages+? WHERE supi=?',
+                             (value.debit, session['supi']))
+            else:
+                conn.execute("UPDATE charging_accounts SET consumed_bytes=consumed_bytes+?,updated_at=? WHERE supi=?",
+                             (value.debit, now, session['supi']))
+            result = None if release else self._response(request, rating_group, value.reservation, value.final, denied=not allowed, messages=messages)
+            self._event(conn, ref, operation, request, result, totals['total'], 0 if messages else value.reservation,
                         "RELEASED" if release else result.multipleUnitInformation[0].resultCode)
             self.repository.append_ledger(conn, session['supi'], ref, operation, session['owner_nf'],
                 {"before": account, "after": self.repository.account_snapshot(conn, session['supi']),
                  "observedDelta": totals['total'], "debit": value.debit, "overrun": value.overrun,
-                 "returnedReservation": max(0, session['reserved_bytes']-value.debit),
-                 "replacementGrant": value.reservation})
+                 "returnedReservation": max(0, session['reserved_messages' if messages else 'reserved_bytes']-value.debit),
+                 "replacementGrant": value.reservation, 'policy': policy,
+                 'unit': 'MESSAGE' if messages else 'BYTE', 'observedMessages': totals['messages']})
             if release:
                 self._cdr(conn, ref, reason, "NF_REPORTED")
             return result
@@ -238,7 +292,10 @@ class ChargingService:
         session = dict(conn.execute("SELECT * FROM charging_sessions WHERE charging_data_ref=?", (ref,)).fetchone())
         context = json.loads(session['context_json']) if session['context_json'] else {}
         pdu = context.get('pduSessionInformation') or {}
-        record = dict(schemaVersion=1, recordType="MAESTRO_EDUCATIONAL_CDR",
+        record = dict(schemaVersion=2, recordType="MAESTRO_EDUCATIONAL_CDR",
+                      servicePolicy=json.loads(session['policy_json']), ratingGroup=session['rating_group'],
+                      totalMessages=session['observed_messages'], debitedMessages=session['consumed_messages'],
+                      overrunMessages=session['overrun_messages'], sumOfReplacementGrantsMessages=session['granted_messages'],
                       chargingSessionId=ref, supi=session['supi'], nfConsumer=session['owner_nf'],
                       chargingId=session['charging_id'], pduSession=pdu, upfId=session['upf_id'] or None,
                       startTimestamp=session['created_at'], endTimestamp=session['released_at'],
@@ -247,6 +304,9 @@ class ChargingService:
                       debitedBytes=session['consumed_bytes'], overrunBytes=session['overrun_bytes'],
                       sumOfReplacementGrantsBytes=session['granted_bytes'],
                       terminationReason=reason, evidence=evidence)
+        if record['servicePolicy'].get('unitKind') == 'IP_PACKET':
+            record.update(serviceSpecificUnit='IP_PACKET', totalPackets=session['observed_messages'],
+                          debitedPackets=session['consumed_messages'], overrunPackets=session['overrun_messages'])
         conn.execute("INSERT INTO charging_cdrs(charging_data_ref,supi,closed_at,record_json) VALUES(?,?,?,?)",
                      (ref, session['supi'], session['released_at'], json.dumps(record, sort_keys=True)))
 
@@ -261,7 +321,7 @@ class ChargingService:
                 return {"status": "RELEASED", "changed": False}
             before = self.repository.account_snapshot(conn, session['supi'])
             now = utc_now()
-            conn.execute("""UPDATE charging_sessions SET status='RELEASED',reserved_bytes=0,
+            conn.execute("""UPDATE charging_sessions SET status='RELEASED',reserved_bytes=0,authorized_bytes=0,reserved_messages=0,
                 released_at=?,updated_at=?,closure_reason='OPERATOR_RECONCILIATION' WHERE charging_data_ref=?""", (now, now, ref))
             self.repository.append_ledger(conn, session['supi'], ref, "RECONCILE", actor,
                 {"reason": reason, "before": before, "after": self.repository.account_snapshot(conn, session['supi']),

@@ -13,20 +13,20 @@ def test_only_catalog_assets(profile, asset):
 
 
 def test_media_rejects_other_group_terminal(client, student_headers):
-    assert client.get('/api/v1/terminal/media/720p/index.m3u8?imsi=imsi-999700000000002', headers=student_headers).status_code == 403
+    assert client.get('/api/v1/terminal/media/720p/index.m3u8?imsi=imsi-999700000000004', headers=student_headers).status_code == 403
 
 
 def test_no_simulated_video(client, teacher_headers):
-    assert client.get('/api/v1/terminal/media/720p/init.mp4', headers=teacher_headers).status_code == 503
+    assert client.get('/api/v1/terminal/media/720p/init.mp4?imsi=imsi-999700000000001', headers=teacher_headers).status_code == 503
 
 
 def test_relay_no_cache_and_failure_not_video(client, teacher_headers, monkeypatch):
     fetch = AsyncMock(return_value=b'fragment-test')
     monkeypatch.setattr(terminal_media, 'fetch', fetch)
-    result = client.get('/api/v1/terminal/media/720p/init.mp4', headers=teacher_headers)
+    result = client.get('/api/v1/terminal/media/720p/init.mp4?imsi=imsi-999700000000001', headers=teacher_headers)
     assert result.content == b'fragment-test'
     assert result.headers['cache-control'] == 'no-store'
     fetch.side_effect = HTTPException(502, 'incomplete')
-    result = client.get('/api/v1/terminal/media/720p/init.mp4', headers=teacher_headers)
+    result = client.get('/api/v1/terminal/media/720p/init.mp4?imsi=imsi-999700000000001', headers=teacher_headers)
     assert result.status_code == 502
     assert result.headers['content-type'].startswith('application/json')

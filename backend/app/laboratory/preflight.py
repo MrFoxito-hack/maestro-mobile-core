@@ -12,9 +12,11 @@ from app.core.config import get_settings
 from app.laboratory.repository import stamp
 
 CORE_UNITS = (
-    "open5gs-amfd", "open5gs-smfd", "open5gs-smfd2", "open5gs-pcfd",
+    "open5gs-amfd", "open5gs-smfd", "open5gs-smfd2", "open5gs-smfd3", "open5gs-pcfd",
     "open5gs-nssfd", "maestro-nwdaf",
 )
+# Health observations outside eMBB must not veto its campaign.
+EMBB_CRITICAL_UNITS = tuple(u for u in CORE_UNITS if u not in ('open5gs-smfd2', 'open5gs-smfd3'))
 REQUIRED_GATES = (
     "assigned_session_identity", "ue_upf_dn_path", "shared_resource_calibration",
     "charging_budget_including_preparation", "baseline_policy_and_inflight_actions",

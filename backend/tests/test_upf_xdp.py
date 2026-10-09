@@ -19,6 +19,13 @@ def test_unknown_mode_rejected(client, teacher_headers):
                        json={'mode': 'shell-command'}).status_code == 422
 
 
+def test_triad_cannot_bypass_charging(client, teacher_headers, monkeypatch):
+    monkeypatch.setattr(upf_xdp, 'get_settings', lambda: SimpleNamespace(multi_upf_enabled=True))
+    monkeypatch.setattr(upf_xdp, 'request', lambda _: pytest.fail('Must not touch XDP maps'))
+    response = client.post('/api/v1/upf-xdp/mode', headers=teacher_headers, json={'mode': 'xdp'})
+    assert response.status_code == 409
+
+
 def test_expired_session_cannot_activate(client, teacher_headers, monkeypatch):
     calls = []
     def request(action):

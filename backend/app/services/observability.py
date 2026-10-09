@@ -271,10 +271,25 @@ class MetricsService:
             active_nfs = sum(1 for c in status.components if c.status == "running")
             total_nfs = len(status.components)
             ue_active = any(c.id == "ue" and c.status == "running" for c in status.components)
-            pdu_active = 1 if ue_active else 0
             ue_registered = 1 if ue_active else 0
+            if scenario_id == "5g-sa" and ue_active:
+                tun_count = len([k for k in raw_interfaces if k.startswith("uesimtun")])
+                if get_settings().multi_upf_enabled or tun_count >= 2 or get_settings().execution_mode == "remote":
+                    pdu_active = 3
+                    slices_active = 3
+                    slices_detail = ["eMBB", "URLLC", "MIoT"]
+                else:
+                    pdu_active = 1
+                    slices_active = 1
+                    slices_detail = ["eMBB"]
+            else:
+                pdu_active = 1 if ue_active else 0
+                slices_active = 1 if ue_active else 0
+                slices_detail = ["eMBB"] if ue_active else []
         except Exception:
             active_nfs, total_nfs, ue_registered, pdu_active = 0, 0, 0, 0
+            slices_active = 0
+            slices_detail = []
 
         ogstun_data = interfaces.get("ogstun", {})
         lo_data = interfaces.get("lo", {})
@@ -300,6 +315,8 @@ class MetricsService:
                 "total_nfs": total_nfs,
                 "ue_registered": ue_registered,
                 "pdu_sessions": pdu_active,
+                "slices_active": slices_active,
+                "slices_detail": slices_detail,
             },
             "history": self.history,
         }
@@ -322,13 +339,18 @@ async def collect_alarms(scenario_id: str, evaluated: set[str] | None = None) ->
 
     if runtime["source"] != "mock":
         observed = {(item["protocol"], item["address"], item["port"]) for item in runtime["listening_ports"]}
+        contexts = {h['id']: h for h in runtime.get('hosts', [])}
         for component in status.components:
             if component.status != "running":
                 continue
             for endpoint in component.expected_endpoints:
+                context = contexts.get(endpoint.get('runtime_id', 'core'))
+                if contexts and (context is None or context.get('observation_status') != 'observed'):
+                    continue  # Unknown observation neither opens nor resolves a port alarm.
+                scoped = {(p['protocol'], p['address'], p['port']) for p in context['listening_ports']} if context else observed
                 evaluated.add(f"{scenario_id}:{component.id}:port:{endpoint['protocol']}:{endpoint['port']}")
                 key = (endpoint["protocol"], endpoint["address"], endpoint["port"])
-                if key in observed:
+                if key in scoped:
                     continue
                 interface_name = endpoint.get("interface", "desconocida")
                 alarms.append({"id": f"{scenario_id}:{component.id}:port:{endpoint['protocol']}:{endpoint['port']}", "scenario_id": scenario_id, "component": component.id, "network_function": component.label, "node_id": component.node_id, "severity": Severity.major, "state": "active", "probable_cause": "communicationsSubsystemFailure", "interfaces": [interface_name], "procedures": component.procedures, "message": f"Endpoint {interface_name} de {component.label} no está en escucha", "evidence": f"No se encontró {endpoint['protocol']}://{endpoint['address']}:{endpoint['port']}", "recommendation": f"Revisar {component.config_paths[0] if component.config_paths else component.unit} y la dirección configurada", "observed_at": observed_at})

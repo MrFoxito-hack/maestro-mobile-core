@@ -39,6 +39,7 @@ type Prediction = {
   }
   observation?: Omit<Prediction, 'snssai' | 'observation'>
 }
+type SliceTarget = { snssai: { sst: number; sd: string }; label: string; object_id: string }
 type Status = {
   connected: boolean
   contract: string | null
@@ -110,7 +111,7 @@ export function NwdafPage() {
   const predictions = useQuery({
     queryKey: ['nwdaf', 'predictions'],
     queryFn: async () =>
-      (await api.get<{ items: Prediction[] }>('/nwdaf/predictions')).data,
+      (await api.get<{ items: Prediction[]; slices: SliceTarget[] }>('/nwdaf/predictions')).data,
     enabled,
     refetchInterval: 5000,
     retry: false,
@@ -139,7 +140,11 @@ export function NwdafPage() {
     refetchInterval: 15000,
     retry: false,
   })
-  const items = predictions.isError ? [] : (predictions.data?.items ?? [])
+  const configured = predictions.data?.slices ?? []
+  const items: Prediction[] = predictions.isError ? [] : configured.map((target) =>
+    predictions.data?.items.find((p) => p.snssai.sst === target.snssai.sst && p.snssai.sd === target.snssai.sd)
+    ?? { snssai: target.snssai, created: 0, fresh: false, input_hash: '',
+      evidence: { model: 'Sin observaci?n', nominal_coverage: 0, coverage_guaranteed: false, points: [] } })
   const selected =
     items.find((item) => JSON.stringify(item.snssai) === slice) ?? items[0]
   const online = !status.isError && status.data?.connected === true
@@ -298,7 +303,7 @@ export function NwdafPage() {
                   key={JSON.stringify(item.snssai)}
                   value={JSON.stringify(item.snssai)}
                 >
-                  {item.snssai.sd === '000001' ? 'Internet · ' : item.snssai.sd === '000002' ? 'Corporate · ' : ''}SST {item.snssai.sst} · SD {item.snssai.sd ?? 'sin SD'}
+                  {configured.find((s) => s.snssai.sst === item.snssai.sst && s.snssai.sd === item.snssai.sd)?.label} ? SST {item.snssai.sst} / SD {item.snssai.sd}
                 </option>
               ))}
             </select>

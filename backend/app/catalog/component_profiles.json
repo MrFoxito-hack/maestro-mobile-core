@@ -76,7 +76,7 @@
       "/etc/open5gs/udm.yaml"
     ],
     "procedures": [
-      "Gestión de identidad y suscripción"
+      "GestiÃ³n de identidad y suscripciÃ³n"
     ]
   },
   "5G:ausf": {
@@ -92,7 +92,7 @@
       "/etc/open5gs/ausf.yaml"
     ],
     "procedures": [
-      "Autenticación 5G-AKA"
+      "AutenticaciÃ³n 5G-AKA"
     ]
   },
   "5G:pcf": {
@@ -108,7 +108,7 @@
       "/etc/open5gs/pcf.yaml"
     ],
     "procedures": [
-      "Aplicación de políticas"
+      "AplicaciÃ³n de polÃ­ticas"
     ]
   },
   "5G:bsf": {
@@ -124,7 +124,7 @@
       "/etc/open5gs/bsf.yaml"
     ],
     "procedures": [
-      "Vinculación de sesión y políticas (Session Binding)"
+      "VinculaciÃ³n de sesiÃ³n y polÃ­ticas (Session Binding)"
     ]
   },
   "5G:nssf": {
@@ -140,7 +140,7 @@
       "/etc/open5gs/nssf.yaml"
     ],
     "procedures": [
-      "Selección de slice"
+      "SelecciÃ³n de slice"
     ]
   },
   "5G:smf": {
@@ -149,13 +149,15 @@
         "protocol": "tcp",
         "address": "127.0.0.4",
         "port": 7777,
-        "interface": "SBI"
+        "interface": "SBI",
+        "runtime_id": "core"
       },
       {
         "protocol": "udp",
         "address": "10.210.50.1",
         "port": 8805,
-        "interface": "N4"
+        "interface": "N4",
+        "runtime_id": "core"
       }
     ],
     "config_paths": [
@@ -164,7 +166,10 @@
     "procedures": [
       "Establecimiento de PDU Session",
       "Control PFCP de UPF"
-    ]
+    ],
+    "runtime_id": "core",
+    "ssh_port_setting": "ssh_port",
+    "namespace": null
   },
   "5G:smf2": {
     "expected_endpoints": [
@@ -172,28 +177,34 @@
         "protocol": "tcp",
         "address": "127.0.0.15",
         "port": 7777,
-        "interface": "SBI"
+        "interface": "SBI",
+        "runtime_id": "core"
       },
       {
         "protocol": "udp",
         "address": "10.210.50.2",
         "port": 8805,
-        "interface": "N4"
+        "interface": "N4",
+        "runtime_id": "core"
       },
       {
         "protocol": "tcp",
         "address": "127.0.0.15",
         "port": 9091,
-        "interface": "Metrics/InfoAPI"
+        "interface": "Metrics/InfoAPI",
+        "runtime_id": "core"
       }
     ],
     "config_paths": [
       "/etc/open5gs/smf2.yaml"
     ],
     "procedures": [
-      "PDU Session Corporate SST=1 SD=000002",
+      "PDU Session MIoT SST=3 SD=000003",
       "Control PFCP exclusivo de UPF-02"
-    ]
+    ],
+    "runtime_id": "core",
+    "ssh_port_setting": "ssh_port",
+    "namespace": null
   },
   "5G:upf": {
     "expected_endpoints": [
@@ -201,22 +212,27 @@
         "protocol": "udp",
         "address": "10.210.50.8",
         "port": 8805,
-        "interface": "N4"
+        "interface": "N4",
+        "runtime_id": "upf-vm"
       },
       {
         "protocol": "udp",
         "address": "10.210.50.8",
         "port": 2152,
-        "interface": "N3"
+        "interface": "N3",
+        "runtime_id": "upf-vm"
       }
     ],
     "config_paths": [
       "/etc/open5gs/upf.yaml"
     ],
     "procedures": [
-      "Creación de sesión PFCP Internet",
+      "CreaciÃ³n de sesiÃ³n PFCP Internet",
       "Transporte de plano de usuario (eMBB)"
-    ]
+    ],
+    "runtime_id": "upf-vm",
+    "ssh_port_setting": "upf_ssh_port",
+    "namespace": null
   },
   "5G:upf2": {
     "expected_endpoints": [
@@ -224,22 +240,27 @@
         "protocol": "udp",
         "address": "10.210.50.9",
         "port": 8805,
-        "interface": "N4"
+        "interface": "N4",
+        "runtime_id": "upf-vm2"
       },
       {
         "protocol": "udp",
         "address": "10.210.50.9",
         "port": 2152,
-        "interface": "N3"
+        "interface": "N3",
+        "runtime_id": "upf-vm2"
       }
     ],
     "config_paths": [
       "/etc/open5gs/upf.yaml"
     ],
     "procedures": [
-      "Creación de sesión PFCP Corporativa",
+      "CreaciÃ³n de sesiÃ³n PFCP Corporativa",
       "Transporte de plano de usuario (MEC)"
-    ]
+    ],
+    "runtime_id": "upf-vm2",
+    "ssh_port_setting": "upf2_ssh_port",
+    "namespace": null
   },
   "5G:amf": {
     "expected_endpoints": [
@@ -261,8 +282,8 @@
     ],
     "procedures": [
       "Registration",
-      "Autenticación",
-      "Gestión de movilidad",
+      "AutenticaciÃ³n",
+      "GestiÃ³n de movilidad",
       "PDU Session Establishment"
     ]
   },
@@ -274,7 +295,10 @@
       "NG Setup",
       "Initial UE Message",
       "Transporte NGAP"
-    ]
+    ],
+    "runtime_id": "gnb-vm",
+    "ssh_port_setting": "gnb_ssh_port",
+    "namespace": null
   },
   "5G:ue": {
     "config_paths": [
@@ -282,9 +306,12 @@
     ],
     "procedures": [
       "Registration",
-      "Autenticación",
+      "AutenticaciÃ³n",
       "PDU Session Establishment"
-    ]
+    ],
+    "runtime_id": "ue-vm",
+    "ssh_port_setting": "ue_ssh_port",
+    "namespace": null
   },
   "4G:mme": {
     "expected_endpoints": [
@@ -300,7 +327,7 @@
     ],
     "procedures": [
       "Attach",
-      "Autenticación EPS",
+      "AutenticaciÃ³n EPS",
       "EPS Bearer Setup"
     ]
   },
@@ -309,8 +336,8 @@
       "/etc/open5gs/hss.yaml"
     ],
     "procedures": [
-      "Autenticación EPS",
-      "Consulta de suscripción"
+      "AutenticaciÃ³n EPS",
+      "Consulta de suscripciÃ³n"
     ]
   },
   "4G:sgwc": {
@@ -335,7 +362,7 @@
       "/etc/open5gs/smf.yaml"
     ],
     "procedures": [
-      "Gestión de sesión EPC"
+      "GestiÃ³n de sesiÃ³n EPC"
     ]
   },
   "4G:upf": {
@@ -351,7 +378,7 @@
       "/etc/open5gs/pcrf.yaml"
     ],
     "procedures": [
-      "Políticas de sesión"
+      "PolÃ­ticas de sesiÃ³n"
     ]
   },
   "4G:enb": {
@@ -371,5 +398,61 @@
       "Attach",
       "EPS Bearer Setup"
     ]
+  },
+  "5G:smf3": {
+    "expected_endpoints": [
+      {
+        "protocol": "tcp",
+        "address": "10.210.50.18",
+        "port": 7777,
+        "interface": "SBI",
+        "runtime_id": "core"
+      },
+      {
+        "protocol": "udp",
+        "address": "10.210.50.18",
+        "port": 8805,
+        "interface": "N4",
+        "runtime_id": "core"
+      }
+    ],
+    "config_paths": [
+      "/etc/open5gs/smf3.yaml"
+    ],
+    "procedures": [
+      "PDU Session URLLC SST=2 SD=000002",
+      "Control PFCP de UPF-03"
+    ],
+    "runtime_id": "core",
+    "ssh_port_setting": "ssh_port",
+    "namespace": null
+  },
+  "5G:upf3": {
+    "expected_endpoints": [
+      {
+        "protocol": "udp",
+        "address": "10.210.50.22",
+        "port": 8805,
+        "interface": "N4",
+        "runtime_id": "upf-urllc"
+      },
+      {
+        "protocol": "udp",
+        "address": "10.210.50.22",
+        "port": 2152,
+        "interface": "N3",
+        "runtime_id": "upf-urllc"
+      }
+    ],
+    "config_paths": [
+      "/etc/open5gs/upf-urllc.yaml"
+    ],
+    "procedures": [
+      "PFCP URLLC",
+      "Forwarding UE–MEC en maestro-urllc"
+    ],
+    "runtime_id": "upf-urllc",
+    "ssh_port_setting": "upf_ssh_port",
+    "namespace": "maestro-urllc"
   }
 }

@@ -1,4 +1,4 @@
-"""Observed laboratory UEs; controls default to the configured primary terminal."""
+"""Observed laboratory UEs; every control requires an explicit terminal identity."""
 import asyncio
 import json
 import re
@@ -7,16 +7,17 @@ from datetime import datetime, timezone
 
 from fastapi import HTTPException
 from app.core.config import get_settings
+from app.services.terminal_access import normalize_imsi
+from app.services import terminal_runtime
+from app.services.upf_inventory import profile
 from app.services.scenarios import scenario_manager
 from app.services.charging import management_get, management_request, mask_identifiers
 from app.services.ue_observation import observed_nodes, terminal_label
 
 STATUS_SCRIPT = r'''
 import json,re,subprocess,pathlib,sys
-config=pathlib.Path('/home/emsadmin/UERANSIM/config/open5gs-ue.yaml').read_text()
-m=re.search(r'^supi:\s*[\x27\x22]?(imsi-\d+)',config,re.M)
-supi=m.group(1) if m else None
-supi=sys.argv[1] if len(sys.argv)>1 else supi
+supi=sys.argv[1]
+assert re.fullmatch(r'imsi-\d{14,15}',supi)
 active='inactive'
 links=json.loads(subprocess.check_output(['ip','-j','-s','addr','show']))
 interfaces=[{'name':i['ifname'],'addresses':[a['local'] for a in i.get('addr_info',[]) if a['family']=='inet'],
@@ -49,21 +50,28 @@ def adapter():
 
 
 async def read_terminal(imsi=None):
-    if imsi and not re.fullmatch(r'(?:imsi-)?\d{14,15}', imsi):
-        raise HTTPException(422, 'IMSI inválido')
-    argument = (' ' + shlex.quote(imsi if imsi.startswith('imsi-') else 'imsi-' + imsi)) if imsi else ''
+    supi = normalize_imsi(imsi)
     try:
-        return json.loads(await adapter()._run('python3 -c ' + shlex.quote(STATUS_SCRIPT) + argument, port=get_settings().ue_ssh_port))
+        data = json.loads(await adapter()._run(
+            shlex.join(['python3', '-c', STATUS_SCRIPT, supi]), port=get_settings().ue_ssh_port))
+        confirm_identity(data, supi)
+        return data
     except HTTPException:
         raise
     except Exception:
         raise HTTPException(503, 'No se pudo consultar el UE remoto') from None
 
 
+def confirm_identity(data, imsi):
+    if data.get('supi') != normalize_imsi(imsi):
+        raise HTTPException(409, 'La identidad observada no corresponde al terminal solicitado')
+
+
 async def snapshot(imsi=None, user=None):
     import yaml
     data = await read_terminal(imsi)
     from app.services.terminal_sessions import describe
+    confirm_identity(data, imsi)
     selection = describe(data)
     supi = data.pop('supi', None)
     native = data.pop('native', {})
@@ -83,12 +91,9 @@ async def snapshot(imsi=None, user=None):
     data['interfaces'] = [i for i in data['interfaces'] if i['name'] in owned]
     active_lab_nodes = observed_nodes(available_nodes)
 
-    # Si el usuario es un alumno, solo ve su UE asignado (sin switch)
-    user_role = getattr(user, 'role', None)
-    role_str = user_role.value if hasattr(user_role, 'value') else str(user_role)
-    if role_str == 'student':
-        student_imsi = getattr(user, 'assigned_imsi', None) or 'imsi-999700000000001'
-        active_lab_nodes = [n for n in active_lab_nodes if n == student_imsi]
+    from app.services.terminal_access import visible_devices
+    allowed = {d['supi'] for d in visible_devices(user)} if user else {supi}
+    active_lab_nodes = [n for n in active_lab_nodes if n in allowed]
     data['available_nodes'] = [
         {'imsi': n, 'label': f'{terminal_label(n)} ({n})'} for n in active_lab_nodes
     ]
@@ -136,7 +141,11 @@ async def snapshot(imsi=None, user=None):
 
 _af_boost_sessions: dict[str, dict] = {}
 _pcc_dynamic_qos: dict[str, dict] = {}
-_control_lock = asyncio.Lock()
+_control_locks: dict[str, asyncio.Lock] = {}
+
+
+def control_lock(imsi):
+    return _control_locks.setdefault(normalize_imsi(imsi), asyncio.Lock())
 
 
 def set_dynamic_pcc_qos(supi: str, five_qi: int, mbr_dl_mbps: float, mbr_ul_mbps: float) -> dict:
@@ -162,55 +171,44 @@ def get_dynamic_pcc_qos(supi: str) -> dict | None:
 
 
 async def airplane(enabled: bool, imsi: str | None = None):
-    async with _control_lock:
-        remote = adapter()
+    supi = normalize_imsi(imsi)
+    async with control_lock(supi):
+        # Resolve even before NAS/traffic mutations; shared or unknown units fail closed.
+        await terminal_runtime.control(supi, 'inspect')
+        deregistered = False
         if enabled:
-            if imsi:
-                clear_dynamic_pcc_qos(imsi)
-            else:
-                clear_dynamic_pcc_qos()
+            clear_dynamic_pcc_qos(supi)
             try:
-                await traffic(False)
+                await traffic(False, imsi=supi)
             except HTTPException:
                 pass
-            # Try an actual NAS switch-off before stopping the auto-restarting service.
-            deregistration_requested = False
             try:
-                observed = await read_terminal(imsi)
-                target_node = observed.get('supi') or imsi or 'imsi-999700000000001'
-                await remote.native_operation('ueransim-cli', 'ue', {'command': 'deregister', 'node_name': target_node})
-                deregistration_requested = True
-            except Exception:
+                data = await read_terminal(supi)
+                confirm_identity(data, supi)
+                await adapter().native_operation('ueransim-cli', 'ue',
+                    {'command': 'deregister', 'node_name': supi})
+                deregistered = True
+            except HTTPException:
                 pass
-            if imsi and imsi in _af_boost_sessions:
-                try:
-                    await af_boost(False, imsi)
-                except Exception:
-                    pass
-            elif not imsi:
-                for s in list(_af_boost_sessions.keys()):
-                    try:
-                        await af_boost(False, s)
-                    except Exception:
-                        pass
-            if not imsi or imsi == 'imsi-999700000000001':
-                await remote.stop_service('ueransim-ue')
-            return {'enabled': True, 'deregistration_requested': deregistration_requested,
-                    'note': 'Confirmar el procedimiento NAS en la captura; detener el proceso no lo demuestra.'}
-        if not imsi or imsi == 'imsi-999700000000001':
-            await remote.start_service('ueransim-ue')
-        return {'enabled': False, 'note': 'Registro solicitado; pendiente de confirmar por telemetría.'}
+            if supi in _af_boost_sessions:
+                await af_boost(False, supi)
+        runtime = await terminal_runtime.control(supi, 'stop' if enabled else 'start')
+        return {'enabled': enabled, 'imsi': supi, 'unit': runtime['unit'],
+                'deregistration_requested': deregistered,
+                'note': 'Solicitud aplicada a esta instancia; confirmar registro por telemetría.'}
 
 
 async def traffic(start: bool, imsi: str | None = None):
+    imsi = normalize_imsi(imsi)
+    unit = "maestro-terminal-traffic-" + imsi
     remote = adapter()
     from app.services.terminal_sessions import resolve
     session = await resolve(imsi=imsi) if start else None
     # Fixed target and interface, no arbitrary shell/URL and no background job without expiry.
-    command = ('systemd-run --unit=maestro-terminal-traffic --collect --property=RuntimeMaxSec=25 '
+    command = ('systemd-run --unit=' + unit + ' --collect --property=RuntimeMaxSec=25 '
                '/usr/bin/ping -I ' + shlex.quote(session['interface']) + ' -c 40 -i 0.2 -s 1000 -W 1 ' +
-               ('10.45.0.1' if session['apn'] == 'internet' else '10.46.0.1')) if start else (
-               'systemctl stop maestro-terminal-traffic.service')
+               profile(session['apn'])['gateway']) if start else (
+               'systemctl stop ' + unit + '.service')
     try:
         await remote._run(remote._sudo_cmd(command), port=get_settings().ue_ssh_port)
     except Exception:
@@ -220,14 +218,8 @@ async def traffic(start: bool, imsi: str | None = None):
 
 
 async def topup(request_id: str, imsi: str | None = None):
+    supi = normalize_imsi(imsi)
     try:
-        supi = imsi
-        if not supi:
-            data = json.loads(await adapter()._run('python3 -c ' + shlex.quote(STATUS_SCRIPT), port=get_settings().ue_ssh_port))
-            supi = data.get('supi')
-        import re
-        if not supi or not re.fullmatch(r'imsi-\d{14,15}', supi):
-            raise ValueError('unknown subscriber')
         result = await asyncio.to_thread(management_request, '/admin/v1/accounts/' + supi + '/topup',
                                         payload={'requestId': request_id, 'amountBytes': 50_000_000})
         from app.services.terminal_sessions import sessions
@@ -289,18 +281,25 @@ def _n6_probe_sync(interface):
         client.close()
 
 
-async def n6_probe():
+async def n6_probe(imsi=None):
+    imsi = normalize_imsi(imsi)
+    lock = control_lock(imsi)
     adapter()  # Never run against a simulated scenario.
-    if _control_lock.locked():
+    if lock.locked():
         raise HTTPException(409, 'Hay otra operación del terminal en curso')
-    async with _control_lock:
+    async with lock:
         from app.services.terminal_sessions import resolve
-        session = await resolve(required='internet')
-        return await asyncio.to_thread(_n6_probe_sync, session['interface'])
+        session = await resolve(imsi=imsi, required='internet')
+        result = await asyncio.to_thread(_n6_probe_sync, session['interface'])
+        if result.get('local_ip') and result['local_ip'] != session['address']:
+            raise HTTPException(409, 'La IP origen no corresponde a la sesión solicitada')
+        return {**result, 'imsi': imsi, 'interface': session['interface'], 'source_ip': session['address']}
 
 
 async def af_boost(enable: bool, imsi: str | None = None):
+    imsi = normalize_imsi(imsi)
     data = await read_terminal(imsi)
+    confirm_identity(data, imsi)
     supi = data.get('supi')
     if not supi or not re.fullmatch(r'imsi-\d{14,15}', supi):
         raise HTTPException(422, 'Identidad del terminal no confirmada')
@@ -334,7 +333,8 @@ async def af_boost(enable: bool, imsi: str | None = None):
 
     from app.services.terminal_sessions import sessions
     active_sessions = sessions(data)
-    internet_session = next((s for s in active_sessions if s['apn'] == 'internet'), None)
+    internet_sessions = [s for s in active_sessions if s['apn'] == 'internet']
+    internet_session = internet_sessions[0] if len(internet_sessions) == 1 else None
     if not internet_session:
         raise HTTPException(409, 'Sesión PDU con DNN internet no activa; no se puede aplicar QoS Boost')
 
@@ -400,121 +400,41 @@ async def af_boost(enable: bool, imsi: str | None = None):
 
 
 async def run_speedtest(imsi: str | None = None):
-    """Executes a 5G SA speedtest over the active PDU session."""
-    import random
-    data = await read_terminal(imsi)
-    supi = data.get('supi')
-    if not supi or not re.fullmatch(r'imsi-\d{14,15}', supi):
-        supi = imsi or 'imsi-999700000000001'
-
-    from app.services.terminal_sessions import sessions
-    active_sessions = sessions(data)
-    current_session = next((s for s in active_sessions if s['apn'] == 'internet'), None)
-    if not current_session and active_sessions:
-        current_session = active_sessions[0]
-
-    ip_addr = current_session['address'] if current_session else '10.45.0.2'
-    interface = current_session['interface'] if current_session else 'uesimtun0'
-    apn = current_session['apn'] if current_session else 'internet'
-
-    dyn_pcc = _pcc_dynamic_qos.get(supi)
-    if not dyn_pcc:
-        try:
-            smf_info = await adapter().native_operation('open5gs-info', 'smf', {'endpoint': 'pdu-info'})
-            items = smf_info.get('data', {}).get('items', [])
-            ue_item = next((it for it in items if it.get('supi') == supi), None)
-            if ue_item:
-                pdus = ue_item.get('pdu', [])
-                for p in pdus:
-                    qf_list = p.get('qos_flows', [])
-                    dedicated = next((qf for qf in qf_list if qf.get('qfi', 1) > 1 and qf.get('5qi') != 9), None)
-                    if dedicated:
-                        five_qi_val = dedicated.get('5qi', 1)
-                        dl_default = 35.0 if five_qi_val == 1 else (20.0 if five_qi_val == 2 else (50.0 if five_qi_val == 3 else 30.0))
-                        ul_default = round(dl_default / 2.0, 1)
-                        dyn_pcc = {
-                            'five_qi': five_qi_val,
-                            'mbr_dl_mbps': dl_default,
-                            'mbr_ul_mbps': ul_default,
-                            'qfi': dedicated.get('qfi', 2)
-                        }
-                        _pcc_dynamic_qos[supi] = dyn_pcc
-                        break
-                else:
-                    if supi in _pcc_dynamic_qos and _pcc_dynamic_qos[supi].get('five_qi') != 9:
-                        clear_dynamic_pcc_qos(supi)
-                        dyn_pcc = None
-        except Exception:
-            pass
-
-    boost = _af_boost_sessions.get(supi, {})
-    is_boosted = bool(boost.get('active')) or bool(dyn_pcc and dyn_pcc.get('five_qi') != 9)
-
-    if dyn_pcc and dyn_pcc.get('five_qi') != 9:
-        five_qi = int(dyn_pcc.get('five_qi', 1))
-        mbr_dl = float(dyn_pcc.get('mbr_dl_mbps', 20.0))
-        mbr_ul = float(dyn_pcc.get('mbr_ul_mbps', 10.0))
-
-        download_mbps = round(random.uniform(mbr_dl * 0.90, mbr_dl * 0.97), 2)
-        upload_mbps = round(random.uniform(mbr_ul * 0.88, mbr_ul * 0.96), 2)
-
-        if five_qi in (1, 3):
-            ping_ms = round(random.uniform(3.8, 6.5), 1)
-            jitter_ms = round(random.uniform(0.5, 1.2), 1)
-        elif five_qi in (2, 4):
-            ping_ms = round(random.uniform(5.5, 8.5), 1)
-            jitter_ms = round(random.uniform(0.7, 1.5), 1)
-        elif five_qi in (65, 66, 67, 82, 83):
-            ping_ms = round(random.uniform(2.5, 4.5), 1)
-            jitter_ms = round(random.uniform(0.3, 0.8), 1)
-        else:
-            ping_ms = round(random.uniform(10.0, 16.0), 1)
-            jitter_ms = round(random.uniform(1.2, 2.8), 1)
-
-        dl_str = f"{int(mbr_dl)}M" if mbr_dl.is_integer() else f"{mbr_dl}M"
-        ul_str = f"{int(mbr_ul)}M" if mbr_ul.is_integer() else f"{mbr_ul}M"
-        qos_label = f"5QI={five_qi} (PCC Dinámico N7)"
-        pcc_rule = f"maestro-mml (MBR {dl_str} / {ul_str})"
-        qos_level = five_qi
-    elif is_boosted:
-        download_mbps = round(random.uniform(16.5, 19.8), 2)
-        upload_mbps = round(random.uniform(8.1, 10.2), 2)
-        ping_ms = round(random.uniform(6.2, 9.5), 1)
-        jitter_ms = round(random.uniform(0.8, 1.6), 1)
-        qos_label = '5QI=2 (QoS Boost Concedido)'
-        pcc_rule = 'pcc-boost-video (GBR 10M / MBR 20M)'
-        qos_level = 2
+    """Bounded measurement on the requested PDU; no invented IP/rate fallback."""
+    from app.services.terminal_sessions import resolve
+    from app.services.terminal_inventory import by_supi
+    from app.services import terminal_devices
+    supi = normalize_imsi(imsi)
+    session = await resolve(imsi=supi)
+    download = ping = jitter = None
+    received = 0
+    if session['apn'] == 'internet':
+        measurement = await n6_probe(imsi=supi)
+        received = measurement['received_bytes']
+        duration = measurement['duration_seconds']
+        if measurement['completed'] and duration > 0:
+            download = round(received * 8 / duration / 1_000_000, 4)
+        completed = measurement['completed']
+        server = measurement['destination']
+        note = 'Transferencia HTTP acotada a 32 KiB/s; no mide capacidad máxima ni subida.'
     else:
-        download_mbps = round(random.uniform(4.1, 6.4), 2)
-        upload_mbps = round(random.uniform(2.8, 4.5), 2)
-        ping_ms = round(random.uniform(18.0, 26.5), 1)
-        jitter_ms = round(random.uniform(2.5, 5.2), 1)
-        qos_label = '5QI=9 (Best Effort Estándar)'
-        pcc_rule = 'default-best-effort'
-        qos_level = 9
-
-    bytes_down = int(download_mbps * 1024 * 1024 * 0.5)
-    bytes_up = int(upload_mbps * 1024 * 1024 * 0.25)
-
-    return {
-        'status': 'success',
-        'timestamp': datetime.now(timezone.utc).isoformat(),
-        'client_ip': ip_addr,
-        'server': 'PUCP 5G Core · UPF-01 N6 (Lima, PE)',
-        'server_ip': '10.210.50.8',
-        'interface': interface,
-        'apn': apn,
-        'snssai': {'sst': 1, 'sd': '000001'},
-        'qos': qos_label,
-        'qos_level': qos_level,
-        'is_boosted': is_boosted,
-        'pcc_rule': pcc_rule,
-        'ping_ms': ping_ms,
-        'jitter_ms': jitter_ms,
-        'download_mbps': download_mbps,
-        'upload_mbps': upload_mbps,
-        'bytes_downloaded': bytes_down,
-        'bytes_uploaded': bytes_up,
-        'note': 'Medición sobre túnel PDU 5G Standalone (3GPP Release 16)'
-    }
-
+        device = by_supi(supi)
+        if device is None or device.kind not in ('vehicle', 'sensor'):
+            raise HTTPException(409, 'Medición no disponible para este perfil de terminal')
+        measurement = await terminal_devices.measure(device.kind,
+            'probe' if device.kind == 'vehicle' else 'burst', imsi=supi)
+        ping, jitter = measurement['rtt_ms'], measurement.get('jitter_ms')
+        completed = measurement['received'] > 0
+        server = measurement['target']
+        note = 'RTT UDP medido; caudal de descarga y subida no medido.'
+    if measurement['interface'] != session['interface'] or measurement['source_ip'] != session['address']:
+        raise HTTPException(409, 'La sesión cambió durante la medición; vuelva a consultar el terminal')
+    return {'status': 'success' if completed else 'incomplete', 'imsi': supi,
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'client_ip': session['address'], 'interface': session['interface'],
+            'apn': session['apn'], 'snssai': session['snssai'],
+            'server': server, 'server_ip': server, 'qos': 'No medido', 'qos_level': None,
+            'is_boosted': bool(_af_boost_sessions.get(supi, {}).get('active')),
+            'pcc_rule': None, 'ping_ms': ping, 'jitter_ms': jitter,
+            'download_mbps': download, 'upload_mbps': None,
+            'bytes_downloaded': received, 'bytes_uploaded': None, 'note': note}

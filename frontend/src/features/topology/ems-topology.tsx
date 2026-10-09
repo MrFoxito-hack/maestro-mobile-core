@@ -4,6 +4,7 @@ import {
   BaseEdge,
   Controls,
   EdgeLabelRenderer,
+  getBezierPath,
   getSmoothStepPath,
   getStraightPath,
   Handle,
@@ -24,7 +25,7 @@ import { Brain, Coins, Database, Globe, Radio, Router, Server, Smartphone, Tv } 
 import type { ComponentStatus, RuntimeSnapshot } from '@/lib/api'
 import { alarmBelongsToComponent } from './topology-alarm'
 
-export type TopologyView = 'physical' | 'telco' | 'models' | 'interfaces'
+export type TopologyView = 'physical' | 'telco' | 'models' | 'interfaces' | 'slicing'
 export type TopologySelection =
   | { type: 'host'; id: string }
   | { type: 'component'; id: string }
@@ -52,6 +53,8 @@ const telcoPositions5G: Record<string, { x: number; y: number }> = {
   // Fila 2: Orquestadores Core y Proxy (Bajo el Bus SBA, Y = 285)
   amf: { x: 340, y: 285 },
   smf: { x: 740, y: 285 },
+  smf2: { x: 840, y: 285 },
+  smf3: { x: 940, y: 285 },
   scp: { x: 1140, y: 285 },
   bsf: { x: 1340, y: 285 },
 
@@ -59,6 +62,8 @@ const telcoPositions5G: Record<string, { x: number; y: number }> = {
   ue: { x: 60, y: 470 },
   gnb: { x: 340, y: 470 },
   upf: { x: 740, y: 470 },
+  upf2: { x: 840, y: 470 },
+  upf3: { x: 940, y: 470 },
   dn: { x: 1140, y: 470 },
 }
 
@@ -433,17 +438,20 @@ const sbaInterfacesEdges: Record<string, TelcoEdgeMeta> = {
 }
 
 function getComponentIcon(id: string) {
-  if (id === 'ue') {
+  if (id.startsWith('ue')) {
     return <Smartphone className='h-4 w-4 text-sky-500' />
   }
-  if (id === 'dn') {
+  if (id.startsWith('dn') || id.startsWith('mec')) {
     return <Globe className='h-4 w-4 text-emerald-500' />
   }
   if (id === 'gnb' || id === 'enb') {
     return <Radio className='h-4 w-4 text-indigo-500' />
   }
-  if (id === 'upf' || id === 'upf2' || id === 'sgwu') {
+  if (id.startsWith('upf') || id === 'sgwu') {
     return <Router className='h-4 w-4 text-emerald-500' />
+  }
+  if (id.startsWith('smf')) {
+    return <Server className='h-4 w-4 text-amber-500' />
   }
   if (id === 'mongodb') {
     return <Database className='h-4 w-4 text-amber-500' />
@@ -615,7 +623,11 @@ function TelcoNode({ data }: NodeProps) {
       {/* Centro: Icono destacado y Sigla grande y legible */}
       <div className='flex min-w-0 items-center gap-2.5'>
         <div className='shrink-0 [&>svg]:h-5 [&>svg]:w-5'>{icon}</div>
-        <span className='truncate font-mono text-base font-black tracking-tight text-foreground'>
+        <span
+          className={`truncate font-mono font-black tracking-tight text-foreground ${
+            String(data.label).length > 9 ? 'text-xs' : 'text-base'
+          }`}
+        >
           {String(data.label)}
         </span>
       </div>
@@ -637,6 +649,8 @@ function getHostIcon(id: string) {
   if (id === 'ue-vm') return <Smartphone className='h-4 w-4 text-sky-500' />
   if (id === 'gnb-vm') return <Radio className='h-4 w-4 text-indigo-500' />
   if (id === 'upf-vm') return <Router className='h-4 w-4 text-emerald-500' />
+  if (id === 'upf-urllc' || id.includes('urllc'))
+    return <Router className='h-4 w-4 text-purple-500' />
   if (id === 'upf-vm2') return <Router className='h-4 w-4 text-cyan-500' />
   return <Server className='h-4 w-4 text-violet-500' />
 }
@@ -656,17 +670,12 @@ function HostNode({ data }: NodeProps) {
     shortTitle = 'EMS-GNB-01'
   else if (id === 'core' || rawLabel.includes('testbed'))
     shortTitle = 'EMS-CORE'
+  else if (id === 'upf-urllc' || id.includes('urllc'))
+    shortTitle = 'EMS-UPF-03'
   else if (id === 'upf-vm' || rawLabel.includes('upf-01'))
     shortTitle = 'EMS-UPF-01'
   else if (id === 'upf-vm2' || rawLabel.includes('upf-02'))
     shortTitle = 'EMS-UPF-02'
-
-  let shortRole = String(data.role || 'Host VM')
-  if (id === 'ue-vm') shortRole = 'UE (Dual PDU)'
-  else if (id === 'gnb-vm') shortRole = 'gNodeB (RAN)'
-  else if (id === 'core') shortRole = '5G Core (CP)'
-  else if (id === 'upf-vm') shortRole = 'UPF (Internet)'
-  else if (id === 'upf-vm2') shortRole = 'UPF (Corporate)'
 
   const icon = getHostIcon(id)
 
@@ -707,14 +716,9 @@ function HostNode({ data }: NodeProps) {
         <span className={`size-2 rounded-full ${ledStyle} shrink-0`} />
       </div>
 
-      {/* Footer: IP + Rol */}
-      <div className='flex items-center justify-between gap-1 font-mono text-[10px]'>
-        <span className='truncate text-muted-foreground/80'>
-          {String(data.ip || 'Sin IP')}
-        </span>
-        <span className='shrink-0 rounded bg-muted/70 px-1.5 py-0.5 font-sans text-[9.5px] font-medium text-foreground/80'>
-          {shortRole}
-        </span>
+      {/* Footer: IP */}
+      <div className='flex items-center font-mono text-[10.5px] text-muted-foreground/85'>
+        <span>{String(data.ip || 'Sin IP')}</span>
       </div>
     </div>
   )
@@ -751,6 +755,18 @@ function CustomTelcoEdge({
     edgePath = path
     labelX = lx
     labelY = ly
+  } else if (data?.curve === 'bezier') {
+    const [path, lx, ly] = getBezierPath({
+      sourceX,
+      sourceY,
+      sourcePosition,
+      targetX,
+      targetY,
+      targetPosition,
+    })
+    edgePath = path
+    labelX = lx
+    labelY = ly
   } else {
     const [path, lx, ly] = getSmoothStepPath({
       sourceX,
@@ -765,9 +781,16 @@ function CustomTelcoEdge({
     labelY = ly
   }
 
-  // Si data?.labelNearTarget es true, colocamos el badge en el tramo horizontal previo al nodo destino
-  const lx = data?.labelNearTarget ? targetX - 70 : labelX
-  const ly = data?.labelNearTarget ? targetY : labelY
+  const lx = data?.labelNearTarget
+    ? targetX - (typeof data.targetOffset === 'number' ? data.targetOffset : 50)
+    : data?.labelNearSource
+      ? sourceX + (typeof data.sourceOffset === 'number' ? data.sourceOffset : 45)
+      : labelX
+  const ly = data?.labelNearTarget
+    ? targetY
+    : data?.labelNearSource
+      ? sourceY
+      : labelY
 
   return (
     <>
@@ -927,6 +950,8 @@ function telcoElements(
   const sbaCoreNfs = new Set([
     'amf',
     'smf',
+    'smf2',
+    'smf3',
     'nrf',
     'scp',
     'udm',
@@ -1043,22 +1068,22 @@ function telcoElements(
     ? baseComponents
     : baseComponents.filter((c) => sbaCoreNfs.has(c.id))
 
-  // En la vista lógica 3GPP, colapsamos instancias del plano de usuario (ej. 2 UPFs)
-  // y del Session Management (ej. 2 SMFs) en un único nodo arquitectural para mantener un diagrama canónico.
+  // En la vista lógica 3GPP, colapsamos instancias del plano de usuario (ej. 3 UPFs)
+  // y del Session Management (ej. 3 SMFs) en un único nodo arquitectural para mantener un diagrama canónico.
   const upfComps = sourceComponents.filter(
-    (c) => c.id === 'upf' || c.id === 'upf2' || c.kind === 'user-plane'
+    (c) => c.id === 'upf' || c.id === 'upf2' || c.id === 'upf3' || c.kind === 'user-plane'
   )
   const hasMultipleUpfs = is5g && upfComps.length > 1
 
   const smfComps = sourceComponents.filter(
-    (c) => c.id === 'smf' || c.id === 'smf2'
+    (c) => c.id === 'smf' || c.id === 'smf2' || c.id === 'smf3'
   )
   const hasMultipleSmfs = is5g && smfComps.length > 1
 
   let displayComponents: ComponentStatus[] = sourceComponents
   if (hasMultipleUpfs) {
     const nonUpfs = displayComponents.filter(
-      (c) => !(c.id === 'upf' || c.id === 'upf2' || c.kind === 'user-plane')
+      (c) => !(c.id === 'upf' || c.id === 'upf2' || c.id === 'upf3' || c.kind === 'user-plane')
     )
     const allRunning = upfComps.every((c) => c.status === 'running')
     const aggregatedUpf: ComponentStatus = {
@@ -1071,7 +1096,7 @@ function telcoElements(
       status: allRunning ? 'running' : 'stopped',
       procedures: [
         'Plano de Usuario Desagregado (CUPS)',
-        'Soporte Multi-Slice: Internet (eMBB) + Corporativo (MEC)',
+        'Soporte Tríada Multi-Slice: Internet (eMBB) + Corporativo (MIoT) + Vehicular (URLLC)',
       ],
       expected_endpoints: upfComps.flatMap((c) => c.expected_endpoints || []),
       config_paths: ['/etc/open5gs/upf.yaml'],
@@ -1082,7 +1107,7 @@ function telcoElements(
 
   if (hasMultipleSmfs) {
     const nonSmfs = displayComponents.filter(
-      (c) => !(c.id === 'smf' || c.id === 'smf2')
+      (c) => !(c.id === 'smf' || c.id === 'smf2' || c.id === 'smf3')
     )
     const allRunning = smfComps.every((c) => c.status === 'running')
     const aggregatedSmf: ComponentStatus = {
@@ -1094,8 +1119,8 @@ function telcoElements(
       interfaces: ['N4', 'SBI'],
       status: allRunning ? 'running' : 'stopped',
       procedures: [
-        'Aislamiento en Plano de Control (3GPP Rel-16 Dual-SMF)',
-        'Soporte Multi-Slice: SMF-01 (Internet eMBB) + SMF-02 (Corporate MEC)',
+        'Aislamiento en Plano de Control (3GPP Rel-16 Multi-SMF)',
+        'Soporte Tríada Multi-Slice: SMF-01 (eMBB) + SMF-02 (MIoT) + SMF-03 (URLLC)',
       ],
       expected_endpoints: smfComps.flatMap((c) => c.expected_endpoints || []),
       config_paths: ['/etc/open5gs/smf.yaml'],
@@ -1145,9 +1170,9 @@ function telcoElements(
 
     const subtitle =
       component.id === 'upf' && hasMultipleUpfs
-        ? `${upfComps.length} Instancias (Internet + Corp)`
+        ? `${upfComps.length} Instancias (eMBB + MIoT + URLLC)`
         : component.id === 'smf' && hasMultipleSmfs
-          ? `${smfComps.length} Instancias (Dual-SMF)`
+          ? `${smfComps.length} Instancias (Multi-SMF Tríada)`
           : undefined
 
     return {
@@ -1375,6 +1400,286 @@ function telcoElements(
   return { nodes, edges }
 }
 
+function slicingElements(
+  components: ComponentStatus[],
+  alarms?: NodeAlarmItem[]
+) {
+  const getComp = (id: string) => components.find((c) => c.id === id)
+  const getStatus = (id: string) => getComp(id)?.status ?? 'running'
+
+  const getSeverity = (id: string) => {
+    const compAlarms = (alarms ?? []).filter((a) => {
+      const c = getComp(id)
+      return c ? alarmBelongsToComponent(a, c) : a.component === id
+    })
+    if (compAlarms.some((a) => a.severity === 'critical')) return 'critical'
+    if (compAlarms.some((a) => a.severity === 'major')) return 'major'
+    if (compAlarms.some((a) => a.severity === 'minor')) return 'minor'
+    if (compAlarms.some((a) => a.severity === 'warning')) return 'warning'
+    return null
+  }
+
+  const ueStatus = getStatus('ue')
+  const gnbStatus = getStatus('gnb')
+  const amfStatus = getStatus('amf')
+  const smf1Status = getStatus('smf')
+  const smf2Status = getStatus('smf2')
+  const smf3Status = getStatus('smf3')
+  const upf1Status = getStatus('upf')
+  const upf2Status = getStatus('upf2')
+  const upf3Status = getStatus('upf3')
+
+  // Arquitectura Canónica Tríada 5G (Pipeline Lineal de 6 Columnas con Líneas Rectas):
+  // Col 1: UE -> Col 2: gNodeB -> Col 3: AMF -> Col 4: SMF -> Col 5: UPF -> Col 6: DN
+  const slicingNodesConfig: Array<{
+    id: string
+    label: string
+    kind: string
+    status: string
+    pos: { x: number; y: number }
+  }> = [
+    // Terminales (Col 1, X = 40)
+    { id: 'ue1', label: 'UE-01', kind: 'ue', status: ueStatus, pos: { x: 40, y: 130 } },
+    { id: 'ue2', label: 'UE-02', kind: 'ue', status: ueStatus, pos: { x: 40, y: 330 } },
+    { id: 'ue3', label: 'UE-03', kind: 'ue', status: ueStatus, pos: { x: 40, y: 530 } },
+
+    // Acceso Radio Común (Col 2, X = 260)
+    { id: 'gnb', label: 'gNodeB', kind: 'ran', status: gnbStatus, pos: { x: 260, y: 330 } },
+
+    // Gestión de Acceso y Movilidad Común (Col 3, X = 480)
+    { id: 'amf', label: 'AMF', kind: 'core', status: amfStatus, pos: { x: 480, y: 330 } },
+
+    // Control de Sesión Multi-SMF (Col 4, X = 700)
+    { id: 'smf', label: 'SMF-01', kind: 'core', status: smf1Status, pos: { x: 700, y: 130 } },
+    { id: 'smf2', label: 'SMF-02', kind: 'core', status: smf2Status, pos: { x: 700, y: 330 } },
+    { id: 'smf3', label: 'SMF-03', kind: 'core', status: smf3Status, pos: { x: 700, y: 530 } },
+
+    // Plano de Usuario Multi-UPF (Col 5, X = 930)
+    { id: 'upf', label: 'UPF-01', kind: 'user-plane', status: upf1Status, pos: { x: 930, y: 130 } },
+    { id: 'upf2', label: 'UPF-02', kind: 'user-plane', status: upf2Status, pos: { x: 930, y: 330 } },
+    { id: 'upf3', label: 'UPF-03', kind: 'user-plane', status: upf3Status, pos: { x: 930, y: 530 } },
+
+    // Redes de Datos Externas (Col 6, X = 1160)
+    { id: 'dn1', label: 'DN-Internet', kind: 'data-network', status: upf1Status, pos: { x: 1160, y: 130 } },
+    { id: 'dn2', label: 'DN-Corp', kind: 'data-network', status: upf2Status, pos: { x: 1160, y: 330 } },
+    { id: 'dn3', label: 'MEC-Server', kind: 'data-network', status: upf3Status, pos: { x: 1160, y: 530 } },
+  ]
+
+  const nodes: Node[] = slicingNodesConfig.map((cfg) => {
+    const rawId = cfg.id.startsWith('ue') ? 'ue' : cfg.id.startsWith('dn') ? 'upf' : cfg.id
+    return {
+      id: cfg.id,
+      type: 'telcoNode',
+      position: cfg.pos,
+      data: {
+        selectionType: 'component',
+        id: cfg.id,
+        label: cfg.label,
+        kind: cfg.kind,
+        status: cfg.status,
+        alarmSeverity: getSeverity(rawId),
+        alarmCount: 0,
+      },
+    }
+  })
+
+  // Enlaces E2E con líneas ortogonales limpias y curvas redondeadas suaves (smoothstep)
+  const slicingLinksConfig: Array<{
+    id: string
+    source: string
+    target: string
+    sourceHandle?: string
+    targetHandle?: string
+    type?: string
+    pathOptions?: { borderRadius?: number }
+    data?: Record<string, unknown>
+    label: string
+    color: string
+  }> = [
+    // ─── 1. Fan-in de Terminales hacia gNodeB (NR-Uu) ───
+    {
+      id: 'ue1-gnb',
+      source: 'ue1',
+      target: 'gnb',
+      sourceHandle: 'source-right',
+      targetHandle: 'target-left-top',
+      type: 'smoothstep',
+      pathOptions: { borderRadius: 16 },
+      label: 'NR-Uu',
+      color: '#059669',
+    },
+    {
+      id: 'ue2-gnb',
+      source: 'ue2',
+      target: 'gnb',
+      sourceHandle: 'source-right',
+      targetHandle: 'target-left',
+      type: 'straight',
+      label: 'NR-Uu',
+      color: '#0891b2',
+    },
+    {
+      id: 'ue3-gnb',
+      source: 'ue3',
+      target: 'gnb',
+      sourceHandle: 'source-right',
+      targetHandle: 'target-left-bottom',
+      type: 'smoothstep',
+      pathOptions: { borderRadius: 16 },
+      label: 'NR-Uu',
+      color: '#8b5cf6',
+    },
+
+    // ─── 2. Interfaz N2 de Control Radio (gNodeB -> AMF horizontal pura) ───
+    {
+      id: 'gnb-amf',
+      source: 'gnb',
+      target: 'amf',
+      sourceHandle: 'source-right',
+      targetHandle: 'target-left',
+      type: 'straight',
+      label: 'N2',
+      color: '#64748b',
+    },
+
+    // ─── 3. Fan-out N11 hacia los 3 SMFs por Rebanada (AMF -> SMFs) ───
+    {
+      id: 'amf-smf',
+      source: 'amf',
+      target: 'smf',
+      sourceHandle: 'source-right-top',
+      targetHandle: 'target-left',
+      type: 'smoothstep',
+      pathOptions: { borderRadius: 16 },
+      label: 'N11',
+      color: '#059669',
+    },
+    {
+      id: 'amf-smf2',
+      source: 'amf',
+      target: 'smf2',
+      sourceHandle: 'source-right',
+      targetHandle: 'target-left',
+      type: 'straight',
+      label: 'N11',
+      color: '#0891b2',
+    },
+    {
+      id: 'amf-smf3',
+      source: 'amf',
+      target: 'smf3',
+      sourceHandle: 'source-right-bottom',
+      targetHandle: 'target-left',
+      type: 'smoothstep',
+      pathOptions: { borderRadius: 16 },
+      label: 'N11',
+      color: '#8b5cf6',
+    },
+
+    // ─── 4. Control de Sesión N4 (PFCP) hacia UPFs (Líneas horizontales puras) ───
+    {
+      id: 'smf-upf',
+      source: 'smf',
+      target: 'upf',
+      sourceHandle: 'source-right',
+      targetHandle: 'target-left',
+      type: 'straight',
+      label: 'N4',
+      color: '#059669',
+    },
+    {
+      id: 'smf2-upf2',
+      source: 'smf2',
+      target: 'upf2',
+      sourceHandle: 'source-right',
+      targetHandle: 'target-left',
+      type: 'straight',
+      label: 'N4',
+      color: '#0891b2',
+    },
+    {
+      id: 'smf3-upf3',
+      source: 'smf3',
+      target: 'upf3',
+      sourceHandle: 'source-right',
+      targetHandle: 'target-left',
+      type: 'straight',
+      label: 'N4 · XDP',
+      color: '#8b5cf6',
+    },
+
+    // ─── 5. Enlace N6 hacia Redes de Datos Externas (Líneas horizontales puras) ───
+    {
+      id: 'upf-dn1',
+      source: 'upf',
+      target: 'dn1',
+      sourceHandle: 'source-right',
+      targetHandle: 'target-left',
+      type: 'straight',
+      label: 'N6',
+      color: '#059669',
+    },
+    {
+      id: 'upf2-dn2',
+      source: 'upf2',
+      target: 'dn2',
+      sourceHandle: 'source-right',
+      targetHandle: 'target-left',
+      type: 'straight',
+      label: 'N6',
+      color: '#0891b2',
+    },
+    {
+      id: 'upf3-dn3',
+      source: 'upf3',
+      target: 'dn3',
+      sourceHandle: 'source-right',
+      targetHandle: 'target-left',
+      type: 'straight',
+      label: 'N6',
+      color: '#8b5cf6',
+    },
+  ]
+
+  const edges: Edge[] = slicingLinksConfig.map((link) => ({
+    id: link.id,
+    source: link.source,
+    target: link.target,
+    sourceHandle: link.sourceHandle,
+    targetHandle: link.targetHandle,
+    type: link.type ?? 'straight',
+    pathOptions: link.pathOptions,
+    data: link.data,
+    animated: false,
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 14,
+      height: 14,
+      color: link.color,
+    },
+    label: link.label,
+    labelStyle: {
+      fontSize: 10,
+      fontWeight: 600,
+      fill: 'var(--foreground)',
+      fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+    },
+    labelBgPadding: [6, 3],
+    labelBgBorderRadius: 6,
+    labelBgStyle: {
+      fill: 'var(--card)',
+      stroke: 'var(--border)',
+      strokeWidth: 1.2,
+    },
+    style: {
+      stroke: link.color,
+      strokeWidth: 2,
+    },
+  }))
+
+  return { nodes, edges }
+}
+
 function physicalElements(
   components: ComponentStatus[],
   runtime?: RuntimeSnapshot
@@ -1385,10 +1690,17 @@ function physicalElements(
     runtime.hosts && runtime.hosts.length > 1 ? runtime.hosts : null
 
   if (rawHosts) {
+    const hasUrllc = rawHosts.some((h) => h.id === 'upf-urllc')
+
     const nodes: Node[] = rawHosts.map((host, idx) => {
       const hostComps = components.filter((c) => {
+        if (host.id === 'upf-urllc')
+          return c.node_id === 'upf-urllc' || c.id === 'upf3'
         if (host.id === 'upf-vm')
-          return c.node_id === 'upf-vm' || c.id === 'upf'
+          return (
+            c.node_id === 'upf-vm' ||
+            (c.id === 'upf' || (!hasUrllc && c.id === 'upf3'))
+          )
         if (host.id === 'upf-vm2')
           return c.node_id === 'upf-vm2' || c.id === 'upf2'
         if (host.id === 'gnb-vm')
@@ -1396,37 +1708,48 @@ function physicalElements(
         if (host.id === 'ue-vm') return c.node_id === 'ue-vm' || c.id === 'ue'
         return (
           c.node_id === 'core' ||
-          (!['upf-vm', 'upf-vm2', 'gnb-vm', 'ue-vm'].includes(c.node_id) &&
-            !['upf', 'upf2', 'gnb', 'ue'].includes(c.id))
+          (!['upf-vm', 'upf-vm2', 'upf-urllc', 'gnb-vm', 'ue-vm'].includes(
+            c.node_id
+          ) &&
+            !['upf', 'upf2', 'upf3', 'gnb', 'ue'].includes(c.id))
         )
       })
       const active = hostComps.filter((c) => c.status === 'running').length
       const healthy = active === hostComps.length && hostComps.length > 0
 
-      // Layout amplio y proporcional sin solapamiento
-      let pos = { x: 80 + idx * 300, y: 190 }
-      if (rawHosts.length === 5) {
-        if (host.id === 'ue-vm') pos = { x: 60, y: 200 }
-        else if (host.id === 'gnb-vm') pos = { x: 370, y: 200 }
-        else if (host.id === 'core') pos = { x: 680, y: 200 }
-        else if (host.id === 'upf-vm') pos = { x: 990, y: 110 }
-        else if (host.id === 'upf-vm2') pos = { x: 990, y: 290 }
-      } else if (rawHosts.length === 3) {
-        if (idx === 0) pos = { x: 100, y: 200 }
-        else if (idx === 1) pos = { x: 500, y: 110 }
-        else if (idx === 2) pos = { x: 500, y: 290 }
+      // Layout en Niveles (Tiers) Canónicos: Acceso -> RAN -> Core -> Multi-UPF en 3 niveles
+      let pos = { x: 80 + idx * 300, y: 280 }
+      if (host.id === 'ue-vm') {
+        pos = { x: 60, y: 280 }
+      } else if (host.id === 'gnb-vm') {
+        pos = { x: 370, y: 280 }
+      } else if (host.id === 'core') {
+        pos = { x: 680, y: 280 }
+      } else if (host.id === 'upf-vm') {
+        // Nivel 1 (Superior): UPF-01 eMBB
+        pos = { x: 990, y: hasUrllc ? 110 : 170 }
+      } else if (host.id === 'upf-urllc') {
+        // Nivel 2 (Intermedio): UPF-03 URLLC (eBPF/XDP)
+        pos = { x: 990, y: 280 }
+      } else if (host.id === 'upf-vm2') {
+        // Nivel 3 (Inferior): UPF-02 MIoT (Corporativo)
+        pos = { x: 990, y: hasUrllc ? 450 : 390 }
       }
 
       const defaultRole =
         host.id === 'ue-vm'
-          ? 'UE (Dual PDU)'
+          ? 'UE (Tríada 3 Slices)'
           : host.id === 'gnb-vm'
             ? 'gNodeB (RAN)'
             : host.id === 'upf-vm2'
-              ? 'UPF (Corporate)'
-              : host.id === 'upf-vm'
-                ? 'UPF (Internet)'
-                : '5G Core (CP)'
+              ? 'UPF-02 (MIoT)'
+              : host.id === 'upf-urllc'
+                ? 'UPF-03 (URLLC / eBPF)'
+                : host.id === 'upf-vm'
+                  ? hasUrllc
+                    ? 'UPF-01 (eMBB)'
+                    : 'UPF-01 (eMBB) + UPF-03 (URLLC)'
+                  : '5G Core (CP + Multi-SMF)'
 
       const defaultIp =
         host.id === 'ue-vm'
@@ -1435,9 +1758,11 @@ function physicalElements(
             ? '10.210.50.10'
             : host.id === 'upf-vm2'
               ? '10.210.50.9'
-              : host.id === 'upf-vm'
-                ? '10.210.50.8'
-                : '10.210.50.1'
+              : host.id === 'upf-urllc'
+                ? '10.210.50.22'
+                : host.id === 'upf-vm'
+                  ? '10.210.50.8'
+                  : '10.210.50.1'
 
       return {
         id: host.id,
@@ -1455,128 +1780,129 @@ function physicalElements(
       }
     })
 
-    const edges: Edge[] = []
-    if (rawHosts.length === 5) {
-      const links = [
-        {
-          id: 'phys-ue-gnb',
-          source: 'ue-vm',
-          target: 'gnb-vm',
-          sourceHandle: 'source-right',
-          targetHandle: 'target-left',
-          label: 'Radio Sim',
-          stroke: '#0284c7',
-          type: 'straight',
-        },
-        {
-          id: 'phys-gnb-core',
-          source: 'gnb-vm',
-          target: 'core',
-          sourceHandle: 'source-right',
-          targetHandle: 'target-left',
-          label: 'N2 (NGAP)',
-          stroke: '#475569',
-          type: 'straight',
-        },
-        {
-          id: 'phys-core-upf1',
-          source: 'core',
-          target: 'upf-vm',
-          sourceHandle: 'source-right',
-          targetHandle: 'target-left',
-          label: 'N4 (Internet)',
-          stroke: '#059669',
-          type: 'smoothstep',
-        },
-        {
-          id: 'phys-core-upf2',
-          source: 'core',
-          target: 'upf-vm2',
-          sourceHandle: 'source-right',
-          targetHandle: 'target-left',
-          label: 'N4 (Corporate)',
-          stroke: '#0891b2',
-          type: 'smoothstep',
-        },
-      ]
+    const hasHost = (id: string) => rawHosts.some((h) => h.id === id)
+    const links: Array<{
+      id: string
+      source: string
+      target: string
+      sourceHandle?: string
+      targetHandle?: string
+      label: string
+      stroke: string
+      type?: string
+      pathOptions?: { offset?: number; borderRadius?: number }
+      zIndex?: number
+    }> = []
 
-      for (const link of links) {
-        edges.push({
-          id: link.id,
-          source: link.source,
-          target: link.target,
-          sourceHandle: link.sourceHandle,
-          targetHandle: link.targetHandle,
-          type: link.type,
-          animated: false,
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            width: 12,
-            height: 12,
-            color: link.stroke,
-          },
-          label: link.label,
-          labelStyle: {
-            fontSize: 10,
-            fontWeight: 600,
-            fill: 'var(--foreground)',
-            fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-          },
-          labelBgPadding: [6, 2.5],
-          labelBgBorderRadius: 6,
-          labelBgStyle: {
-            fill: 'var(--card)',
-            stroke: 'var(--border)',
-            strokeWidth: 1.2,
-          },
-          style: {
-            stroke: link.stroke,
-            strokeWidth: 2,
-          },
-        })
-      }
-    } else {
-      const coreHost = rawHosts[0]
-      for (let i = 1; i < rawHosts.length; i++) {
-        const targetHost = rawHosts[i]
-        const isUpf2 =
-          targetHost.id === 'upf-vm2' || targetHost.ip === '10.210.50.9'
-        const color = isUpf2 ? '#0891b2' : '#059669'
-        edges.push({
-          id: `host-link-${targetHost.id}`,
-          source: coreHost.id,
-          target: targetHost.id,
-          sourceHandle: 'source-right',
-          targetHandle: 'target-left',
-          type: 'smoothstep',
-          animated: false,
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            width: 12,
-            height: 12,
-            color,
-          },
-          label: isUpf2 ? 'N4 (Corporate)' : 'N4 (Internet)',
-          labelStyle: {
-            fontSize: 10,
-            fontWeight: 600,
-            fill: 'var(--foreground)',
-            fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-          },
-          labelBgPadding: [6, 2.5],
-          labelBgBorderRadius: 6,
-          labelBgStyle: {
-            fill: 'var(--card)',
-            stroke: 'var(--border)',
-            strokeWidth: 1.2,
-          },
-          style: {
-            stroke: color,
-            strokeWidth: 2,
-          },
-        })
-      }
+    if (hasHost('ue-vm') && hasHost('gnb-vm')) {
+      links.push({
+        id: 'phys-ue-gnb',
+        source: 'ue-vm',
+        target: 'gnb-vm',
+        sourceHandle: 'source-right',
+        targetHandle: 'target-left',
+        label: 'Radio Sim',
+        stroke: '#0284c7',
+        type: 'straight',
+        zIndex: 10,
+      })
     }
+
+    if (hasHost('gnb-vm') && hasHost('core')) {
+      links.push({
+        id: 'phys-gnb-core',
+        source: 'gnb-vm',
+        target: 'core',
+        sourceHandle: 'source-right',
+        targetHandle: 'target-left',
+        label: 'N2 (NGAP)',
+        stroke: '#6366f1',
+        type: 'straight',
+        zIndex: 10,
+      })
+    }
+
+    if (hasHost('core') && hasHost('upf-vm')) {
+      links.push({
+        id: 'phys-core-upf1',
+        source: 'core',
+        target: 'upf-vm',
+        sourceHandle: 'source-right',
+        targetHandle: 'target-left',
+        label: hasUrllc ? 'N4 (Internet · eMBB)' : 'N4 (Internet + URLLC)',
+        stroke: '#059669',
+        type: 'smoothstep',
+        pathOptions: { offset: 30, borderRadius: 12 },
+        zIndex: 5,
+      })
+    }
+
+    if (hasHost('core') && hasHost('upf-vm2')) {
+      links.push({
+        id: 'phys-core-upf2',
+        source: 'core',
+        target: 'upf-vm2',
+        sourceHandle: 'source-right',
+        targetHandle: 'target-left',
+        label: 'N4 (Corporate · MIoT)',
+        stroke: '#0891b2',
+        type: 'smoothstep',
+        pathOptions: { offset: 30, borderRadius: 12 },
+        zIndex: 5,
+      })
+    }
+
+    // N4 URLLC · XDP en primer plano absoluto (por encima de los demás enlaces)
+    if (hasHost('core') && hasHost('upf-urllc')) {
+      links.push({
+        id: 'phys-core-upf3',
+        source: 'core',
+        target: 'upf-urllc',
+        sourceHandle: 'source-right',
+        targetHandle: 'target-left',
+        label: 'N4 (URLLC · XDP)',
+        stroke: '#8b5cf6',
+        type: 'straight',
+        zIndex: 50,
+      })
+    }
+
+    const edges: Edge[] = links.map((link) => ({
+      id: link.id,
+      source: link.source,
+      target: link.target,
+      sourceHandle: link.sourceHandle,
+      targetHandle: link.targetHandle,
+      type: link.type ?? 'straight',
+      pathOptions: link.pathOptions,
+      zIndex: link.zIndex ?? 10,
+      animated: false,
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 12,
+        height: 12,
+        color: link.stroke,
+      },
+      label: link.label,
+      labelStyle: {
+        fontSize: 10,
+        fontWeight: 600,
+        fill: 'var(--foreground)',
+        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+      },
+      labelBgPadding: [6, 2.5],
+      labelBgBorderRadius: 6,
+      labelBgStyle: {
+        fill: '#090d16',
+        fillOpacity: 1,
+        stroke: 'var(--border)',
+        strokeWidth: 1.2,
+      },
+      style: {
+        stroke: link.stroke,
+        strokeWidth: 2,
+      },
+    }))
 
     return { nodes, edges }
   }
@@ -1629,7 +1955,9 @@ export function EmsTopology({
     const next =
       view === 'physical'
         ? physicalElements(components, runtime)
-        : telcoElements(components, alarms, view)
+        : view === 'slicing'
+          ? slicingElements(components, alarms)
+          : telcoElements(components, alarms, view)
     setNodes((current) => {
       if (isViewChange) {
         return next.nodes
@@ -1645,8 +1973,16 @@ export function EmsTopology({
 
   const handleNodeClick: NodeMouseHandler = (_, node) => {
     if (node.id === 'sba-bus') return
-    const type = node.data.selectionType === 'host' ? 'host' : 'component'
-    onSelect?.({ type, id: node.id })
+    const isHost = node.data?.selectionType === 'host'
+    const realId = isHost
+      ? node.id
+      : node.id.startsWith('ue')
+        ? 'ue'
+        : node.id.startsWith('dn')
+          ? 'dn'
+          : node.id
+    const type = isHost ? 'host' : 'component'
+    onSelect?.({ type, id: realId })
   }
 
   return (

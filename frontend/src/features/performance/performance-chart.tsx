@@ -124,7 +124,8 @@ export function PerformanceChart({
         </div>
       )}
       <div className='min-h-0 flex-1'>
-        <ResponsiveContainer width='100%' height='100%'>
+        <ResponsiveContainer width='100%' height='100%' minWidth={0}
+          initialDimension={{ width: 1, height: 1 }}>
           <ComposedChart
             data={rows}
             margin={{ top: 12, right: 16, left: 0, bottom: 10 }}

@@ -19,7 +19,10 @@ def closed_loop_history(response: Response, _: UserPublic = Depends(operator_use
 @router.get("/predictions")
 def predictions(response: Response, _: UserPublic = Depends(operator_user)):
     response.headers["Cache-Control"] = "no-store"
-    return nwdaf.nwdaf_request("/management/v1/predictions")
+    result = nwdaf.nwdaf_request("/management/v1/predictions")
+    slices = nwdaf.slice_catalog()
+    return {**result, 'slices': slices, 'items': [p for p in result.get('items', [])
+            if any(p.get('snssai') == s['snssai'] for s in slices)]}
 
 
 @router.get("/status")

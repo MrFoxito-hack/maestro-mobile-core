@@ -56,3 +56,78 @@ def p1203_document(probe, trace):
         raise ValueError('incomplete_or_inconsistent_player')
     document['I23']['stalling'] = [[0, startup], *trace['stalls']]
     return document
+
+
+def adaptive_p1203_document(probes, trace):
+    """Mode-0 segments selected by actual Hls.js FRAG_CHANGED events.
+
+    probes maps representation IDs to ffprobe streams/packets of the complete
+    asset. Downloads alone do not prove presentation; use played fragments.
+    """
+    fragments = trace.get('fragments', [])
+    if not fragments or not trace.get('ended'):
+        raise ValueError('missing_played_fragments')
+    # A recovered fragment can replace only its remaining, unplayed portion.
+    # Preserve the earlier representation up to the actual switch media time.
+    timeline = []
+    for event in fragments:
+        fragment = dict(event)
+        if timeline and fragment['start'] < timeline[-1]['start']+timeline[-1]['duration']-.05:
+            position = fragment.get('media_time')
+            if (type(position) not in (int, float) or not math.isfinite(position)
+                    or not timeline[-1]['start'] < position < fragment['start']+fragment['duration']):
+                raise ValueError('ambiguous_replaced_fragment')
+            finish = fragment['start']+fragment['duration']
+            timeline[-1]['duration'] = position-timeline[-1]['start']
+            fragment.update(start=position, duration=finish-position)
+        timeline.append(fragment)
+    fragments = timeline
+    # Reuse startup validation, then replace constant-representation metadata.
+    document = p1203_document(next(iter(probes.values())), trace)
+    document['I11']['segments'] = []
+    document['I13']['segments'] = []
+    end = 0.0
+    seen = set()
+    for fragment in fragments:
+        identity = (fragment['start'], fragment['duration'])
+        if identity in seen:
+            raise ValueError('duplicate_played_fragment')
+        seen.add(identity)
+        start, duration = fragment['start'], fragment['duration']
+        if (type(start) not in (int, float) or type(duration) not in (int, float)
+                or not math.isfinite(start) or not math.isfinite(duration)
+                or abs(start-end) > .05 or duration <= 0):
+            raise ValueError('noncontiguous_played_fragments')
+        probe = probes[str(fragment['level'])]
+        for stream in probe['streams']:
+            kind = stream['codec_type']
+            if kind not in ('video', 'audio'):
+                continue
+            packets = [p for p in probe['packets'] if p['stream_index'] == stream['index']]
+            origin = min(int(p['pts']) for p in packets)
+            selected = [p for p in packets if start-1e-6 <= float((int(p['pts'])-origin)*Fraction(stream['time_base'])) < start+duration-1e-6]
+            if not selected:
+                raise ValueError('missing_fragment_packets')
+            segment = {'start': start, 'duration': duration,
+                       'bitrate': sum(int(p['size']) for p in selected)*8/duration/1000}
+            if kind == 'video':
+                if stream['codec_name'] != 'h264':
+                    raise ValueError('unsupported_video_codec')
+                segment.update(codec='h264', fps=float(Fraction(stream['avg_frame_rate'])),
+                               resolution=f"{stream['width']}x{stream['height']}")
+                document['I13']['segments'].append(segment)
+            else:
+                if stream['codec_name'] != 'aac' or stream['profile'] != 'LC' or stream.get('channels') != 2:
+                    raise ValueError('unsupported_audio_profile')
+                segment.update(codec='aaclc')
+                document['I11']['segments'].append(segment)
+        end = start+duration
+    if abs(trace['played_seconds']-end) > .1 or not 8 <= end <= 300:
+        raise ValueError('incomplete_playback_coverage')
+    last = 0
+    for stall in trace['stalls']:
+        if (len(stall) != 2 or any(type(v) not in (int, float) or not math.isfinite(v) for v in stall)
+                or not last <= stall[0] <= end or stall[1] < 0):
+            raise ValueError('invalid_player_stall')
+        last = stall[0]
+    return document

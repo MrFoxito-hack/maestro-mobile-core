@@ -1,0 +1,8 @@
+{
+  "version": "triad-v1",
+  "targets": [
+    {"id":"upf-01","service":"embb","label":"Smartphone · eMBB","dnn":"internet","sst":1,"sd":"000001","ssh_port_setting":"upf_ssh_port","namespace":null,"interface":"ogstun","gateway":"10.45.0.1","pool":"10.45.0.0/16","n3_address":"10.210.50.8","metrics_url":"http://127.0.0.1:9090/metrics","unit":"open5gs-upfd","pm_object_id":"nf:upf-01","xdp_expected":false},
+    {"id":"upf-03","service":"urllc","label":"Vehículo · URLLC experimental","dnn":"5g-plus","sst":2,"sd":"000002","ssh_port_setting":"upf_ssh_port","namespace":"maestro-urllc","interface":"ogstun","gateway":"10.47.0.1","pool":"10.47.0.0/16","n3_address":"10.210.50.22","metrics_url":"http://127.0.0.1:9090/metrics","unit":"open5gs-upfd-urllc","pm_object_id":"nf:upf-03:triad-v1","xdp_expected":true},
+    {"id":"upf-02","service":"miot","label":"Sensor · MIoT","dnn":"corporate","sst":3,"sd":"000003","ssh_port_setting":"upf2_ssh_port","namespace":null,"interface":"ogstun","gateway":"10.46.0.1","pool":"10.46.0.0/16","n3_address":"10.210.50.9","metrics_url":"http://127.0.0.1:9090/metrics","unit":"open5gs-upfd","pm_object_id":"nf:upf-02:triad-v1","xdp_expected":false}
+  ]
+}

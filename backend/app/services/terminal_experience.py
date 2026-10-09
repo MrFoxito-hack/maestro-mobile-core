@@ -24,34 +24,13 @@ class PlaybackObservation(BaseModel):
 
 
 def _publish_p1203(body: PlaybackObservation):
-    if body.played_seconds < 8.0 or body.startup_seconds is None or body.received_bytes <= 0:
-        return
-    try:
-        from app.services.nwdaf import nwdaf_request
-        duration = float(min(300.0, max(8.0, body.played_seconds)))
-        bitrate_kbps = max(500.0, (body.received_bytes * 8.0 / duration / 1000.0))
-        stalls = [[0.0, float(body.startup_seconds)]]
-        if body.rebuffer_count > 0 and body.rebuffer_seconds > 0:
-            step = duration / (body.rebuffer_count + 1)
-            dur_per_stall = body.rebuffer_seconds / body.rebuffer_count
-            for i in range(body.rebuffer_count):
-                stalls.append([round((i + 1) * step, 2), round(dur_per_stall, 2)])
-        resolution = '1920x1080' if body.profile == '1080p' else '1280x720'
-        doc = {
-            'I11': {'segments': [{'start': 0.0, 'duration': duration, 'bitrate': 128.0, 'codec': 'aaclc'}], 'streamId': 1},
-            'I13': {'segments': [{'start': 0.0, 'duration': duration, 'bitrate': round(bitrate_kbps, 1), 'codec': 'h264', 'fps': 25.0, 'resolution': resolution}], 'streamId': 1},
-            'I23': {'stalling': stalls, 'streamId': 1},
-            'IGen': {'device': 'mobile', 'displaySize': resolution, 'viewingDistance': '30cm'},
-        }
-        nwdaf_request('/management/v1/publish/service-experience', method='POST', body=json.dumps({
-            'supi': body.imsi,
-            'app_id': 'stream5g',
-            'timestamp': time.time(),
-            'document': doc
-        }))
-    except Exception:
-        # Failure to publish to NWDAF must not fail recording player observation
-        pass
+    """Aggregate telemetry cannot reconstruct audiovisual metadata or stall times.
+
+    Keep browser observations available, but never publish an invented P.1203
+    document. Laboratory scoring uses qoe_metrics with probed media and the
+    complete player trace; it is deliberately independent of live policy.
+    """
+    return None
 
 
 def record(body: PlaybackObservation):

@@ -30,7 +30,9 @@ import { Route as AuthenticatedAuditIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAlarmsIndexRouteImport } from './routes/_authenticated/alarms/index'
 import { Route as AuthenticatedTracesNodeRouteImport } from './routes/_authenticated/traces/node'
 import { Route as AuthenticatedTracesE2eRouteImport } from './routes/_authenticated/traces/e2e'
+import { Route as AuthenticatedServicesVerticalsRouteImport } from './routes/_authenticated/services/verticals'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedDiagnosticoFallasRouteImport } from './routes/_authenticated/diagnostico/fallas'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -145,10 +147,22 @@ const AuthenticatedTracesE2eRoute = AuthenticatedTracesE2eRouteImport.update({
   path: '/traces/e2e',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedServicesVerticalsRoute =
+  AuthenticatedServicesVerticalsRouteImport.update({
+    id: '/services/verticals',
+    path: '/services/verticals',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedErrorsErrorRoute =
   AuthenticatedErrorsErrorRouteImport.update({
     id: '/errors/$error',
     path: '/errors/$error',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDiagnosticoFallasRoute =
+  AuthenticatedDiagnosticoFallasRouteImport.update({
+    id: '/diagnostico/fallas',
+    path: '/diagnostico/fallas',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
@@ -160,7 +174,9 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/diagnostico/fallas': typeof AuthenticatedDiagnosticoFallasRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/services/verticals': typeof AuthenticatedServicesVerticalsRoute
   '/traces/e2e': typeof AuthenticatedTracesE2eRoute
   '/traces/node': typeof AuthenticatedTracesNodeRoute
   '/alarms/': typeof AuthenticatedAlarmsIndexRoute
@@ -183,7 +199,9 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/': typeof AuthenticatedIndexRoute
+  '/diagnostico/fallas': typeof AuthenticatedDiagnosticoFallasRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/services/verticals': typeof AuthenticatedServicesVerticalsRoute
   '/traces/e2e': typeof AuthenticatedTracesE2eRoute
   '/traces/node': typeof AuthenticatedTracesNodeRoute
   '/alarms': typeof AuthenticatedAlarmsIndexRoute
@@ -208,7 +226,9 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/diagnostico/fallas': typeof AuthenticatedDiagnosticoFallasRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/_authenticated/services/verticals': typeof AuthenticatedServicesVerticalsRoute
   '/_authenticated/traces/e2e': typeof AuthenticatedTracesE2eRoute
   '/_authenticated/traces/node': typeof AuthenticatedTracesNodeRoute
   '/_authenticated/alarms/': typeof AuthenticatedAlarmsIndexRoute
@@ -233,7 +253,9 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/diagnostico/fallas'
     | '/errors/$error'
+    | '/services/verticals'
     | '/traces/e2e'
     | '/traces/node'
     | '/alarms/'
@@ -256,7 +278,9 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/'
+    | '/diagnostico/fallas'
     | '/errors/$error'
+    | '/services/verticals'
     | '/traces/e2e'
     | '/traces/node'
     | '/alarms'
@@ -280,7 +304,9 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/'
+    | '/_authenticated/diagnostico/fallas'
     | '/_authenticated/errors/$error'
+    | '/_authenticated/services/verticals'
     | '/_authenticated/traces/e2e'
     | '/_authenticated/traces/node'
     | '/_authenticated/alarms/'
@@ -455,6 +481,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTracesE2eRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/services/verticals': {
+      id: '/_authenticated/services/verticals'
+      path: '/services/verticals'
+      fullPath: '/services/verticals'
+      preLoaderRoute: typeof AuthenticatedServicesVerticalsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/errors/$error': {
       id: '/_authenticated/errors/$error'
       path: '/errors/$error'
@@ -462,12 +495,21 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/diagnostico/fallas': {
+      id: '/_authenticated/diagnostico/fallas'
+      path: '/diagnostico/fallas'
+      fullPath: '/diagnostico/fallas'
+      preLoaderRoute: typeof AuthenticatedDiagnosticoFallasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedDiagnosticoFallasRoute: typeof AuthenticatedDiagnosticoFallasRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
+  AuthenticatedServicesVerticalsRoute: typeof AuthenticatedServicesVerticalsRoute
   AuthenticatedTracesE2eRoute: typeof AuthenticatedTracesE2eRoute
   AuthenticatedTracesNodeRoute: typeof AuthenticatedTracesNodeRoute
   AuthenticatedAlarmsIndexRoute: typeof AuthenticatedAlarmsIndexRoute
@@ -485,7 +527,9 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedDiagnosticoFallasRoute: AuthenticatedDiagnosticoFallasRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
+  AuthenticatedServicesVerticalsRoute: AuthenticatedServicesVerticalsRoute,
   AuthenticatedTracesE2eRoute: AuthenticatedTracesE2eRoute,
   AuthenticatedTracesNodeRoute: AuthenticatedTracesNodeRoute,
   AuthenticatedAlarmsIndexRoute: AuthenticatedAlarmsIndexRoute,

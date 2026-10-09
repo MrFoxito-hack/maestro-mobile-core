@@ -237,7 +237,7 @@ class ConfigurationService:
         self._allowed_path(scenario_id, component_id, path)
         adapter = scenario_manager.adapter
         if isinstance(adapter, RemoteExecutionAdapter):
-            return await adapter.read_remote_file(path)
+            return await adapter.read_remote_file(path, component_id=component_id)
         if get_settings().execution_mode == "local":
             return Path(path).read_text(encoding="utf-8")
         if get_settings().execution_mode == "simulated":

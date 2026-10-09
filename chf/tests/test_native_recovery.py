@@ -64,6 +64,23 @@ def test_open_session_is_not_automatically_forgiven():
     assert state['state'] == 'manual_reconciliation_required' and request is None
 
 
+@pytest.mark.parametrize('packets,accepted', [(3, True), (4, False), (None, False)])
+def test_packet_recovery_matches_durable_pfcp_count(packets, accepted):
+    entries = journal()
+    report = json.loads(entries[2]['body'])
+    report['serviceSpecificUnits'] = 3
+    entries[2]['body'] = json.dumps(report)
+    request = json.loads(entries[-1]['body'])
+    if packets is not None:
+        request['multipleUnitUsage'][0]['usedUnitContainer'][0]['serviceSpecificUnits'] = packets
+    entries[-1]['body'] = json.dumps(request)
+    if accepted:
+        assert parse_journal(encode(entries))[0]['state'] == 'release_pending'
+    else:
+        with pytest.raises(ValueError):
+            parse_journal(encode(entries))
+
+
 @pytest.mark.parametrize('uri,base', [
     (RESOURCE + '/release', 'http://127.0.0.2:8081'),
     (RESOURCE + '/update', BASE),

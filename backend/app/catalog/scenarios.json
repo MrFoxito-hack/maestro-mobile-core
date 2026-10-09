@@ -18,7 +18,7 @@
   },
   "5g-sa": {
     "name": "5G Standalone educativo", "technology": "5G", "description": "Baseline multi-VM del Laboratorio 4",
-    "nodes": [{"id":"core","label":"5GC","role":"core"}, {"id":"upf-vm","label":"UPF-01 VM","role":"user-plane"}, {"id":"upf-vm2","label":"UPF-02 VM (Corp)","role":"user-plane"}, {"id":"gnb-vm","label":"gNodeB VM","role":"ran"}, {"id":"ue-vm","label":"UE VM","role":"ue"}],
+    "nodes": [{"id":"core","label":"5GC","role":"core"}, {"id":"upf-vm","label":"UPF-01 VM (eMBB + URLLC)","role":"user-plane"}, {"id":"upf-vm2","label":"UPF-02 VM (Corp)","role":"user-plane"}, {"id":"gnb-vm","label":"gNodeB VM","role":"ran"}, {"id":"ue-vm","label":"UE VM","role":"ue"}],
     "components": [
       {"id":"mongodb","label":"MongoDB","kind":"database","node_id":"core","unit":"mongod","interfaces":[],"depends_on":[]},
       {"id":"nrf","label":"NRF","kind":"core","node_id":"core","unit":"open5gs-nrfd","interfaces":["SBI"],"depends_on":[]},
@@ -31,10 +31,12 @@
       {"id":"nssf","label":"NSSF","kind":"core","node_id":"core","unit":"open5gs-nssfd","interfaces":["SBI"],"depends_on":["nrf"]},
       {"id":"smf","label":"SMF-01 (Internet)","kind":"core","node_id":"core","unit":"open5gs-smfd","interfaces":["N4","SBI"],"depends_on":["nrf","pcf"]},
       {"id":"smf2","label":"SMF-02 (Corporate)","kind":"core","node_id":"core","unit":"open5gs-smfd2","interfaces":["N4","SBI"],"depends_on":["nrf","scp","pcf"]},
+      {"id":"smf3","label":"SMF-03 (URLLC)","kind":"core","node_id":"core","unit":"open5gs-smfd3","interfaces":["N4","SBI"],"depends_on":["nrf","scp","pcf"]},
       {"id":"chf","label":"CHF","kind":"core","node_id":"core","unit":"open5gs-chfd","interfaces":["Nchf"],"depends_on":[]},
       {"id":"nwdaf","label":"NWDAF","kind":"core","node_id":"core","unit":"maestro-nwdaf","interfaces":["Nnwdaf"],"depends_on":[]},
       {"id":"upf","label":"UPF-01 (Internet)","kind":"user-plane","node_id":"upf-vm","unit":"open5gs-upfd","interfaces":["N3","N4","N6"],"depends_on":["smf"]},
       {"id":"upf2","label":"UPF-02 (Corporate)","kind":"user-plane","node_id":"upf-vm2","unit":"open5gs-upfd2","interfaces":["N3","N4","N6"],"depends_on":["smf2"]},
+      {"id":"upf3","label":"UPF-03 (URLLC)","kind":"user-plane","node_id":"upf-vm","unit":"open5gs-upfd-urllc","interfaces":["N3","N4","N6"],"depends_on":["smf3"]},
       {"id":"amf","label":"AMF","kind":"core","node_id":"core","unit":"open5gs-amfd","interfaces":["N1","N2","SBI"],"depends_on":["nrf","ausf","nssf"]},
       {"id":"gnb","label":"gNodeB","kind":"ran","node_id":"gnb-vm","unit":"ueransim-gnb","interfaces":["N2","N3","NR-Uu"],"depends_on":["amf","upf"]},
       {"id":"ue","label":"UE","kind":"ue","node_id":"ue-vm","unit":"ueransim-ue","interfaces":["N1","NR-Uu"],"depends_on":["gnb"]}

@@ -144,7 +144,33 @@ def status():
         reason=None if remaining else 'Registrar nuevamente una sesión observada')
 
 
+def require_uncharged_upf(proc_root=Path('/proc')):
+    """The experimental redirect path cannot account to an enforced URR.
+
+    Inspect running processes, not a presumed configuration filename. Unknown
+    configurations fail closed. Never disable the UPF's charging enforcement.
+    """
+    import yaml
+    found = False
+    for process in proc_root.glob('[0-9]*'):
+        try:
+            if process.joinpath('comm').read_text().strip() != 'open5gs-upfd':
+                continue
+            args = process.joinpath('cmdline').read_bytes().decode().split('\0')
+        except FileNotFoundError:
+            continue
+        found = True
+        if '-c' not in args:
+            raise ValueError('Cannot verify UPF charging configuration')
+        config = yaml.safe_load(Path(args[args.index('-c') + 1]).read_text())
+        if config.get('upf', {}).get('charging_enforcement', False):
+            raise ValueError('XDP redirect blocked: PFCP/QER/URR/CHF synchronization is not implemented')
+    if not found:
+        raise ValueError('No running UPF; charging policy cannot be verified')
+
+
 def activate():
+    require_uncharged_upf()
     current = status()
     if not current.get('lease_seconds'):
         raise ValueError('Session missing or expired: capture and register the current UE first')
@@ -156,7 +182,8 @@ def activate():
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('action', choices=['register', 'on', 'off', 'stats', 'status'])
+    p.add_argument('action', choices=['register', 'on', 'off', 'stats', 'status', 'prepare-c4'])
+    p.add_argument('--registry', help='Native C4 registry; prepare-c4 writes an inactive proposal only')
     p.add_argument('--pcap')
     p.add_argument('--ue')
     p.add_argument('--nat', default='10.0.2.16')
@@ -165,7 +192,13 @@ if __name__ == '__main__':
     p.add_argument('--lease', type=int, default=3600)
     p.add_argument('--output', default='session.json')
     a = p.parse_args()
-    if a.action == 'register':
+    if a.action == 'prepare-c4':
+        from c4_image import compile_image
+        if not a.registry: p.error('prepare-c4 requires --registry')
+        proposal = compile_image(json.loads(Path(a.registry).read_text()))
+        Path(a.output).write_text(json.dumps(proposal, indent=2) + '\n')
+        print(json.dumps({'output': a.output, 'sessions': len(proposal['sessions']), 'admission_ready': False}))
+    elif a.action == 'register':
         if not a.pcap or not a.ue: p.error('register requires --pcap and --ue')
         register(a)
     elif a.action == 'stats': stats()
