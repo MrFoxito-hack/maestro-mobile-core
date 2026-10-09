@@ -1,0 +1,82 @@
+diff --git a/src/udm/context.c b/src/udm/context.c
+index aa9279c..61e0e10 100644
+--- a/src/udm/context.c
++++ b/src/udm/context.c
+@@ -45,6 +45,9 @@ void udm_context_init(void)
+ #define MAX_NUM_OF_UDM_SDM_SUBSCRIPTIONS_PER_UE 4
+     max_num_of_udm_sdm_subscriptions = ogs_global_conf()->max.ue *
+             MAX_NUM_OF_UDM_SDM_SUBSCRIPTIONS_PER_UE;
++    /* Keep a minimum reserve for dense lab registration scenarios. */
++    if (max_num_of_udm_sdm_subscriptions < 16384)
++        max_num_of_udm_sdm_subscriptions = 16384;
+     ogs_pool_init(&udm_sdm_subscription_pool, max_num_of_udm_sdm_subscriptions);
+ 
+     ogs_list_init(&self.udm_ue_list);
+@@ -366,6 +369,17 @@ udm_sdm_subscription_t *udm_sdm_subscription_add(udm_ue_t *udm_ue)
+ 
+     ogs_assert(udm_ue);
+ 
++    /* Repeated subscriptions for this UE retain the same pool slot and ID. */
++    ogs_list_for_each(&udm_ue->sdm_subscription_list, sdm_subscription) {
++        if (sdm_subscription->id) {
++            ogs_info("[%s] Reusing SDM subscription [%s] (idempotent)",
++                    udm_ue->supi ? udm_ue->supi : "unknown",
++                    sdm_subscription->id);
++            return sdm_subscription;
++        }
++    }
++    sdm_subscription = NULL;
++
+     ogs_uuid_get(&uuid);
+     ogs_uuid_format(id, &uuid);
+ 
+diff --git a/src/udm/nudm-handler.c b/src/udm/nudm-handler.c
+index eae9128..5c28b86 100644
+--- a/src/udm/nudm-handler.c
++++ b/src/udm/nudm-handler.c
+@@ -671,6 +671,8 @@ bool udm_nudm_sdm_handle_subscription_create(
+     OpenAPI_sdm_subscription_t *SDMSubscription = NULL;
+ 
+     udm_sdm_subscription_t *sdm_subscription = NULL;
++    char *callback_uri = NULL;
++    int status;
+     
+     ogs_assert(udm_ue);
+     ogs_assert(stream);
+@@ -721,8 +723,25 @@ bool udm_nudm_sdm_handle_subscription_create(
+         return false;
+     }
+ 
+-    sdm_subscription->data_change_callback_uri =
+-        ogs_strdup(SDMSubscription->callback_reference);
++    status = sdm_subscription->data_change_callback_uri ?
++        OGS_SBI_HTTP_STATUS_OK : OGS_SBI_HTTP_STATUS_CREATED;
++    if (!sdm_subscription->data_change_callback_uri ||
++        strcmp(sdm_subscription->data_change_callback_uri,
++            SDMSubscription->callback_reference) != 0) {
++        /* Allocate first so an allocation failure preserves the old URI. */
++        callback_uri = ogs_strdup(SDMSubscription->callback_reference);
++        if (!callback_uri) {
++            if (!sdm_subscription->data_change_callback_uri)
++                udm_sdm_subscription_remove(sdm_subscription);
++            ogs_assert(true == ogs_sbi_server_send_error(stream,
++                OGS_SBI_HTTP_STATUS_INTERNAL_SERVER_ERROR, recvmsg,
++                "No memory for callbackReference", udm_ue->supi, NULL));
++            return false;
++        }
++        if (sdm_subscription->data_change_callback_uri)
++            ogs_free(sdm_subscription->data_change_callback_uri);
++        sdm_subscription->data_change_callback_uri = callback_uri;
++    }
+ 
+     server = ogs_sbi_server_from_stream(stream);
+     ogs_assert(server);
+@@ -742,7 +761,7 @@ bool udm_nudm_sdm_handle_subscription_create(
+     sendmsg.SDMSubscription = OpenAPI_sdm_subscription_copy(
+             sendmsg.SDMSubscription, SDMSubscription);
+ 
+-    response = ogs_sbi_build_response(&sendmsg, OGS_SBI_HTTP_STATUS_CREATED);
++    response = ogs_sbi_build_response(&sendmsg, status);
+     ogs_assert(response);
+     ogs_sbi_server_send_response(stream, response);
+ 

@@ -1,0 +1,20 @@
+--- a/src/amf/gmm-handler.c
++++ b/src/amf/gmm-handler.c
+@@ -1495,6 +1495,8 @@
+                 /********************************************
+                  * Check Visited SMF Instance
+                  *******************************************/
++                /* MAEstro: consult NSSF for each new PDU session when enabled. */
++                if (!getenv("MAESTRO_NSSF_ALWAYS")) {
+                 v_smf_instance = OGS_SBI_GET_NF_INSTANCE(
+                         sess->sbi.service_name_array[service_name]);
+                 if (!v_smf_instance) {
+@@ -1514,6 +1516,8 @@
+                 } else
+                     ogs_info("V-SMF Instance [%s](SESSION)",
+                             v_smf_instance->id);
++
++                }
+ 
+                 if (v_smf_instance) {
+                     ogs_info("V-SMF Instance [%s]", v_smf_instance->id);

@@ -39,8 +39,6 @@ import { PerformanceChart, type ChartMode } from './performance-chart'
 import { ReportDialog } from './report-dialog'
 import { exportPerformance } from './export'
 import { UpfXdpPanel } from './upf-xdp-panel'
-import { UpfTelemetryPanel } from './upf-telemetry-panel'
-import { AbObservationsPanel } from './ab-observations-panel'
 import {
   NF_GROUPS,
   PERFORMANCE_TEMPLATES,
@@ -351,8 +349,6 @@ function PerformanceWorkspace({ scenario }: { scenario: '5g-sa' | '4g-epc' }) {
 
   return (
     <EmsPage title='Performance'>
-      <UpfTelemetryPanel />
-      <AbObservationsPanel />
       <div className='grid min-h-[600px] grid-cols-1 overflow-hidden rounded-lg border bg-card lg:h-[calc(100dvh-88px)] lg:grid-cols-[210px_minmax(0,1fr)_300px] 2xl:grid-cols-[230px_minmax(0,1fr)_340px]'>
         <aside className='flex min-h-0 flex-col border-b lg:border-r lg:border-b-0'>
           <div className='border-b p-3'>
