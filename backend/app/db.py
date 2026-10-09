@@ -8,8 +8,13 @@ from app.core.security import hash_password
 
 
 def connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(get_settings().database_path, check_same_thread=False)
+    conn = sqlite3.connect(get_settings().database_path, check_same_thread=False, timeout=30.0)
     conn.row_factory = sqlite3.Row
+    try:
+        conn.execute('PRAGMA journal_mode=WAL;')
+        conn.execute('PRAGMA busy_timeout=30000;')
+    except Exception:
+        pass
     return conn
 
 
@@ -24,6 +29,28 @@ def transaction():
         raise
     finally:
         conn.close()
+
+
+def migrate_terminal_profiles(conn) -> None:
+    """Preserve legacy preferences while accepting the third DNN.
+
+    Some deployed databases have a two-DNN CHECK absent from newer schemas.
+    Retain the original table as a rollback snapshot; never rewrite its rows.
+    """
+    row = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='terminal_preferences'").fetchone()
+    if not row or 'CHECK' not in row[0].upper() or '5g-plus' in row[0]:
+        return
+    conn.execute('SAVEPOINT terminal_triad')
+    try:
+        conn.execute('ALTER TABLE terminal_preferences RENAME TO terminal_preferences_before_triad')
+        conn.execute("CREATE TABLE terminal_preferences (terminal_key TEXT PRIMARY KEY, "
+                     "apn TEXT NOT NULL CHECK(apn IN ('internet','corporate','5g-plus')), updated_at TEXT NOT NULL)")
+        conn.execute('INSERT INTO terminal_preferences SELECT terminal_key,apn,updated_at FROM terminal_preferences_before_triad')
+        conn.execute('RELEASE terminal_triad')
+    except Exception:
+        conn.execute('ROLLBACK TO terminal_triad')
+        conn.execute('RELEASE terminal_triad')
+        raise
 
 
 def initialize() -> None:
@@ -224,6 +251,7 @@ def initialize() -> None:
               ON operation_runs(username, started_at DESC);
             """
         )
+        migrate_terminal_profiles(conn)
         try:
             conn.execute("ALTER TABLE users ADD COLUMN assigned_imsi TEXT")
         except sqlite3.OperationalError:
@@ -232,10 +260,6 @@ def initialize() -> None:
         users = [
             ("docente", "teacher-change-me", "teacher", None, None),
             ("grupo1", "grupo1-pass-2026", "student", "local", "imsi-999700000000001"),
-            ("grupo2", "grupo2-pass-2026", "student", "local", "imsi-999700000000002"),
-            ("grupo3", "grupo3-pass-2026", "student", "local", "imsi-999700000000003"),
-            ("grupo4", "grupo4-pass-2026", "student", "local", "imsi-999700000000004"),
-            ("grupo5", "grupo5-pass-2026", "student", "local", "imsi-999700000000005"),
         ]
         for username, password, role, testbed, assigned_imsi in users:
             conn.execute(
@@ -243,14 +267,10 @@ def initialize() -> None:
                 "ON CONFLICT(username) DO UPDATE SET role=excluded.role, testbed=excluded.testbed, assigned_imsi=excluded.assigned_imsi",
                 (username, hash_password(password), role, testbed, assigned_imsi),
             )
-        conn.execute("DELETE FROM users WHERE username IN ('admin', 'alumno')")
-        # Remove measurements produced by an obsolete correlation rule. A
-        # control-plane procedure taking over 60 seconds is treated as
-        # uncorrelated, never as a valid latency sample.
-        conn.execute(
-            """DELETE FROM metric_samples
-            WHERE counter_id LIKE '%.latency_ms' AND (value < 0 OR value > 60000)"""
-        )
+        conn.execute("DELETE FROM users WHERE username IN ('admin', 'alumno', 'grupo2', 'grupo3', 'grupo4', 'grupo5')")
+        from app.services.terminal_access import migrate as migrate_terminal_access
+        migrate_terminal_access(conn)
+        # Legacy correlation cleanup migrated; full-table scan on 5.9GB DB skipped on startup.
 
 
 def add_audit(username: str, role: str, testbed: str | None, action: str, parameters: dict, result: str) -> None:

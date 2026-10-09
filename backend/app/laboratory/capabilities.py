@@ -18,9 +18,15 @@ CAPABILITIES = [
      "status": "operational_pilot", "source": "backend/app/laboratory/worker.py",
      "limitation": "Piloto real con guard de transporte y rescate; recuperación efectiva de políticas y exclusión de otros escritores pendientes."},
     {"id": "local_investigator", "label": "Investigador local en GPU",
-     "status": "not_implemented", "source": None,
-     "limitation": "Modelo, memoria y calidad pendientes de evaluación."},
+     "status": "implemented", "source": "docs/C6_QOE_IA_VERIFICACION.md",
+     "limitation": "Asesor local de lectura. Consultar exactitud y tiempos medidos; no aplica políticas."},
 ]
+
+
+def c6_preset():
+    import json
+    from pathlib import Path
+    return json.loads(Path(__file__).with_name('c6_preset.json').read_text(encoding='utf-8'))
 
 
 def templates() -> list[dict]:

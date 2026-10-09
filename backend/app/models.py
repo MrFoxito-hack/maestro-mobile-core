@@ -199,8 +199,15 @@ class AuditEvent(BaseModel):
     created_at: datetime
 
 
+class PolicyAuthorityToken(BaseModel):
+    token: int = Field(strict=True, ge=1)
+    expected_version: int = Field(strict=True, ge=0)
+    action_id: str = Field(pattern=r"^[a-zA-Z0-9._-]{8,100}$")
+
+
 class OperationExecute(BaseModel):
     scenario_id: str = Field(pattern=r"^[a-zA-Z0-9._-]+$")
     component_id: str = Field(pattern=r"^[a-zA-Z0-9._-]+$")
     operation_id: str = Field(pattern=r"^[a-zA-Z0-9._-]+$")
     parameters: dict[str, Any] = Field(default_factory=dict)
+    authority: PolicyAuthorityToken | None = None

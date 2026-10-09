@@ -91,7 +91,7 @@ export function PhoneApp({
   const cleanSubscriber = subscriber?.replace('imsi-', '') ?? '999700000000001'
   const imsi = /[\u2022*]/.test(cleanSubscriber) ? '999700000000001' : cleanSubscriber
   const msisdnMap: Record<string, string> = {
-    '999700000000001': '51939289457',
+    '999700000000001': '51987654321',
     '999700000000002': '51939289458',
     '999700000000003': '51939289459',
     '999700000000004': '51939289460',

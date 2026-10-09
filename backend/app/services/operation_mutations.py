@@ -8,16 +8,17 @@ import json
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
+from fastapi import HTTPException
 
 from app.models import SubscriberCreate, SubscriberUpdate
 from app.services import charging, nwdaf
 from app.services.subscribers import subscriber_service
 
 IMSI = dict(id="imsi", label="IMSI", type="text", required=True, pattern=r"^(?:imsi-)?\d{14,15}$")
-SST = dict(id="sst", label="SST", type="number", minimum=0, maximum=255)
-SD = dict(id="sd", label="SD", type="text", pattern=r"^[0-9a-fA-F]{6}$")
-DNN = dict(id="apn_dnn", label="DNN", type="select", options=[
-    dict(value=value, label=value) for value in ("internet", "corporate")])
+SST = dict(id="sst", label="SST", type="number", required=True, minimum=0, maximum=255)
+SD = dict(id="sd", label="SD", type="text", required=True, pattern=r"^[0-9a-fA-F]{6}$")
+DNN = dict(id="apn_dnn", label="DNN", type="select", required=True, options=[
+    dict(value=value, label=value) for value in ("internet", "5g-plus", "corporate")])
 
 
 def choice(identifier: str, *values: str | int, default=None) -> dict:
@@ -37,8 +38,8 @@ def mutation_definitions(component: str) -> list[dict[str, Any]]:
                 dict(id="opc", label="OPC", type="text", pattern=r"^[0-9a-fA-F]{32}$", secret=True,
                      default="E8ED289DEBA952E6B6710CE703365304"),
                 dict(id="amf", label="AMF", type="text", pattern=r"^[0-9a-fA-F]{4}$", default="8000"),
-                {**SST, "default": 1}, SD, {**DNN, "default": "internet"}]),
-            ("subscriber.update", "MOD 5G-SUB", "Actualizar slice o DNN sin reiniciar el Core.", True, [IMSI, SST, SD, DNN]),
+                SST, SD, DNN]),
+            ("subscriber.update", "SET 5G-SUB", "Actualizar el triplete completo SST/SD/DNN sin reiniciar el Core.", True, [IMSI, SST, SD, DNN]),
             ("subscriber.delete", "RMV 5G-SUB", "Eliminar el perfil de suscriptor del UDR.", True, [IMSI]),
         ],
         "chf": [
@@ -55,7 +56,7 @@ def mutation_definitions(component: str) -> list[dict[str, Any]]:
                          integer=False, minimum=0.001, maximum=100000) for direction in ("dl", "ul")]])],
         "nwdaf": [
             ("nwdaf.analytics", "DSP NWDAF-ANALYTICS", "Carga observada y predicción por NF y horizonte.", False,
-             [choice("nf", "UPF-01", "UPF-02"), choice("horizon", 15, 30, default=15)]),
+             [choice("nf", "UPF-01", "UPF-03", "UPF-02"), choice("horizon", 15, 30, default=15)]),
             ("nwdaf.mode", "SET NWDAF-MODE", "Conmutar el actuador nativo entre modo autónomo y manual.", True,
              [choice("mode", "AUTONOMOUS", "MANUAL")]),
         ],
@@ -68,13 +69,27 @@ def mutation_definitions(component: str) -> list[dict[str, Any]]:
             for identifier, label, description, mutating, parameters in definitions.get(group, [])]
 
 
-async def execute_mutation(operation: str, parameters: dict, run_id: str) -> tuple[dict, str]:
+async def execute_mutation(operation: str, parameters: dict, run_id: str, *, authority: dict | None = None) -> tuple[dict, str]:
     values = dict(parameters)
     imsi = values.pop("imsi", "").removeprefix("imsi-")
     supi = "imsi-" + imsi
     if operation.startswith("subscriber."):
+        if operation in {"subscriber.create", "subscriber.update"}:
+            from app.services.upf_inventory import profile
+            from app.services.terminal_inventory import by_supi
+            target = profile(values["apn_dnn"])
+            if target is None or (values["sst"], values["sd"].lower()) != (target["sst"], target["sd"]):
+                raise HTTPException(422, "Triplete SST/SD/DNN incompatible con el inventario de slicing")
+            device = by_supi(supi)
+            if device is not None and device.service != target["service"]:
+                raise HTTPException(409, "Conflicto de recurso: el UE está reservado para otro servicio")
         if operation == "subscriber.create":
-            result = await asyncio.to_thread(subscriber_service.create, SubscriberCreate(imsi=imsi, **values))
+            try:
+                result = await asyncio.to_thread(subscriber_service.create, SubscriberCreate(imsi=imsi, **values))
+            except ValueError as exc:
+                if str(exc) == "El IMSI ya existe":
+                    raise HTTPException(409, str(exc)) from exc
+                raise
         elif operation == "subscriber.update":
             if not values:
                 raise ValueError("MOD 5G-SUB requiere SST, SD o DNN")
@@ -105,8 +120,9 @@ async def execute_mutation(operation: str, parameters: dict, run_id: str) -> tup
     from app.services.pcf_control import control_request
     payload = {"operation": "mode", **values} if operation == "nwdaf.mode" else {
         "operation": "qos", "supi": supi, **values}
+    payload['authority'] = authority
     res = await asyncio.to_thread(control_request, payload)
-    if operation == "pcf.qos":
+    if operation == "pcf.qos" and res.get('effective_policy_verified') is True and not res.get('replay'):
         from app.services.terminal import set_dynamic_pcc_qos
         set_dynamic_pcc_qos(
             supi=supi,
@@ -114,4 +130,4 @@ async def execute_mutation(operation: str, parameters: dict, run_id: str) -> tup
             mbr_dl_mbps=float(values.get("mbr_dl_mbps", 20.0)),
             mbr_ul_mbps=float(values.get("mbr_ul_mbps", 20.0)),
         )
-    return res, "pcf-native-n7"
+    return res, "remote-policy-authority"

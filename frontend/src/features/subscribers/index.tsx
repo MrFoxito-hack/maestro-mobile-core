@@ -78,6 +78,18 @@ type Subscriber = {
 
 const emptySubscribers: Subscriber[] = []
 
+function resolveSubscriberSlice(sub: Subscriber) {
+  const activeApn = sub.live_status?.pdu_sessions?.[0]?.apn
+  const slice =
+    (activeApn &&
+      sub.slice?.find((s) => s.session?.some((sess) => sess.name === activeApn))) ||
+    sub.slice?.[0]
+  const dnn = activeApn || slice?.session?.[0]?.name || 'internet'
+  const sst = slice?.sst ?? 1
+  const sd = slice?.sd
+  return { slice, dnn, sst, sd }
+}
+
 const defaultCreate = {
   imsi: '999700000000002',
   key: '465B5CE8B199B49FAA5F0A2EE238A6BC',
@@ -201,8 +213,15 @@ export function SubscribersPage() {
   const filteredSubscribers = useMemo(() => {
     return subscribers.filter((sub) => {
       const q = search.trim().toLowerCase()
-      const dnn = sub.slice?.[0]?.session?.[0]?.name?.toLowerCase() ?? ''
-      const matchesSearch = !q || sub.imsi.includes(q) || dnn.includes(q)
+      const { dnn } = resolveSubscriberSlice(sub)
+      const allDnns =
+        sub.slice?.flatMap((s) => s.session?.map((sess) => sess.name) ?? []) ??
+        []
+      const matchesSearch =
+        !q ||
+        sub.imsi.includes(q) ||
+        dnn.toLowerCase().includes(q) ||
+        allDnns.some((d) => d.toLowerCase().includes(q))
 
       if (!matchesSearch) return false
 
@@ -231,17 +250,15 @@ export function SubscribersPage() {
   }
 
   const openEdit = (sub: Subscriber) => {
-    const sst = sub.slice?.[0]?.sst ?? 1
-    const sd = sub.slice?.[0]?.sd ?? '000001'
-    const apn_dnn = sub.slice?.[0]?.session?.[0]?.name ?? 'internet'
+    const { sst, sd, dnn } = resolveSubscriberSlice(sub)
     setEditSub(sub)
     setEditForm({
       key: '',
       opc: '',
       amf: sub.security?.amf ?? '8000',
-      apn_dnn,
+      apn_dnn: dnn,
       sst,
-      sd,
+      sd: sd ?? '000001',
     })
   }
 
@@ -402,8 +419,7 @@ export function SubscribersPage() {
                 ) : (
                   filteredSubscribers.map((sub) => {
                     const live = sub.live_status
-                    const slice = sub.slice?.[0]
-                    const dnn = slice?.session?.[0]?.name ?? 'internet'
+                    const { dnn, sst, sd } = resolveSubscriberSlice(sub)
 
                     return (
                       <TableRow
@@ -489,11 +505,11 @@ export function SubscribersPage() {
 
                         <TableCell className='font-mono text-xs whitespace-nowrap'>
                           <span className='font-semibold'>
-                            SST {slice?.sst ?? 1}
+                            SST {sst}
                           </span>
-                          {slice?.sd && (
+                          {sd && (
                             <span className='ml-1 text-muted-foreground'>
-                              / SD {slice.sd}
+                              / SD {sd}
                             </span>
                           )}
                         </TableCell>
@@ -573,11 +589,7 @@ export function SubscribersPage() {
               detailSub.live_status?.pdu_sessions?.[0]?.address ||
               'Sin sesión PDU'
 
-            const dnn =
-              detailSub.slice?.[0]?.session?.[0]?.name ?? 'internet'
-
-            const sst = detailSub.slice?.[0]?.sst ?? 1
-            const sd = detailSub.slice?.[0]?.sd
+            const { dnn, sst, sd } = resolveSubscriberSlice(detailSub)
 
             return (
               <div className='space-y-4'>

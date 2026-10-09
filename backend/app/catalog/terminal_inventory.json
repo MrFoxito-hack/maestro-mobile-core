@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "version": "terminal-triads-v1",
+  "testbed": "local",
+  "groups": [
+    {"id": "grupo-1", "label": "Grupo 1"},
+    {"id": "docente", "label": "Docente"}
+  ],
+  "devices": [
+    {"id": "g1-smartphone", "group_id": "grupo-1", "kind": "smartphone", "service": "embb", "supi": "imsi-999700000000001", "label": "Grupo 1 · Smartphone (eMBB)"},
+    {"id": "g1-vehicle", "group_id": "grupo-1", "kind": "vehicle", "service": "urllc", "supi": "imsi-999700000000002", "label": "Grupo 1 · Vehículo V2X (URLLC)"},
+    {"id": "g1-sensor", "group_id": "grupo-1", "kind": "sensor", "service": "miot", "supi": "imsi-999700000000003", "label": "Grupo 1 · Sensor IoT (MIoT)"},
+    {"id": "teacher-smartphone", "group_id": "docente", "kind": "smartphone", "service": "embb", "supi": "imsi-999700000000004", "label": "Docente · Smartphone (eMBB)"},
+    {"id": "teacher-vehicle", "group_id": "docente", "kind": "vehicle", "service": "urllc", "supi": "imsi-999700000000005", "label": "Docente · Vehículo V2X (URLLC)"},
+    {"id": "teacher-sensor", "group_id": "docente", "kind": "sensor", "service": "miot", "supi": "imsi-999700000000006", "label": "Docente · Sensor IoT (MIoT)"}
+  ]
+}

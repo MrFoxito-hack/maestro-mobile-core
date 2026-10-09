@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 from uuid import UUID
 
 import pytest
@@ -28,18 +29,18 @@ def test_subscriber_lifecycle_and_secret_redaction(client, teacher_headers):
     imsi = '999700000000096'
     subscriber_service.memory.pop(imsi, None)
     created = execute(client, teacher_headers, 'udm', 'subscriber.create',
-                      {'imsi': 'imsi-' + imsi, 'sd': '000002', 'apn_dnn': 'corporate'})
+                      {'imsi': 'imsi-' + imsi, 'sst': 3, 'sd': '000003', 'apn_dnn': 'corporate'})
     assert created.status_code == 201, created.text
     assert created.json()['parameters']['key'] == '[REDACTED]'
     assert created.json()['data']['security']['k'] == '[REDACTED]'
     assert '465B5CE8B199B49FAA5F0A2EE238A6BC' not in created.text
     doc = subscriber_service.memory[imsi]
-    assert doc['slice'][0]['sd'] == '000002'
+    assert doc['slice'][0]['sd'] == '000003'
     assert doc['slice'][0]['session'][0]['qos']['index'] == 9
-    assert execute(client, teacher_headers, 'udr', 'subscriber.create', {'imsi': imsi}).status_code == 422
-    changed = execute(client, teacher_headers, 'udr', 'subscriber.update', {'imsi': imsi, 'apn_dnn': 'internet'})
+    assert execute(client, teacher_headers, 'udr', 'subscriber.create', {'imsi': imsi, 'sst': 3, 'sd': '000003', 'apn_dnn': 'corporate'}).status_code == 409
+    changed = execute(client, teacher_headers, 'udr', 'subscriber.update', {'imsi': imsi, 'sst': 1, 'sd': '000001', 'apn_dnn': 'internet'})
     assert changed.status_code == 201
-    assert changed.json()['data']['slice'][0]['sd'] == '000002'
+    assert changed.json()['data']['slice'][0]['sd'] == '000001'
     assert execute(client, teacher_headers, 'udm', 'subscriber.delete', {'imsi': imsi}).status_code == 201
     assert imsi not in subscriber_service.memory
     assert execute(client, teacher_headers, 'udm', 'subscriber.delete', {'imsi': imsi}).status_code == 422
@@ -92,15 +93,24 @@ def test_qos_and_mode_dispatch(client, teacher_headers, monkeypatch):
         calls.append(payload)
         return {'status': 'success', 'detail': 'N7_ACK'}
     monkeypatch.setattr(pcf_control, 'control_request', control)
-    assert execute(client, teacher_headers, 'pcf', 'pcf.qos', {'imsi': '999700000000004', 'mbr_dl_mbps': 1.5}).status_code == 201
-    assert calls[-1] == {'operation': 'qos', 'supi': 'imsi-999700000000004', 'five_qi': 9, 'mbr_dl_mbps': 1.5}
-    assert execute(client, teacher_headers, 'nwdaf', 'nwdaf.mode', {'mode': 'MANUAL'}).status_code == 201
-    assert calls[-1] == {'operation': 'mode', 'mode': 'MANUAL'}
+    context = {'token': 1, 'expected_version': 0, 'action_id': 'test-action-0001'}
+    def fenced(component, operation, parameters):
+        return client.post('/api/v1/operations/execute', headers=teacher_headers, json={
+            'scenario_id': '5g-sa', 'component_id': component, 'operation_id': operation,
+            'parameters': parameters, 'authority': context})
+    assert fenced('pcf', 'pcf.qos', {'imsi': '999700000000004', 'mbr_dl_mbps': 1.5}).status_code == 201
+    sent = calls[-1]
+    assert sent['authority']['token'] == 1
+    assert sent['authority']['owner'] == 'local/docente'
+    assert {k: v for k, v in sent.items() if k != 'authority'} == {
+        'operation': 'qos', 'supi': 'imsi-999700000000004', 'five_qi': 9, 'mbr_dl_mbps': 1.5}
+    assert fenced('nwdaf', 'nwdaf.mode', {'mode': 'MANUAL'}).status_code == 201
+    assert calls[-1] == {'operation': 'mode', 'mode': 'MANUAL', 'authority': sent['authority']}
 
 
 def test_nwdaf_resolution_and_missing_forecast(monkeypatch):
-    snssai = {'sst': 1, 'sd': '000002'}
-    monkeypatch.setattr(nwdaf, 'get_health', lambda: {'slice_maps': [{'object_id': 'nf:upf:upf-02', 'snssai': snssai}]})
+    snssai = {'sst': 3, 'sd': '000003'}
+    monkeypatch.setattr(nwdaf, 'get_health', lambda: {'slice_maps': [{'object_id': 'nf:upf-02:triad-v1', 'snssai': snssai}]})
     def observed(event, event_filter):
         assert event == 'LOAD_LEVEL_INFORMATION'
         assert json.loads(event_filter) == {'snssais': [snssai]}
@@ -125,3 +135,51 @@ def test_nwdaf_resolution_and_missing_forecast(monkeypatch):
 ])
 def test_operator_permissions(client, student_headers, component, operation, parameters):
     assert execute(client, student_headers, component, operation, parameters).status_code == 403
+
+
+@pytest.mark.parametrize('suffix,sst,sd,dnn', [
+    (1, 1, '000001', 'internet'), (4, 1, '000001', 'internet'),
+    (2, 2, '000002', '5g-plus'), (5, 2, '000002', '5g-plus'),
+    (3, 3, '000003', 'corporate'), (6, 3, '000003', 'corporate'),
+])
+def test_c7_six_ues_conflicts_and_lifecycle(client, teacher_headers, monkeypatch, suffix, sst, sd, dnn):
+    # Isolated UDR: these are catalog identities, never live subscriptions.
+    monkeypatch.setattr(subscriber_service, 'memory', {})
+    p = dict(imsi=f'99970000000000{suffix}', sst=sst, sd=sd, apn_dnn=dnn)
+    created = execute(client, teacher_headers, 'udm', 'subscriber.create', p)
+    assert created.status_code == 201, created.text
+    before = deepcopy(subscriber_service.memory)
+    conflict = execute(client, teacher_headers, 'udm', 'subscriber.create', p)
+    assert conflict.status_code == 409
+    result = conflict.json()['result']
+    assert result['status'] == 'failed' and 'ya existe' in result['error']
+    history = client.get('/api/v1/operations/history', headers=teacher_headers).json()
+    assert any(r['id'] == result['id'] and r['status'] == 'failed' for r in history)
+    assert subscriber_service.memory == before
+    other = dict(sst=2, sd='000002', apn_dnn='5g-plus') if sst != 2 else dict(sst=1, sd='000001', apn_dnn='internet')
+    assert execute(client, teacher_headers, 'udm', 'subscriber.update', {**p, **other}).status_code == 409
+    assert subscriber_service.memory == before
+    assert execute(client, teacher_headers, 'udr', 'subscriber.update', p).status_code == 201
+    assert execute(client, teacher_headers, 'udm', 'subscriber.delete', {'imsi': p['imsi']}).status_code == 201
+    assert not subscriber_service.memory
+
+
+@pytest.mark.parametrize('changes', [
+    {'sst': 1.5}, {'sst': True}, {'sst': 256}, {'sst': -1}, {'sd': 3},
+    {'sd': '00003'}, {'sd': 'GG0003'}, {'apn_dnn': 'unsupported'},
+    {'sst': 1}, {'sd': '000002'}, {'apn_dnn': 'internet'}, {'unexpected': 1},
+])
+@pytest.mark.parametrize('operation', ['subscriber.create', 'subscriber.update'])
+def test_c7_invalid_triplet_never_writes(client, teacher_headers, monkeypatch, changes, operation):
+    monkeypatch.setattr(subscriber_service, 'memory', {})
+    p = {'imsi': '999700000000096', 'sst': 3, 'sd': '000003', 'apn_dnn': 'corporate'}
+    assert execute(client, teacher_headers, 'udm', operation, {**p, **changes}).status_code == 422
+    assert not subscriber_service.memory
+
+
+@pytest.mark.parametrize('missing', ['sst', 'sd', 'apn_dnn'])
+@pytest.mark.parametrize('operation', ['subscriber.create', 'subscriber.update'])
+def test_c7_triplet_is_explicit(client, teacher_headers, missing, operation):
+    p = {'imsi': '999700000000096', 'sst': 3, 'sd': '000003', 'apn_dnn': 'corporate'}
+    p.pop(missing)
+    assert execute(client, teacher_headers, 'udm', operation, p).status_code == 422

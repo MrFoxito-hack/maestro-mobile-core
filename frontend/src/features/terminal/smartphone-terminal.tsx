@@ -1,9 +1,11 @@
+import { TerminalScope } from './terminal-scope'
+import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Activity,
-  Building2,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CreditCard,
@@ -15,10 +17,8 @@ import {
   Plane,
   Radio,
   RefreshCw,
-  RotateCcw,
   Search,
   Settings2,
-  ShieldAlert,
   Smartphone,
   X,
   Zap,
@@ -41,9 +41,9 @@ import { NotesApp } from './notes-app'
 import { SafariApp } from './safari-app'
 
 type State = {
-  active_apn: 'internet' | 'corporate'
+  active_apn: 'internet' | 'corporate' | '5g-plus'
   apn_sessions: Array<{
-    apn: 'internet' | 'corporate'
+    apn: 'internet' | 'corporate' | '5g-plus'
     interface: string
     address: string
     snssai: { sst: number; sd: number | null } | null
@@ -188,21 +188,42 @@ function IosRow({
 
 export function SmartphoneTerminal() {
   const [open, setOpen] = useState(false)
+  return <TerminalScope kind='smartphone'>{(device, selector, meta) =>
+    <ScopedSmartphone
+      selectedImsi={device.supi}
+      selector={selector}
+      devices={meta?.devices ?? [device]}
+      onSelectImsi={meta?.setSelected}
+      open={open}
+      setOpen={setOpen}
+    />
+  }</TerminalScope>
+}
+
+function ScopedSmartphone({
+  selectedImsi,
+  selector,
+  devices = [],
+  onSelectImsi,
+  open,
+  setOpen,
+}: {
+  selectedImsi: string
+  selector: ReactNode
+  devices?: Array<{ id: string; supi: string; label: string; kind: 'smartphone' | 'vehicle' | 'sensor' }>
+  onSelectImsi?: (supi: string) => void
+  open: boolean
+  setOpen: (open: boolean) => void
+}) {
+  const [islandOpen, setIslandOpen] = useState(false)
   const [activeApp, setActiveApp] = useState<
-    'home' | 'settings' | 'stream' | 'balance' | 'corp' | 'phone' | 'notes' | 'safari'
+    'home' | 'settings' | 'stream' | 'balance' | 'phone' | 'notes' | 'safari'
   >('home')
   const [initialDialCode, setInitialDialCode] = useState<string | null>(null)
   const [settingsView, setSettingsView] = useState<'root' | 'apn' | 'qos' | 'diagnostic'>('root')
   const [cellularData, setCellularData] = useState(true)
-  const [selectedImsi, setSelectedImsi] = useState<string | null>(null)
+  const username = useAuthStore((s) => s.auth.user?.username)
   const [currentTime, setCurrentTime] = useState('')
-  const [portal, setPortal] = useState<{
-    title: string
-    subtitle: string
-    client_ip: string
-    interface: string
-    snssai: { sst: number; sd: number | null } | null
-  } | null>(null)
   const [probe, setProbe] = useState<{
     completed: boolean
     received_bytes: number
@@ -278,7 +299,7 @@ export function SmartphoneTerminal() {
 
   const scenario = useScenarioStore((s) => s.scenario)
   const role = useAuthStore((s) => s.auth.user?.role)
-  const enabled = scenario === '5g-sa' && (role === 'student' || role === 'teacher')
+  const enabled = scenario === '5g-sa' && (role === 'student' || role === 'teacher' || role === 'admin')
   const qc = useQueryClient()
 
   // Real-time clock for status bar
@@ -295,7 +316,7 @@ export function SmartphoneTerminal() {
   }, [])
 
   const status = useQuery({
-    queryKey: ['terminal-status', selectedImsi],
+    queryKey: ['terminal-status', username, selectedImsi],
     queryFn: async () =>
       (
         await api.get<State>(
@@ -317,12 +338,12 @@ export function SmartphoneTerminal() {
     mutationFn: async (enable: boolean) => {
       const res = await api.post('/terminal/af-boost', {
         enabled: enable,
-        imsi: selectedImsi || undefined,
+        imsi: selectedImsi,
       })
       return res.data
     },
     onSuccess: (data) => {
-      qc.setQueryData<State>(['terminal-status', selectedImsi], (curr) =>
+      qc.setQueryData<State>(['terminal-status', username, selectedImsi], (curr) =>
         curr ? { ...curr, af_boost: data } : curr
       )
       void qc.invalidateQueries({ queryKey: ['terminal-status'] })
@@ -343,12 +364,7 @@ export function SmartphoneTerminal() {
   // Command mutation for standard operations
   const command = useMutation({
     mutationFn: async ({ path, data }: { path: string; data?: unknown }) => {
-      const imsiQuery = selectedImsi ? `?imsi=${encodeURIComponent(selectedImsi)}` : ''
-      return (
-        path === 'corporate/intranet'
-          ? await api.get('/terminal/corporate/intranet' + imsiQuery)
-          : await api.post('/terminal/' + path, data)
-      ).data
+      return (await api.post('/terminal/' + path, data)).data
     },
     onSuccess: (result, variables) => {
       if (variables.path === 'traffic/n6-probe') setProbe(result)
@@ -356,10 +372,8 @@ export function SmartphoneTerminal() {
         pendingTopup.current = null
         triggerIslandAlert('+50 MB recargados · Sesión PDU lista')
       }
-      if (variables.path === 'corporate/intranet') setPortal(result)
       if (variables.path === 'apn') {
-        setPortal(null)
-        qc.setQueryData<State>(['terminal-status', selectedImsi], (current) =>
+        qc.setQueryData<State>(['terminal-status', username, selectedImsi], (current) =>
           current ? { ...current, active_apn: result.active_apn } : current
         )
         triggerIslandAlert(
@@ -384,10 +398,9 @@ export function SmartphoneTerminal() {
   const data = status.isError ? undefined : status.data
   const activeApn = data?.active_apn ?? 'internet'
   const activeSession = data?.apn_sessions?.find((s) => s.apn === activeApn)
-  const corporateAvailable = Boolean(data?.apn_sessions?.some((s) => s.apn === 'corporate'))
   const offline = data?.service === 'inactive'
   const balance = data?.balance
-  const remaining = balance ? Math.max(0, balance.quota_bytes - balance.consumed_bytes) : null
+  const remaining = balance ? Math.max(0, balance.available_bytes) : null
   const percent =
     balance && remaining !== null
       ? Math.min(100, (remaining / Math.max(1, balance.quota_bytes)) * 100)
@@ -397,13 +410,7 @@ export function SmartphoneTerminal() {
 
   const run = (path: string, body?: unknown) => {
     setNotice('')
-    const payload =
-      body && typeof body === 'object'
-        ? {
-            ...(body as Record<string, unknown>),
-            ...(selectedImsi ? { imsi: selectedImsi } : {}),
-          }
-        : body
+    const payload = { ...(body && typeof body === 'object' ? body : {}), imsi: selectedImsi }
     command.mutate({ path, data: payload })
   }
 
@@ -437,6 +444,8 @@ export function SmartphoneTerminal() {
         <DialogDescription className='sr-only'>
           Dispositivo móvil conectado al core Open5GS SA con soporte de AF N5 QoS Boost.
         </DialogDescription>
+
+        <div className='sr-only'>{selector}</div>
 
         {/* Authentic iPhone Wallpaper Background (Visible ONLY on Home Screen, completely hidden in Settings & apps) */}
         {activeApp === 'home' && (
@@ -473,14 +482,22 @@ export function SmartphoneTerminal() {
             </span>
           </div>
 
-          {/* Center: Dynamic Island (Authentic Hardware Notch) */}
+          {/* Center: Dynamic Island (Authentic Hardware Notch & Interactive Selector) */}
           <div
             className={cn(
-              'absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-black shadow-lg transition-all duration-300 flex items-center justify-between px-2.5 z-40',
+              'absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-black shadow-lg transition-all duration-300 flex items-center justify-between px-2.5 z-40 select-none',
               isStreamingActive && activeApp !== 'stream'
-                ? 'h-6 min-w-[110px] border border-white/10 bg-black cursor-pointer'
-                : 'h-6 w-24'
+                ? 'h-6.5 min-w-[120px] border border-sky-500/30 bg-black cursor-pointer'
+                : 'h-6.5 min-w-[105px] border border-white/10 hover:border-white/30 cursor-pointer group'
             )}
+            onClick={() => {
+              if (isStreamingActive && activeApp !== 'stream') {
+                setActiveApp('stream')
+              } else {
+                setIslandOpen((prev) => !prev)
+              }
+            }}
+            title='Dynamic Island · Click para cambiar de terminal'
           >
             {isStreamingActive && activeApp !== 'stream' ? (
               <button
@@ -503,8 +520,21 @@ export function SmartphoneTerminal() {
               </button>
             ) : (
               <>
-                <div className='size-2 rounded-full bg-slate-900 border border-slate-700/50' />
-                <div className='size-2.5 rounded-full bg-slate-950 ring-1 ring-slate-800' />
+                {/* Left: Camera sensor + Terminal Suffix */}
+                <div className='flex items-center gap-1.5'>
+                  <div className='size-2 rounded-full bg-slate-900 border border-slate-700/60' />
+                  <span className='text-[10px] font-mono font-bold text-slate-300 group-hover:text-emerald-400 transition-colors'>
+                    {selectedImsi.slice(-3)}
+                  </span>
+                </div>
+
+                {/* Right: Slice Tag & Chevron */}
+                <div className='flex items-center gap-0.5'>
+                  <span className='text-[8.5px] font-semibold uppercase tracking-wider text-slate-400 group-hover:text-white transition-colors'>
+                    eMBB
+                  </span>
+                  <ChevronDown className={cn('size-2.5 text-slate-500 group-hover:text-white transition-transform duration-200', islandOpen && 'rotate-180 text-white')} />
+                </div>
               </>
             )}
           </div>
@@ -532,13 +562,13 @@ export function SmartphoneTerminal() {
               </span>
             )}
 
-            {/* Authentic iOS Battery Icon with Terminal Nipple */}
-            <div className='flex items-center'>
+            {/* Decorative stimulus; not measured battery or charging balance. */}
+            <div className='flex items-center' role='img' aria-label='Batería ilustrativa, no medida' title='Batería ilustrativa, no medida'>
               <div className='relative flex h-[11.5px] w-[21px] items-center rounded-[3.5px] border border-white/70 p-[1.5px]'>
                 <div
                   className={cn(
                     'h-full rounded-[1.5px] transition-all',
-                    remaining === 0 ? 'w-1 bg-rose-500' : 'w-full bg-[#34c759]'
+                    'w-full bg-[#34c759]'
                   )}
                 />
                 <div className='absolute -right-[3px] top-1/2 -translate-y-1/2 h-[4px] w-[1.5px] rounded-r-xs bg-white/70' />
@@ -547,27 +577,92 @@ export function SmartphoneTerminal() {
           </div>
         </header>
 
-        {/* Only teachers can switch between supervised terminals. */}
-        {role === 'teacher' && data?.available_nodes && (
-          <div className='relative z-20 flex items-center justify-between border-b border-white/5 bg-slate-900/60 px-4 py-1.5 text-xs'>
-            <span className='text-[10px] font-medium text-slate-400'>UE detectados: {data.available_nodes.length}</span>
-            <select
-              value={selectedImsi || data.subscriber || ''}
-              disabled={data.available_nodes.length === 0}
-              onChange={(e) => setSelectedImsi(e.target.value)}
-              className='rounded-lg border border-teal-500/30 bg-slate-950 px-2 py-0.5 text-[11px] font-semibold text-teal-300 outline-none'
-              aria-label='Cambiar terminal supervisado'
-            >
-              {!data.available_nodes.some((node) => node.imsi === (selectedImsi || data.subscriber)) && (
-                <option value={selectedImsi || data.subscriber || ''}>Terminal no detectado</option>
-              )}
-              {data.available_nodes.map((node) => (
-                <option key={node.imsi} value={node.imsi} className='bg-slate-900 text-white'>
-                  {node.label}
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* EXPANDED DYNAMIC ISLAND (Apple-style Modal Overlay) */}
+        {islandOpen && (
+          <>
+            {/* Backdrop click outside to close */}
+            <div
+              className='absolute inset-0 z-45 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150'
+              onClick={() => setIslandOpen(false)}
+            />
+
+            {/* Expanded Island Card */}
+            <div className='absolute left-1/2 top-2.5 -translate-x-1/2 w-[300px] max-w-[92%] rounded-[22px] bg-black/95 text-white border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.9)] backdrop-blur-2xl p-3 z-50 animate-in zoom-in-95 fade-in duration-150'>
+              {/* Header */}
+              <div className='flex items-center justify-between pb-2 border-b border-white/10 px-1'>
+                <span className='text-[12px] font-semibold text-white'>
+                  Dispositivos
+                </span>
+                <button
+                  type='button'
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setIslandOpen(false)
+                  }}
+                  className='flex size-6 items-center justify-center rounded-full bg-white/10 text-slate-400 hover:bg-white/20 hover:text-white transition-colors cursor-pointer'
+                  title='Cerrar'
+                >
+                  <X className='size-3.5' />
+                </button>
+              </div>
+
+              {/* Device Options */}
+              <div className='mt-2 flex flex-col gap-1.5'>
+                {devices.map((d) => {
+                  const isSelected = d.supi === selectedImsi
+                  const suffix = d.supi.slice(-3)
+                  const cleanLabel = d.label
+                    .replace(/\s*·\s*Smartphone\s*(\([^)]*\))?/i, '')
+                    .replace(/\s*\((eMBB|URLLC|MIoT|5G)\)/i, '')
+                    .trim() || d.label
+
+                  return (
+                    <button
+                      key={d.id}
+                      type='button'
+                      onClick={() => {
+                        if (onSelectImsi && !isSelected) {
+                          onSelectImsi(d.supi)
+                        }
+                        setIslandOpen(false)
+                      }}
+                      className={cn(
+                        'flex items-center justify-between rounded-xl px-2.5 py-2 text-left transition-all cursor-pointer group/item',
+                        isSelected
+                          ? 'bg-emerald-500/15 border border-emerald-500/40 text-white'
+                          : 'bg-white/5 border border-transparent hover:bg-white/10 text-slate-300 hover:text-white'
+                      )}
+                    >
+                      <div className='flex items-center gap-2.5 min-w-0'>
+                        <div
+                          className={cn(
+                            'flex size-7 shrink-0 items-center justify-center rounded-lg font-mono text-[11px] font-bold',
+                            isSelected
+                              ? 'bg-emerald-500 text-slate-950 font-black'
+                              : 'bg-white/10 text-slate-400'
+                          )}
+                        >
+                          {suffix}
+                        </div>
+                        <span className='text-[12px] font-medium truncate'>
+                          {cleanLabel}
+                        </span>
+                      </div>
+                      {isSelected ? (
+                        <span className='rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9.5px] font-semibold text-emerald-300 border border-emerald-500/30 shrink-0'>
+                          Activo
+                        </span>
+                      ) : (
+                        <span className='text-[9.5px] text-slate-400 group-hover/item:text-white shrink-0 px-2 py-0.5'>
+                          Conectar
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </>
         )}
 
         {/* MAIN PHONE SCREEN CONTENT (Scrollable App View with Drag-to-Scroll & Hidden Scrollbar) */}
@@ -814,27 +909,6 @@ export function SmartphoneTerminal() {
                   </span>
                 </button>
 
-                {/* 12. CorpNet (Original Apple Enterprise Squircle SVG) */}
-                <button
-                  type='button'
-                  onClick={() => setActiveApp('corp')}
-                  className='flex flex-col items-center gap-1 group cursor-pointer relative'
-                  title='CorpNet'
-                >
-                  <div className='relative transition-transform group-active:scale-90'>
-                    <img
-                      src='/images/ios-icons/corpnet.svg'
-                      alt='CorpNet'
-                      className='size-[54px] select-none pointer-events-none filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]'
-                    />
-                    {activeApn === 'corporate' && (
-                      <span className='absolute -top-1 -right-1 flex size-3 items-center justify-center rounded-full bg-blue-400 ring-1 ring-white shadow animate-pulse' />
-                    )}
-                  </div>
-                  <span className='text-[11px] font-medium text-white tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] truncate max-w-[64px]'>
-                    CorpNet
-                  </span>
-                </button>
               </div>
 
               {/* iOS SpringBoard Page Dots */}
@@ -985,7 +1059,7 @@ export function SmartphoneTerminal() {
                 afBoost={data?.af_boost}
                 onToggleAfBoost={(enable) => afBoostMutation.mutateAsync(enable)}
                 isAfBoostPending={afBoostMutation.isPending}
-                selectedImsi={selectedImsi || data?.subscriber || 'imsi-999700000000001'}
+                selectedImsi={selectedImsi}
                 isPip={activeApp !== 'stream'}
                 onOpenStream={() => setActiveApp('stream')}
                 onOpenBalance={() => setActiveApp('balance')}
@@ -1025,7 +1099,7 @@ export function SmartphoneTerminal() {
                     </span>
                   </div>
                   <span className='rounded-full bg-[#2c2c2e] px-2 py-0.5 font-mono text-[10px] text-[#8e8e93]'>
-                    {data?.subscriber ?? 'SIM activa'}
+                    {data?.subscriber ? data.subscriber.replace('imsi-', '') : 'SIM activa'}
                   </span>
                 </div>
 
@@ -1120,190 +1194,6 @@ export function SmartphoneTerminal() {
             </div>
           )}
 
-          {/* APP 3: CorpNet (Corporate Intranet Portal / Safari Enterprise Style) */}
-          {activeApp === 'corp' && (
-            <div className='flex flex-col gap-3 animate-in fade-in duration-150'>
-              {/* iOS Navigation Header */}
-              <div className='flex items-center justify-between py-1'>
-                <button
-                  type='button'
-                  onClick={() => setActiveApp('home')}
-                  className='flex items-center text-[14px] font-medium text-[#0a84ff] hover:opacity-80 transition -ml-1 cursor-pointer'
-                >
-                  <ChevronLeft className='size-5 mr-0.5' />
-                  Inicio
-                </button>
-                <div className='flex items-center gap-1.5'>
-                  <span className='text-[15px] font-semibold text-white'>CorpNet</span>
-                </div>
-                <span
-                  className={cn(
-                    'text-[10px] font-medium px-2 py-0.5 rounded-full border',
-                    activeApn === 'corporate'
-                      ? 'text-[#0a84ff] bg-[#0a84ff]/15 border-[#0a84ff]/20'
-                      : 'text-[#8e8e93] bg-[#2c2c2e] border-white/10'
-                  )}
-                >
-                  {activeApn === 'corporate' ? 'Slice Activo' : 'Aislado'}
-                </span>
-              </div>
-
-              {/* Safari Smart Search / Address Bar */}
-              <div className='flex items-center justify-between rounded-xl bg-[#1c1c1e] px-3.5 py-2 ring-1 ring-white/5'>
-                <div className='flex items-center gap-2 min-w-0'>
-                  <Lock
-                    className={cn(
-                      'size-3.5 shrink-0',
-                      activeApn === 'corporate' ? 'text-[#30d158]' : 'text-[#ff9f0a]'
-                    )}
-                  />
-                  <span className='text-[12.5px] font-medium text-white truncate'>
-                    {activeApn === 'corporate' ? 'intranet.empresa.5g:8080' : 'intranet.empresa.5g'}
-                  </span>
-                </div>
-                <button
-                  type='button'
-                  onClick={() => {
-                    if (activeApn === 'corporate') {
-                      setPortal(null)
-                      run('corporate/intranet')
-                    }
-                  }}
-                  className='text-[#8e8e93] hover:text-white transition cursor-pointer p-0.5'
-                  title='Recargar página'
-                >
-                  <RotateCcw className='size-3.5' />
-                </button>
-              </div>
-
-              {!cellularData ? (
-                <div className='rounded-2xl bg-[#1c1c1e] p-6 text-center ring-1 ring-white/5 shadow-md'>
-                  <div className='mx-auto flex size-14 items-center justify-center rounded-2xl bg-[#ff9f0a]/15 text-[#ff9f0a]'>
-                    <Radio className='size-7 opacity-90' />
-                  </div>
-                  <h3 className='mt-4 text-[16px] font-semibold text-white'>
-                    Datos celulares desactivados
-                  </h3>
-                  <p className='mt-2 text-[12px] leading-relaxed text-[#8e8e93]'>
-                    La Intranet de la organización requiere una conexión de datos celulares activa para acceder a través del túnel 5G SA.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setActiveApp('settings')
-                      setSettingsView('root')
-                    }}
-                    className='mt-5 inline-flex items-center gap-2 rounded-2xl bg-[#0a84ff] px-5 py-3 text-[13px] font-semibold text-white hover:bg-[#0071e3] transition shadow-md active:scale-98 cursor-pointer'
-                  >
-                    <Settings2 className='size-4' /> Abrir Configuración
-                  </button>
-                </div>
-              ) : activeApn !== 'corporate' ? (
-                <div className='rounded-2xl bg-[#1c1c1e] p-6 text-center ring-1 ring-white/5 shadow-md'>
-                  <div className='mx-auto flex size-14 items-center justify-center rounded-2xl bg-[#0a84ff]/15 text-[#0a84ff]'>
-                    <ShieldAlert className='size-7' />
-                  </div>
-                  <h3 className='mt-4 text-[16px] font-semibold text-white'>
-                    Zona Corporativa Restringida
-                  </h3>
-                  <p className='mt-2 text-[12px] leading-relaxed text-[#8e8e93]'>
-                    La Intranet requiere aislamiento de red mediante el Slice Corporativo (SST 1 / SD) y DNN <span className='text-white font-mono'>corporate</span>. El terminal se encuentra en el APN público.
-                  </p>
-                  <button
-                    disabled={busy}
-                    onClick={() => run('apn', { apn: 'corporate' })}
-                    className='mt-5 inline-flex items-center gap-2 rounded-2xl bg-[#0a84ff] px-5 py-3 text-[13px] font-semibold text-white shadow-md transition hover:bg-[#0071e3] active:scale-98 disabled:opacity-40 cursor-pointer'
-                  >
-                    <Building2 className='size-4' /> Activar Slice Corporativo
-                  </button>
-                </div>
-              ) : (
-                <div className='flex flex-col gap-3'>
-                  {/* Apple Enterprise Portal Card */}
-                  <div className='overflow-hidden rounded-2xl bg-[#1c1c1e] p-4 ring-1 ring-white/5 shadow-md'>
-                    <div className='flex items-center justify-between'>
-                      <div className='flex items-center gap-2.5'>
-                        <div className='flex size-8 items-center justify-center rounded-xl bg-[#0a84ff]/20 text-[#0a84ff] border border-[#0a84ff]/30'>
-                          <Building2 className='size-4' />
-                        </div>
-                        <div>
-                          <div className='text-[14px] font-semibold text-white'>Intranet MAEstro 5G</div>
-                          <div className='text-[10px] text-[#30d158] font-medium flex items-center gap-1'>
-                            <span className='size-1.5 rounded-full bg-[#30d158] animate-ping' />
-                            Túnel Cifrado Activo
-                          </div>
-                        </div>
-                      </div>
-                      <span className='rounded-full bg-[#0a84ff]/15 px-2 py-0.5 text-[9.5px] font-bold text-[#0a84ff] border border-[#0a84ff]/20'>
-                        SST 1 / SD
-                      </span>
-                    </div>
-
-                    <button
-                      disabled={busy}
-                      onClick={() => {
-                        setPortal(null)
-                        run('corporate/intranet')
-                      }}
-                      className='mt-3.5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0a84ff] py-3 text-[13px] font-semibold text-white hover:bg-[#0071e3] active:scale-98 transition shadow-md disabled:opacity-50 cursor-pointer'
-                    >
-                      {command.isPending && command.variables?.path === 'corporate/intranet' ? (
-                        <Loader2 className='size-4 animate-spin' />
-                      ) : (
-                        <Globe className='size-4' />
-                      )}
-                      Consultar Servidor Intranet
-                    </button>
-                  </div>
-
-                  {/* Inset Grouped Details Table */}
-                  {portal && (
-                    <div className='flex flex-col gap-1.5 animate-in fade-in duration-150'>
-                      <div className='px-1 text-[11px] font-medium tracking-wider text-[#8e8e93] uppercase'>
-                        Respuesta de Servidor Intranet
-                      </div>
-                      <div className='overflow-hidden rounded-2xl bg-[#1c1c1e] divide-y divide-[#2c2c2e] ring-1 ring-white/5'>
-                        <div className='flex items-center justify-between px-3.5 py-3 text-[13px]'>
-                          <span className='text-[#8e8e93]'>Servicio</span>
-                          <span className='font-semibold text-white'>{portal.title}</span>
-                        </div>
-                        <div className='flex items-center justify-between px-3.5 py-3 text-[13px]'>
-                          <span className='text-[#8e8e93]'>IP Origen Cliente</span>
-                          <span className='font-mono font-medium text-[#0a84ff]'>{portal.client_ip}</span>
-                        </div>
-                        <div className='flex items-center justify-between px-3.5 py-3 text-[13px]'>
-                          <span className='text-[#8e8e93]'>Interfaz PDU</span>
-                          <span className='font-mono text-white'>{portal.interface}</span>
-                        </div>
-                        <div className='flex items-center justify-between px-3.5 py-3 text-[13px]'>
-                          <span className='text-[#8e8e93]'>S-NSSAI</span>
-                          <span className='font-mono text-[#64d2ff]'>
-                            SST {portal.snssai?.sst ?? 1} · SD{' '}
-                            {portal.snssai?.sd == null
-                              ? 'Default'
-                              : portal.snssai.sd.toString(16).padStart(6, '0')}
-                          </span>
-                        </div>
-                        <div className='flex items-center justify-between px-3.5 py-3 text-[13px]'>
-                          <span className='text-[#8e8e93]'>Aislamiento 3GPP</span>
-                          <span className='font-medium text-[#30d158]'>Túnel N6 UPF OK</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Return to Public APN Button */}
-                  <button
-                    onClick={() => run('apn', { apn: 'internet' })}
-                    disabled={busy}
-                    className='mt-1 flex w-full items-center justify-center rounded-2xl bg-[#1c1c1e] py-3 text-[13px] font-medium text-[#0a84ff] hover:bg-[#2c2c2e] ring-1 ring-white/5 transition active:scale-98 disabled:opacity-40 cursor-pointer'
-                  >
-                    Volver a APN Internet Público
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* APP 1: Ajustes (iOS Style System Settings) */}
           {activeApp === 'settings' && (
             <div className='flex flex-col gap-3 pb-2'>
@@ -1339,7 +1229,7 @@ export function SmartphoneTerminal() {
                       className='w-full flex items-center justify-between px-3.5 py-3 text-left transition-colors active:bg-[#2c2c2e]/60'
                     >
                       <div>
-                        <div className='text-[14px] font-medium text-white'>internet</div>
+                        <div className='text-[14px] font-medium text-white'>Smartphone eMBB · internet</div>
                         <div className='text-[11px] text-[#8e8e93] mt-0.5'>
                           Acceso público general a Internet y streaming. Slice SST 1 · SD 000001.
                         </div>
@@ -1349,25 +1239,6 @@ export function SmartphoneTerminal() {
                       )}
                     </button>
 
-                    {/* Option corporate */}
-                    <button
-                      type='button'
-                      disabled={busy}
-                      onClick={() => run('apn', { apn: 'corporate' })}
-                      className='w-full flex items-center justify-between px-3.5 py-3 text-left transition-colors active:bg-[#2c2c2e]/60 disabled:opacity-45'
-                    >
-                      <div>
-                        <div className='text-[14px] font-medium text-white'>corporate</div>
-                        <div className='text-[11px] text-[#8e8e93] mt-0.5'>
-                          {corporateAvailable
-                            ? 'SesiÃ³n activa Â· Slice SST 1 Â· SD 000002.'
-                            : 'Autorizada, pero sin sesiÃ³n PDU establecida.'}
-                        </div>
-                      </div>
-                      {activeApn === 'corporate' && (
-                        <Check className='size-5 text-[#0a84ff] shrink-0 ml-2' />
-                      )}
-                    </button>
                   </div>
 
                   <div className='px-3 pt-1 text-[11px] text-[#8e8e93] leading-relaxed'>
@@ -1591,7 +1462,7 @@ export function SmartphoneTerminal() {
                     </div>
                     <div className='flex-1 min-w-0'>
                       <div className='text-[15px] font-semibold text-white truncate'>
-                        {data?.subscriber ? `SIM: ${data.subscriber}` : 'Terminal 5G SA'}
+                        {data?.subscriber ? `SIM: ${data.subscriber.replace('imsi-', '')}` : 'Terminal 5G SA'}
                       </div>
                       <div className='text-[12px] text-[#8e8e93] truncate'>
                         ID de Apple, iCloud y más
@@ -1680,14 +1551,6 @@ export function SmartphoneTerminal() {
                         value={remaining != null ? `${mb(remaining)} MB` : '—'}
                         hasChevron
                         onClick={() => setActiveApp('balance')}
-                      />
-                      <IosRow
-                        icon={<Building2 className='size-4' />}
-                        iconBg='#0a84ff'
-                        label='Intranet corporativa'
-                        value={activeApn === 'corporate' ? 'Slice activo' : 'Slice 1'}
-                        hasChevron
-                        onClick={() => setActiveApp('corp')}
                       />
                       <IosRow
                         icon={<Film className='size-4' />}
@@ -1784,13 +1647,7 @@ export function SmartphoneTerminal() {
                   setActiveApp('phone')
                 }}
                 onTriggerIslandAlert={triggerIslandAlert}
-                imsi={
-                  selectedImsi
-                    ? selectedImsi.replace('imsi-', '')
-                    : data?.subscriber && !data.subscriber.includes('•')
-                      ? data.subscriber.replace('imsi-', '')
-                      : '999700000000001'
-                }
+                imsi={selectedImsi.replace('imsi-', '')}
               />
             </div>
           )}
@@ -1801,14 +1658,8 @@ export function SmartphoneTerminal() {
               <SafariApp
                 onClose={() => setActiveApp('home')}
                 onTriggerIslandAlert={triggerIslandAlert}
-                imsi={
-                  selectedImsi
-                    ? selectedImsi.replace('imsi-', '')
-                    : data?.subscriber && !data.subscriber.includes('•')
-                      ? data.subscriber.replace('imsi-', '')
-                      : '999700000000001'
-                }
-                ipAddress={activeSession?.address ?? data?.interfaces?.[0]?.addresses?.[0] ?? '10.45.0.3'}
+                imsi={selectedImsi.replace('imsi-', '')}
+                ipAddress={activeSession?.address ?? 'Sin IP observada'}
                 activeApn={activeApn}
                 afBoost={data?.af_boost}
                 snssai={activeSession?.snssai}

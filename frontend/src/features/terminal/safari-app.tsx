@@ -33,22 +33,22 @@ interface SpeedtestResult {
   apn: string
   snssai: { sst: number; sd: string | number }
   qos: string
-  qos_level: number
+  qos_level: number | null
   is_boosted: boolean
   pcc_rule: string
-  ping_ms: number
-  jitter_ms: number
-  download_mbps: number
-  upload_mbps: number
+  ping_ms: number | null
+  jitter_ms: number | null
+  download_mbps: number | null
+  upload_mbps: number | null
   bytes_downloaded: number
-  bytes_uploaded: number
+  bytes_uploaded: number | null
   note: string
 }
 
 interface SafariAppProps {
   onClose: () => void
   onTriggerIslandAlert?: (msg: string) => void
-  imsi?: string
+  imsi: string
   ipAddress?: string
   activeApn?: string
   afBoost?: {
@@ -70,8 +70,8 @@ type WebPage = 'start' | 'speedtest' | 'intranet' | 'pucp' | 'open5gs'
 export function SafariApp({
   onClose,
   onTriggerIslandAlert,
-  imsi = '999700000000001',
-  ipAddress = '10.45.0.3',
+  imsi,
+  ipAddress = 'Sin IP observada',
   activeApn = 'internet',
   afBoost,
   snssai,
@@ -188,58 +188,16 @@ export function SafariApp({
     onTriggerIslandAlert?.('⚡ Speedtest 5G: Conectando con UPF-01…')
 
     try {
-      // Trigger real backend measurement
-      const promise = api.post<SpeedtestResult>('/terminal/speedtest', { imsi: `imsi-${cleanImsi}` })
-
-      // Animate Ping / Jitter phase (0 - 1.2s)
-      await new Promise((r) => setTimeout(r, 600))
-      setLivePing(afBoost?.active ? 5.8 : 21.8)
-      setLiveJitter(afBoost?.active ? 0.9 : 3.4)
-
-      // Animate Download Phase (1.2s - 3.2s)
       setTestPhase('download')
-      const targetDl = afBoost?.active
-        ? (afBoost.mbr_dl ? parseFloat(afBoost.mbr_dl) * 0.92 : 18.6)
-        : 5.4
-
-      // Oscillate gauge up to target download
-      const steps = 15
-      for (let i = 1; i <= steps; i++) {
-        await new Promise((r) => setTimeout(r, 110))
-        const progress = i / steps
-        const jitter = (Math.random() - 0.5) * 1.5
-        const currentVal = Math.max(0.5, targetDl * progress + jitter)
-        setCurrentGaugeValue(currentVal)
-        setLiveDownload(currentVal)
-      }
-
-      // Fetch actual backend response
-      const res = await promise
-      const data = res.data
-
-      setCurrentGaugeValue(data.download_mbps)
+      const { data } = await api.post<SpeedtestResult>('/terminal/speedtest', { imsi: `imsi-${cleanImsi}` })
+      setCurrentGaugeValue(data.download_mbps ?? 0)
       setLiveDownload(data.download_mbps)
+      setLiveUpload(data.upload_mbps)
       setLivePing(data.ping_ms)
       setLiveJitter(data.jitter_ms)
-
-      onTriggerIslandAlert?.(`📥 Descarga: ${data.download_mbps} Mbps · ${data.qos}`)
-
-      // Animate Upload Phase (3.2s - 4.8s)
-      setTestPhase('upload')
-      const targetUl = data.upload_mbps
-      for (let i = 1; i <= 10; i++) {
-        await new Promise((r) => setTimeout(r, 100))
-        const currentUl = Math.max(0.3, targetUl * (i / 10) + (Math.random() - 0.5) * 0.8)
-        setCurrentGaugeValue(currentUl)
-        setLiveUpload(currentUl)
-      }
-
-      setCurrentGaugeValue(data.upload_mbps)
-      setLiveUpload(data.upload_mbps)
       setTestResult(data)
       setTestPhase('completed')
-
-      onTriggerIslandAlert?.(`✓ Test 5G SA: ${data.download_mbps} Mbps DL / ${data.upload_mbps} Mbps UL`)
+      onTriggerIslandAlert?.(data.note)
     } catch (err) {
       toast.error(apiErrorMessage(err, 'Error al ejecutar test de velocidad'))
       setTestPhase('idle')
@@ -464,7 +422,7 @@ export function SafariApp({
               <div
                 className={cn(
                   'rounded-full px-2 py-0.5 text-[10px] font-semibold flex items-center gap-1 shadow-sm',
-                  (afBoost?.active || (testResult && testResult.qos_level !== 9))
+                  (afBoost?.active || (testResult?.qos_level != null && testResult.qos_level !== 9))
                     ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold animate-pulse'
                     : 'bg-white/10 text-white/70 border border-white/10'
                 )}
@@ -472,7 +430,7 @@ export function SafariApp({
                 <Sparkles className='size-2.5' />
                 <span>
                   {testResult
-                    ? (testResult.qos_level === 9 ? '5G 5QI=9' : `5G+ 5QI=${testResult.qos_level}`)
+                    ? (testResult.qos_level == null ? '5QI no observado' : `5G 5QI=${testResult.qos_level}`)
                     : (afBoost?.active ? `5G+ ${afBoost.qos}` : '5G 5QI=9')}
                 </span>
               </div>
@@ -493,7 +451,7 @@ export function SafariApp({
                 <path
                   d='M 20 120 A 80 80 0 0 1 180 120'
                   fill='none'
-                  stroke={(afBoost?.active || (testResult && testResult.qos_level !== 9)) ? '#f59e0b' : '#0a84ff'}
+                  stroke={(afBoost?.active || (testResult?.qos_level != null && testResult.qos_level !== 9)) ? '#f59e0b' : '#0a84ff'}
                   strokeWidth='14'
                   strokeLinecap='round'
                   strokeDasharray='251.2'
@@ -506,7 +464,7 @@ export function SafariApp({
                   transform={`rotate(${gaugeAngle} 100 120)`}
                   className='transition-transform duration-100 ease-out origin-[100px_120px]'
                 >
-                  <polygon points='98,120 102,120 100,42' fill={(afBoost?.active || (testResult && testResult.qos_level !== 9)) ? '#fbbf24' : '#60a5fa'} />
+                  <polygon points='98,120 102,120 100,42' fill={(afBoost?.active || (testResult?.qos_level != null && testResult.qos_level !== 9)) ? '#fbbf24' : '#60a5fa'} />
                   <circle cx='100' cy='120' r='6' fill='#ffffff' />
                 </g>
               </svg>
@@ -590,7 +548,7 @@ export function SafariApp({
                   <div className='font-mono text-right text-white'>{testResult.interface} ({testResult.client_ip})</div>
                   
                   <div className='text-white/50'>Regla PCC:</div>
-                  <div className='font-mono text-right text-amber-400'>{testResult.pcc_rule}</div>
+                  <div className='font-mono text-right text-amber-400'>{testResult.pcc_rule ?? 'No observado'}</div>
 
                   <div className='text-white/50'>Flujo de Políticas:</div>
                   <div className='font-mono text-right text-white'>{testResult.qos}</div>
@@ -603,6 +561,7 @@ export function SafariApp({
 
                   <div className='text-white/50'>Servidor UPF:</div>
                   <div className='font-mono text-right text-white'>{testResult.server_ip}</div>
+                  <p className='col-span-2 text-xs text-white/60'>{testResult.note}</p>
                 </div>
               </div>
             )}
@@ -628,7 +587,7 @@ export function SafariApp({
                 <div className='space-y-2 pt-1'>
                   <div className='rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-2.5 text-emerald-400 text-xs flex items-center gap-2'>
                     <CheckCircle2 className='size-4 shrink-0' />
-                    <span>Conectado al Slice Empresarial (UPF-02 / S-NSSAI 1:000001)</span>
+                    <span>Conectado al Slice Empresarial (UPF-03 / S-NSSAI 3:000003)</span>
                   </div>
                   <p className='text-xs text-white/70 leading-relaxed'>
                     Bienvenido al portal interno de la empresa. Tráfico estrictamente aislado de la salida pública a Internet.
@@ -637,7 +596,7 @@ export function SafariApp({
               ) : (
                 <div className='space-y-2 pt-1'>
                   <div className='rounded-xl bg-amber-500/10 border border-amber-500/30 p-2.5 text-amber-300 text-xs'>
-                    ⚠️ Estás navegando con el APN <strong>internet</strong>. Cambia el APN a <strong>corporate</strong> en Ajustes para acceder a los servidores protegidos.
+                    Estás navegando con el APN <strong>internet</strong>. La red <strong>corporate</strong> pertenece al gateway industrial independiente, disponible en Servicios → Casos Verticales.
                   </div>
                 </div>
               )}

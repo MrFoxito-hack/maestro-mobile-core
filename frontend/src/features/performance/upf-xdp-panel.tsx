@@ -1,84 +1,95 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { useAuthStore } from '@/stores/auth-store'
-import { api, apiErrorMessage } from '@/lib/api'
+import type { ReactNode } from 'react'
+import { RefreshCw, Zap } from 'lucide-react'
+import { apiErrorMessage } from '@/lib/api'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { useUrllcXdp } from './use-urllc-xdp'
 
-type Status = {
-  available: boolean
-  mode: 'legacy' | 'xdp'
-  ue?: string
-  lease_seconds?: number
-  reason?: string
-  counters?: Record<string, { packets: number; bytes: number }>
-}
-
-export function UpfXdpPanel() {
-  const user = useAuthStore((s) => s.auth.user)
-  const allowed = user?.role === 'admin' || user?.role === 'teacher'
-  const state = useQuery({
-    queryKey: ['upf-xdp'],
-    queryFn: async () => (await api.get<Status>('/upf-xdp/status')).data,
-    refetchInterval: 10_000,
-    retry: false,
-    enabled: allowed,
-  })
-  const change = useMutation({
-    mutationFn: (mode: 'legacy' | 'xdp') => api.post('/upf-xdp/mode', { mode }),
-    onSuccess: () => state.refetch(),
-  })
-  const data = state.data
+export function UpfXdpPanel({
+  title,
+  subtitle,
+  className,
+}: {
+  title?: ReactNode
+  subtitle?: ReactNode
+  className?: string
+} = {}) {
+  const { state, change, allowed, transitioning, measuring } = useUrllcXdp()
   if (!allowed) return null
+  const data = state.isError ? undefined : state.data
+  const mode = data?.effective_mode ?? 'unknown'
+
   return (
-    <div className='mb-3 rounded-md border px-4 py-3 text-sm'>
-      <div className='flex flex-wrap items-center gap-3'>
-        <strong>UPF · Comparación A/B</strong>
-        <span>
-          {data
-            ? data.mode === 'xdp'
-              ? 'XDP genérico'
-              : 'Tradicional'
-            : 'Estado no disponible'}
-        </span>
-        {data?.ue && <span>UE 001 · {data.ue}</span>}
+    <div
+      className={
+        className ??
+        'flex flex-wrap items-center justify-between gap-2.5 rounded-lg border bg-card/60 p-3 text-xs shadow-2xs'
+      }
+    >
+      <div className='flex items-center gap-2 flex-wrap'>
+        {title ?? (
+          <>
+            <Zap className='size-3.5 text-amber-500' />
+            <strong>Acelerador URLLC</strong>
+          </>
+        )}
+        {subtitle}
+        <Badge
+          variant={mode === 'xdp' && !transitioning ? 'default' : 'secondary'}
+          role='status'
+          className='text-[10px] uppercase font-mono'
+        >
+          {transitioning
+            ? 'Conmutando…'
+            : mode === 'unknown'
+              ? 'Estado no verificado'
+              : `Modo efectivo: ${mode}`}
+        </Badge>
+      </div>
+      <div
+        className='flex items-center gap-1.5'
+        role='group'
+        aria-label='Modo de red URLLC'
+      >
         <Button
           size='sm'
-          variant='outline'
-          disabled={!data?.available || change.isPending}
-          onClick={() => change.mutate('legacy')}
+          className='h-7 px-2.5 text-xs'
+          variant={mode === 'kernel' ? 'secondary' : 'ghost'}
+          aria-pressed={mode === 'kernel' && !transitioning}
+          disabled={transitioning || measuring}
+          onClick={() => change.mutate('kernel')}
         >
-          A · Tradicional
+          A · Kernel
         </Button>
         <Button
           size='sm'
-          variant='outline'
-          disabled={!data?.available || !data.lease_seconds || change.isPending}
+          className='h-7 px-2.5 text-xs'
+          variant={mode === 'xdp' ? 'default' : 'ghost'}
+          aria-pressed={mode === 'xdp' && !transitioning}
+          disabled={
+            !data?.available || transitioning || measuring || state.isPending
+          }
           onClick={() => change.mutate('xdp')}
         >
-          B · XDP experimental
+          B · XDP
         </Button>
-        <Button size='sm' variant='ghost' onClick={() => state.refetch()}>
-          Actualizar
+        <Button
+          size='icon'
+          className='size-7'
+          variant='ghost'
+          aria-label='Actualizar estado URLLC'
+          onClick={() => void state.refetch()}
+        >
+          <RefreshCw
+            className={`size-3.5 ${state.isFetching ? 'animate-spin' : ''}`}
+          />
         </Button>
       </div>
-      <p className='mt-2 text-muted-foreground'>
-        Prueba IPv4 con registro temporal de sesión. El tráfico acelerado omite
-        la contabilización y las políticas de Open5GS. La activación caduca con
-        el registro.
-      </p>
-      {data?.counters && (
-        <p className='mt-1'>
-          Paquetes XDP: UL{' '}
-          {data.counters.ul_redirect_requested?.packets.toLocaleString()} · DL{' '}
-          {data.counters.dl_redirect_requested?.packets.toLocaleString()} ·
-          Registro válido por {data.lease_seconds} s
-        </p>
-      )}
-      {data?.reason && <p>{data.reason}</p>}
       {(state.error || change.error) && (
-        <p className='mt-1 text-destructive'>
+        <p role='alert' className='w-full text-destructive text-[11px]'>
           {apiErrorMessage(
             state.error || change.error,
-            'No se pudo consultar o cambiar el modo del UPF'
+            'No se pudo verificar el agente URLLC'
           )}
         </p>
       )}

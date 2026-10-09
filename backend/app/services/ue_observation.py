@@ -6,9 +6,9 @@ import yaml
 
 
 def terminal_label(imsi: str) -> str:
-    supi = imsi if imsi.startswith('imsi-') else 'imsi-' + imsi
-    teams = {f'imsi-99970000000000{i}': f'Equipo {i}' for i in range(1, 6)}
-    return teams.get(supi, 'UE')
+    from app.services.terminal_inventory import by_supi
+    device=by_supi(imsi)
+    return device.label if device else 'UE'
 
 
 def observed_nodes(nodes: list[str]) -> list[str]:
@@ -74,10 +74,37 @@ def parse_status(native: dict) -> dict:
         'mm_state': _text(state.get('mm-state')), 'cell_id': _text(state.get('current-cell')),
         'tac': _text(state.get('current-tac')), 'guti': _text(state.get('stored-guti')),
     })
+    def _parse_snssai(pdu_dict: dict) -> dict | None:
+        snssai = pdu_dict.get('s-nssai')
+        if not isinstance(snssai, dict):
+            return None
+        raw_sst = snssai.get('sst')
+        raw_sd = snssai.get('sd')
+        sst_val = None
+        sd_val = None
+        if isinstance(raw_sst, int):
+            sst_val = raw_sst
+        elif isinstance(raw_sst, str):
+            try:
+                sst_val = int(raw_sst, 16) if raw_sst.startswith(('0x', '0X')) else int(raw_sst)
+            except ValueError:
+                sst_val = None
+        if isinstance(raw_sd, int):
+            sd_val = f"{raw_sd:06x}"
+        elif isinstance(raw_sd, str):
+            try:
+                sd_val = f"{int(raw_sd, 16):06x}" if raw_sd.startswith(('0x', '0X')) else raw_sd
+            except ValueError:
+                sd_val = raw_sd
+        if sst_val is not None:
+            return {'sst': sst_val, 'sd': sd_val}
+        return None
+
     result['pdu_sessions'] = [
         {'session_id': str(identity), 'state': _text(pdu.get('state')),
          'type': _text(pdu.get('session-type')), 'apn': _text(pdu.get('apn')),
-         'address': _text(pdu.get('address')), 'ambr': _text(pdu.get('ambr'))}
+         'address': _text(pdu.get('address')), 'ambr': _text(pdu.get('ambr')),
+         's_nssai': _parse_snssai(pdu)}
         for identity, pdu in sessions.items() if isinstance(pdu, dict)
     ]
     result['active_ip'] = next((pdu['address'] for pdu in result['pdu_sessions']

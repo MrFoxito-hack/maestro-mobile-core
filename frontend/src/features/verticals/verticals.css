@@ -1,0 +1,763 @@
+.verticals-page {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 10px 18px 70px;
+}
+.verticals-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+  width: 100%;
+}
+.vertical-card {
+  --accent: #2dd4bf;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: #040508;
+  color: #f1f5f9;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.2s ease;
+}
+.vertical-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.fleet-card {
+  --accent: #f59e0b;
+}
+
+/* Card Heading */
+.vertical-card-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 18px 22px 14px;
+}
+.vertical-heading-icon {
+  color: var(--accent);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: #0a0d14;
+  padding: 9px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vertical-heading-text {
+  min-width: 0;
+}
+.vertical-eyebrow {
+  color: #526075;
+  font-size: 9px;
+  letter-spacing: 1.6px;
+  margin-bottom: 3px;
+  font-weight: 600;
+}
+.vertical-card h2 {
+  font-size: clamp(17px, 1.4vw, 22px);
+  letter-spacing: -0.4px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+.vertical-slice {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+.vertical-slice.urllc {
+  color: #2dd4bf;
+  background: rgba(45, 212, 191, 0.08);
+  border: 1px solid rgba(45, 212, 191, 0.22);
+}
+.vertical-slice.miot {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.22);
+}
+
+/* Network Line */
+.vertical-network-line {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 22px 13px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 10px;
+  color: #526075;
+}
+.vertical-connection {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-weight: 500;
+}
+.vertical-connection i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.vertical-connection.is-connected {
+  color: #34d399;
+}
+.vertical-connection.is-connected i {
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
+}
+
+/* Card Body (Vertical Stacking) */
+.vertical-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Mobility Cluster */
+.mobility-cluster {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 12px;
+  padding: 12px 20px 0;
+  align-items: center;
+}
+.vertical-card .instrument-dial {
+  display: block;
+  width: 100%;
+  max-height: 240px;
+}
+.mobility-speed {
+  position: relative;
+}
+.drive-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  color: #2dd4bf;
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: -10px;
+}
+.drive-indicator small {
+  font-size: 8px;
+  letter-spacing: 1.8px;
+  color: #526075;
+  font-weight: 500;
+}
+.mobility-road > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #526075;
+  font-size: 10px;
+  margin-bottom: 4px;
+}
+.mobility-road > .brake-indicator {
+  color: #f87171;
+  font-weight: 600;
+}
+.vertical-card .cockpit-road {
+  width: 100%;
+  max-height: 220px;
+}
+.vertical-card .moving .road-lanes {
+  animation: vertical-road 0.7s linear infinite;
+}
+@keyframes vertical-road {
+  to {
+    stroke-dashoffset: -30;
+  }
+}
+
+/* Throttle & Tachometer */
+.vertical-throttle {
+  margin: 0 20px;
+  padding: 12px 18px;
+  background: #07090e;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  min-height: 142px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.vertical-throttle label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 500;
+  color: #cbd5e1;
+}
+.vertical-throttle input {
+  display: block;
+  width: 100%;
+  accent-color: #2dd4bf;
+  margin: 12px 0 10px;
+  cursor: pointer;
+}
+.vertical-throttle > small {
+  color: #526075;
+  font-size: 9.5px;
+  margin-top: 4px;
+}
+.vertical-tachometer {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 4px;
+}
+.vertical-tachometer i {
+  height: 6px;
+  flex: 1;
+  border-radius: 1px;
+  background: #10141e;
+}
+.vertical-tachometer i.lit {
+  background: #2dd4bf;
+  box-shadow: 0 0 5px rgba(45, 212, 191, 0.5);
+}
+.vertical-tachometer i.lit:nth-last-child(-n + 5) {
+  background: #f59e0b;
+  box-shadow: 0 0 5px rgba(245, 158, 11, 0.5);
+}
+
+/* Fleet Instruments */
+.fleet-instruments-wrapper {
+  padding: 12px 20px 10px;
+}
+.fleet-instruments {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  align-items: center;
+}
+.fleet-instrument-caption {
+  text-align: center;
+  color: #526075;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  margin: 8px 0 0;
+}
+
+/* Fleet Map & Grid */
+.fleet-map {
+  margin: 0 20px;
+  padding: 12px 18px;
+  background: #07090e;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  min-height: 142px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.fleet-density-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: #8492a6;
+}
+.fleet-density-control select {
+  color: #f8fafc;
+  background: #0e121a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.fleet-grid {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 4px;
+  min-height: 76px;
+  max-height: 90px;
+  overflow-y: auto;
+  align-content: start;
+  padding: 8px 0 4px;
+}
+.fleet-grid.dense {
+  grid-template-columns: repeat(50, minmax(0, 1fr));
+  gap: 2px;
+}
+.sensor-cell {
+  background: #0c0f16;
+  color: #526075;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  font: 8px ui-monospace, monospace;
+  min-height: 14px;
+  padding: 2px 0;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+.sensor-cell.ack,
+.fleet-legend i.ack {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(52, 211, 153, 0.4);
+}
+.sensor-cell.lost,
+.sensor-cell.unsent,
+.fleet-legend i.lost {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(248, 113, 113, 0.4);
+}
+.sensor-cell.pending,
+.fleet-legend i.pending {
+  background: rgba(245, 158, 11, 0.3);
+  border-color: rgba(251, 191, 36, 0.6);
+  color: #fef3c7;
+}
+.is-transmitting .sensor-cell {
+  animation: sensor-cycle 0.8s ease-in-out infinite alternate;
+}
+@keyframes sensor-cycle {
+  to {
+    opacity: 0.3;
+  }
+}
+.fleet-grid.dense .sensor-cell {
+  border-radius: 1px;
+  min-height: 6px;
+  padding: 0;
+}
+.fleet-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  font-size: 8.5px;
+  color: #526075;
+  margin-top: 4px;
+}
+.fleet-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.fleet-legend i {
+  width: 6px;
+  height: 6px;
+  background: #141822;
+  border-radius: 1px;
+}
+
+/* Telemetry Panels (MEC & UPF - Identical Dimensions) */
+.mec-panel,
+.upf-panel {
+  margin: 0 20px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  background: #07090e;
+  min-height: 215px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.vertical-panel-label,
+.vertical-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #8492a6;
+  font-size: 9px;
+  letter-spacing: 1.2px;
+  font-weight: 600;
+  width: 100%;
+}
+.vertical-panel-label > span:first-child,
+.vertical-panel-header .vertical-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.panel-ip-badge {
+  font-family: ui-monospace, monospace;
+  color: #526075;
+  font-size: 10px;
+  font-weight: 500;
+}
+.performance-mini-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #fbbf24;
+  font-size: 9.5px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.performance-mini-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+.upf-traffic-badge {
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.08);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  font-weight: 500;
+}
+.vertical-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 10px 0 6px;
+}
+.vertical-metric {
+  min-width: 0;
+}
+.vertical-metric > span {
+  display: block;
+  color: #526075;
+  font-size: 9.5px;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.vertical-metric strong {
+  font-size: clamp(20px, 1.8vw, 28px);
+  font-weight: 400;
+  letter-spacing: -1px;
+  color: #f8fafc;
+}
+.vertical-metric small {
+  color: #526075;
+  font-size: 10px;
+  letter-spacing: 0;
+  margin-left: 4px;
+}
+.vertical-card .device-trace {
+  display: block;
+  width: 100%;
+  height: 68px;
+}
+.vertical-monitor-row {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+.vertical-monitor-row > small {
+  font-size: 9.5px;
+  color: #526075;
+}
+
+/* Actions Wrapper & Primary Action Buttons (Aligned) */
+.vertical-actions-wrapper {
+  margin-top: auto;
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.vertical-brake,
+.transmit-cycle {
+  width: calc(100% - 40px);
+  margin: 0 20px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+}
+.vertical-brake:disabled,
+.transmit-cycle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+}
+.brake-rate-badge {
+  font-size: 9px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  font-family: ui-monospace, monospace;
+}
+.transmit-rate-badge {
+  font-size: 9px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  font-family: ui-monospace, monospace;
+}
+
+/* Left: Frenado V2X (Crimson High-Tech Glass) */
+.vertical-brake {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(185, 28, 28, 0.03) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  color: #fee2e2;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.06);
+}
+.vertical-brake:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.18) 0%, rgba(185, 28, 28, 0.06) 100%);
+  border-color: rgba(239, 68, 68, 0.55);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.2);
+  transform: translateY(-1px);
+}
+.brake-badge {
+  background: rgba(239, 68, 68, 0.16);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+}
+
+/* Right: Transmitir Ciclo Masivo (Amber High-Tech Glass) */
+.transmit-cycle {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(180, 83, 9, 0.03) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.32);
+  color: #fef3c7;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.06);
+}
+.transmit-cycle:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(180, 83, 9, 0.06) 100%);
+  border-color: rgba(245, 158, 11, 0.55);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.2);
+  transform: translateY(-1px);
+}
+.transmit-badge {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+/* Secondary Button (Medir MEC) */
+.vertical-button.secondary {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 550;
+  border: 1px solid rgba(45, 212, 191, 0.28);
+  background: rgba(45, 212, 191, 0.08);
+  color: #5eead4;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.vertical-button.secondary:hover:not(:disabled) {
+  background: rgba(45, 212, 191, 0.16);
+  border-color: rgba(45, 212, 191, 0.45);
+}
+
+/* Live Feedback Strip */
+.vertical-feedback {
+  margin: 0 20px;
+  padding: 0;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+}
+.feedback-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.feedback-pill.idle {
+  background: #07090e;
+  color: #8492a6;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+.feedback-pill.success {
+  background: rgba(16, 185, 129, 0.08);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.22);
+}
+.feedback-pill.error {
+  background: rgba(239, 68, 68, 0.08);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.22);
+}
+.feedback-pill.warning {
+  background: rgba(245, 158, 11, 0.08);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.22);
+}
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.pulse-dot.urllc {
+  background: #2dd4bf;
+  box-shadow: 0 0 6px #2dd4bf;
+  animation: pulse-beacon 2s infinite;
+}
+.pulse-dot.miot {
+  background: #f59e0b;
+  box-shadow: 0 0 6px #f59e0b;
+  animation: pulse-beacon 2s infinite;
+}
+@keyframes pulse-beacon {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+}
+
+/* Card Footers */
+.vertical-card-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 9.5px;
+}
+.footer-chip-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.footer-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2.5px 7px;
+  border-radius: 5px;
+  background: #0a0d14;
+  color: #526075;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  font-weight: 500;
+}
+.footer-chip.mono {
+  font-family: ui-monospace, monospace;
+  color: #cbd5e1;
+}
+.footer-chip.badge-slice.urllc {
+  color: #2dd4bf;
+  background: rgba(45, 212, 191, 0.08);
+  border-color: rgba(45, 212, 191, 0.2);
+  font-weight: 600;
+}
+.footer-chip.badge-slice.miot {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.2);
+  font-weight: 600;
+}
+
+/* Scope Disclaimer at Bottom */
+.verticals-scope {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 900px;
+  margin: 18px auto 0;
+  padding: 9px 16px;
+  border-radius: 10px;
+  background: #040508;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  color: #526075;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.verticals-scope svg {
+  flex-shrink: 0;
+  color: #3b4554;
+}
+.verticals-scope strong {
+  color: #8492a6;
+  font-weight: 600;
+}
+.verticals-empty {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 35px;
+  border-radius: 16px;
+  background: #040508;
+  color: #8492a6;
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .verticals-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 540px) {
+  .verticals-page {
+    padding: 10px 10px 75px;
+  }
+  .vertical-card-heading {
+    padding: 14px 14px 10px;
+  }
+  .mobility-cluster {
+    padding: 8px 10px 0;
+  }
+  .fleet-instruments-wrapper {
+    padding: 8px 10px 0;
+  }
+  .vertical-throttle,
+  .fleet-map,
+  .mec-panel,
+  .upf-panel {
+    margin: 0 12px;
+    padding: 10px 12px;
+  }
+  .vertical-brake,
+  .transmit-cycle {
+    width: calc(100% - 24px);
+    margin: 0 12px;
+  }
+  .vertical-feedback {
+    margin: 0 12px;
+  }
+  .vertical-card-footer {
+    padding: 10px 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .verticals-page *,
+  .verticals-page *::before {
+    animation: none !important;
+    transition: none !important;
+  }
+}

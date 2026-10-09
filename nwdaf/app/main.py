@@ -164,6 +164,16 @@ def create_app(database_path=None, token=None, callback_uris=None, pm_path=None)
         app.state.live_observations[target] = (stamp, payload)
         return {'input_hash': digest, **evidence}
 
+    @app.post('/management/v1/upf-diagnostics', dependencies=[Depends(authorized)])
+    def upf_diagnostics(body: dict):
+        from app.engine.upf_diagnostics import assess
+        # Capacity/SLOs are operator configuration, never publisher-provided values.
+        slos = json.loads(os.getenv('NWDAF_SERVICE_SLOS', '{}'))
+        result = assess(body, slos, datetime.now(timezone.utc).timestamp())
+        result['input_hash'] = app.state.db.record('UPF_SERVICE_DIAGNOSTICS',
+            json.dumps(body['snssai'],sort_keys=True),body,result)
+        return result
+
     @app.post('/management/v1/abnormal-behaviour', dependencies=[Depends(authorized)])
     async def abnormal(body: AnomalyRequest):
         result = detect(body.history, body.value, body.timestamp, scale_floor=body.scale_floor)

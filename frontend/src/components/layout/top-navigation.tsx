@@ -1,25 +1,12 @@
-import { useIsMutating } from '@tanstack/react-query'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { LayoutDashboard } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
-import { useScenarioStore, type ScenarioId } from '@/stores/scenario-store'
 import { cn } from '@/lib/utils'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { ProfileDropdown } from '@/components/profile-dropdown'
-import { ThemeSwitch } from '@/components/theme-switch'
 import { sidebarData } from './data/sidebar-data'
 import { TopNavDropdown } from './top-nav-dropdown'
 
 export function TopNavigation() {
-  const scenario = useScenarioStore((state) => state.scenario)
-  const setScenario = useScenarioStore((state) => state.setScenario)
-  const busy = useIsMutating() > 0
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
@@ -44,7 +31,7 @@ export function TopNavigation() {
   const isResumenActive = pathname === '/'
 
   return (
-    <header className='sticky top-0 z-40 flex flex-wrap items-center gap-x-4 border-b border-white/10 bg-[#1B2A4A] px-3 md:px-4 xl:flex-nowrap dark:border-border dark:bg-background'>
+    <header className='sticky top-0 z-40 flex flex-wrap items-center gap-x-4 border-b border-white/[0.08] bg-black/95 backdrop-blur-md px-3 md:px-4 xl:flex-nowrap'>
       <Link
         to='/'
         aria-label='MAEstro · Inicio'
@@ -92,27 +79,6 @@ export function TopNavigation() {
         </div>
       </nav>
       <div className='ml-auto flex h-14 shrink-0 items-center gap-2'>
-        <Select
-          value={scenario}
-          onValueChange={(value) => setScenario(value as ScenarioId)}
-          disabled={busy}
-        >
-          <SelectTrigger
-            aria-label='Escenario global'
-            className={cn(
-              'h-8 w-32 cursor-pointer text-xs sm:w-40',
-              'border-white/20 bg-white/10 text-white hover:bg-white/15 [&>svg]:text-white/60',
-              'dark:border-border dark:bg-transparent dark:text-foreground dark:hover:bg-accent dark:[&>svg]:text-muted-foreground'
-            )}
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='5g-sa'>5G Standalone</SelectItem>
-            <SelectItem value='4g-epc'>4G EPC</SelectItem>
-          </SelectContent>
-        </Select>
-        <ThemeSwitch />
         <ProfileDropdown />
       </div>
     </header>

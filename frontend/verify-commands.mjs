@@ -23,6 +23,12 @@ try {
     { id: 'system.restart', label: 'Reiniciar', description: 'Reinicio del servicio.', category: 'Acciones', allowed: true, mutating: true, parameters: [] },
   ]
   const components = ['amf', 'udm'].map(id => ({ id, label: id.toUpperCase(), node_id: 'test-vm', unit: `open5gs-${id}d`, status: 'running', operations }))
+  components[1].operations = [...operations, { id: 'subscriber.create', label: 'ADD 5G-SUB', description: 'Crear suscriptor', category: 'UDM', allowed: true, mutating: true, parameters: [
+    { id: 'imsi', label: 'IMSI', type: 'text', required: true },
+    { id: 'sst', label: 'SST', type: 'number', required: true },
+    { id: 'sd', label: 'SD', type: 'text', required: true },
+    { id: 'apn_dnn', label: 'DNN', type: 'text', required: true },
+  ] }]
   let calls = 0
   await page.route('**/api/v1/operations/**', async route => {
     const url = route.request().url()
@@ -31,6 +37,7 @@ try {
     if (url.endsWith('/execute')) {
       calls++
       const payload = route.request().postDataJSON()
+      if (payload.operation_id === 'subscriber.create') return route.fulfill({ status: 409, json: { detail: 'El IMSI ya existe', result: { ...payload, id: 'c7-conflict-run-id', component_label: 'UDM', operation_label: 'ADD 5G-SUB', status: 'failed', source: 'UI TEST', output: 'El IMSI ya existe', error: 'El IMSI ya existe', data: null, username: 'docente', role: 'teacher', duration_ms: 1, started_at: new Date().toISOString() } } })
       assert.equal(payload.component_id, 'udm')
       assert.equal(payload.operation_id, 'system.status')
       return route.fulfill({ json: { ...payload, id: 'ui-test-only', component_label: 'UDM', operation_label: 'Consultar estado', status: 'success', source: 'UI TEST', output: 'TEST RESULT', parameters: {}, username: 'docente', role: 'teacher', duration_ms: 1, started_at: new Date().toISOString() } })
@@ -61,7 +68,7 @@ try {
   await page.getByText('Parámetros no soportados: bad.', { exact: true }).waitFor()
   assert.equal(calls, 1)
   await input.fill('RST NF;')
-  await input.press('Enter')
+  await input.press('Control+Enter')
   await page.getByRole('heading', { name: 'Confirmar operación' }).waitFor()
   assert.equal(calls, 1, 'Mutating operation must not run before confirmation')
   await page.getByRole('button', { name: 'Cancelar', exact: true }).click()
@@ -70,6 +77,14 @@ try {
   await page.getByRole('button', { name: /LST NF-LOG/ }).click()
   await page.locator('input[type=number]').fill('50')
   assert.match(await input.inputValue(), /LINES=50/)
+  await input.fill('ADD 5G-SUB: IMSI="999700000000006", SST=3, SD="000003", DNN="corporate";')
+  await page.getByText(/ADD rechaza un IMSI existente/).waitFor()
+  await input.press('Control+Enter')
+  await page.getByRole('button', { name: 'Confirmar ejecución', exact: true }).click()
+  const conflict = page.getByLabel('Salida del comando')
+  await conflict.filter({ hasText: 'c7-conflict-run-id' }).waitFor()
+  assert.match(await conflict.textContent(), /RETCODE = 1001/)
+  assert.equal(calls, 2)
   await page.setViewportSize({ width: 1100, height: 800 })
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'No horizontal page overflow')
   assert.deepEqual(errors, [])

@@ -11,6 +11,7 @@ from app.models import Role, UserPublic
 from app.services.observability import collect_alarms, metrics_service
 from app.services.scenarios import CATALOG, scenario_manager
 from app.services.telco_kpis import collect_telco_kpis
+from app.services import upf_performance
 from app.services.nf_metrics import definitions as nf_definitions, nf_metrics
 
 
@@ -67,6 +68,8 @@ OBJECT_ALIASES: dict[str, list[str]] = {
     "nf:upf2": ["interface:ogstun_corp", "interface:ogstun2"],
 }
 
+COUNTERS.extend(upf_performance.counters())
+
 COUNTER_BY_ID = {item["id"]: item for item in COUNTERS}
 for item in COUNTERS:
     if "procedure" in item["objects"]:
@@ -80,10 +83,10 @@ for item in COUNTERS:
             item["min_granularity_seconds"] = 1800
             item["supported_granularities"] = [1800]
         else:
-            item["min_granularity_seconds"] = 300
+            item.setdefault("min_granularity_seconds", 300)
             item["supported_granularities"] = [300, 1800]
     else:
-        item["min_granularity_seconds"] = 300
+        item.setdefault("min_granularity_seconds", 300)
         item["supported_granularities"] = [300, 1800]
 
 
@@ -373,6 +376,9 @@ class PerformanceService:
                 {"id": "procedure:attach", "label": "Attach", "type": "procedure", "group": "Procedimientos 4G"},
                 {"id": "procedure:eps-bearer", "label": "EPS Bearer", "type": "procedure", "group": "Procedimientos 4G"},
             ])
+        if scenario_id == "5g-sa":
+            existing = {obj["id"] for obj in objects}
+            objects.extend(obj for obj in upf_performance.objects() if obj["id"] not in existing)
         counters = [item for item in COUNTERS if scenario_id in item.get("scenarios", [scenario_id])]
         counters = counters + nf_definitions(testbed_id, scenario_id)
         for obj in objects:

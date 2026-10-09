@@ -1,0 +1,17 @@
+{
+  "id": "c6-embb-qoe-local-advisor-v1",
+  "observed_supi": "imsi-999700000000001",
+  "competing_supi": "imsi-999700000000004",
+  "dnn": "internet",
+  "snssai": {"sst": 1, "sd": "000001"},
+  "upf": "upf-01",
+  "address_resolution": "live_pdu_session",
+  "capacity_bps": 1500000,
+  "competitor_offered_bps": 3000000,
+  "duration_seconds": 24,
+  "representations_kbps": [250, 1000],
+  "policy_mutation": false,
+  "llm_mode": "read_only_after_acquisition",
+  "execution_ready": false,
+  "runner": "infra/c6_qoe_campaign.py"
+}

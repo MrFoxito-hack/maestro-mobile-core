@@ -592,7 +592,9 @@ def test_node_trace_catalog_exposes_supported_csp_nodes_without_bpf_filters(
     )
     assert response.status_code == 200
     catalog = response.json()
-    assert {item["id"] for item in catalog} == {"amf", "smf", "smf2", "upf", "nrf", "scp"}
+    assert {item["id"] for item in catalog} == {
+        "amf", "smf", "smf2", "smf3", "upf", "upf2", "upf3", "nrf", "scp"
+    }
     assert all("filter" not in item for item in catalog)
     assert any(
         interface["id"] == "n2"

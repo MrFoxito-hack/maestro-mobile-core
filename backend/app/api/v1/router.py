@@ -15,15 +15,23 @@ from app.api.v1.endpoints import (
     scenarios,
     subscribers,
     terminal,
+    terminal_devices,
+    terminal_inventory,
     upf_xdp,
+    upf_telemetry,
+    copilot,
 )
 
 router = APIRouter()
+router.include_router(copilot.router)
 router.include_router(alarm_center.router)
 router.include_router(auth.router)
 router.include_router(charging.router)
 router.include_router(nwdaf.router)
 router.include_router(terminal.router)
+router.include_router(terminal_devices.router)
+router.include_router(terminal_devices.vertical_router)
+router.include_router(terminal_inventory.router)
 router.include_router(scenarios.router)
 router.include_router(configuration.router)
 router.include_router(subscribers.router)
@@ -34,3 +42,4 @@ router.include_router(audit.router)
 router.include_router(experiments.router)
 router.include_router(laboratory.router)
 router.include_router(upf_xdp.router)
+router.include_router(upf_telemetry.router)

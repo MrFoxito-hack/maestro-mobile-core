@@ -1,7 +1,7 @@
 from typing import Any
 
 
-SUBSCRIBER_USER_PLANE_FILTER = "net 10.45.0.0/16 or net 10.46.0.0/16"
+SUBSCRIBER_USER_PLANE_FILTER = "net 10.45.0.0/16 or net 10.46.0.0/16 or net 10.47.0.0/16"
 
 NODE_TRACE_CATALOG: dict[str, dict[str, Any]] = {
     "amf": {
@@ -23,13 +23,22 @@ NODE_TRACE_CATALOG: dict[str, dict[str, Any]] = {
         "filter": "udp port 8805 or tcp port 7777 or tcp port 8081 or tcp port 18081",
     },
     "smf2": {
-        "label": "SMF-02 (Corporate)",
-        "description": "Session Management Function for SST=1 SD=000002",
+        "label": "SMF-02 (Corporate / MIoT)",
+        "description": "Session Management Function for SST=3 SD=000003",
         "interfaces": [
             {"id": "n4", "label": "N4 Interface Trace", "protocols": ["PFCP"]},
             {"id": "sbi", "label": "SBI/N11 Interface Trace", "protocols": ["HTTP/2"]},
         ],
-        "filter": "(host 10.210.50.2 and udp port 8805) or (host 127.0.0.15 and tcp port 7777)",
+        "filter": "(host 10.210.50.2 and udp port 8805) or (host 127.0.0.15 and tcp port 7777) or udp port 8805",
+    },
+    "smf3": {
+        "label": "SMF-03 (URLLC)",
+        "description": "Session Management Function for SST=2 SD=000002",
+        "interfaces": [
+            {"id": "n4", "label": "N4 Interface Trace", "protocols": ["PFCP"]},
+            {"id": "sbi", "label": "SBI/N11 Interface Trace", "protocols": ["HTTP/2"]},
+        ],
+        "filter": "udp port 8805 or tcp port 7777",
     },
     "upf": {
         "label": "UPF",
@@ -39,7 +48,27 @@ NODE_TRACE_CATALOG: dict[str, dict[str, Any]] = {
             {"id": "n4", "label": "N4 Interface Trace", "protocols": ["PFCP"]},
             {"id": "n6", "label": "N6 Interface Trace", "protocols": ["IPv4", "IPv6", "ICMP", "HTTP"]},
         ],
-        "filter": "udp port 2152 or udp port 8805 or net 10.45.0.0/16 or net 10.46.0.0/16",
+        "filter": "udp port 2152 or udp port 8805 or net 10.45.0.0/16 or net 10.46.0.0/16 or net 10.47.0.0/16",
+    },
+    "upf2": {
+        "label": "UPF-02 (Corporate / MIoT)",
+        "description": "User Plane Function for SST=3 SD=000003",
+        "interfaces": [
+            {"id": "n3", "label": "N3 Interface Trace", "protocols": ["GTP-U"]},
+            {"id": "n4", "label": "N4 Interface Trace", "protocols": ["PFCP"]},
+            {"id": "n6", "label": "N6 Interface Trace", "protocols": ["IPv4", "IPv6", "ICMP", "HTTP"]},
+        ],
+        "filter": "udp port 2152 or udp port 8805 or net 10.46.0.0/16",
+    },
+    "upf3": {
+        "label": "UPF-03 (URLLC / XDP)",
+        "description": "User Plane Function for SST=2 SD=000002",
+        "interfaces": [
+            {"id": "n3", "label": "N3 Interface Trace", "protocols": ["GTP-U"]},
+            {"id": "n4", "label": "N4 Interface Trace", "protocols": ["PFCP"]},
+            {"id": "n6", "label": "N6 Interface Trace", "protocols": ["IPv4", "IPv6", "ICMP", "HTTP"]},
+        ],
+        "filter": "udp port 2152 or udp port 8805 or net 10.47.0.0/16 or net 172.31.48.0/20",
     },
     "nrf": {
         "label": "NRF", "description": "Network Repository Function",

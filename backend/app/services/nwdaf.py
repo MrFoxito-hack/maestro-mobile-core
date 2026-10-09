@@ -10,6 +10,15 @@ import paramiko
 from fastapi import HTTPException
 
 from app.core.config import get_settings
+from app.services.upf_inventory import inventory
+
+
+def slice_catalog():
+    labels = {'embb': 'eMBB · Internet', 'urllc': 'URLLC · 5G-Plus / V2X',
+              'miot': 'MIoT · Corporate / Sensores'}
+    return [{'nf': t['id'].upper(), 'snssai': {'sst': t['sst'], 'sd': t['sd']},
+             'object_id': t['pm_object_id'], 'dnn': t['dnn'], 'label': labels[t['service']]}
+            for t in inventory()['targets']]
 
 
 def nwdaf_request(path: str, method: str = "GET", body: str | None = None):
@@ -89,13 +98,20 @@ def get_analytics(event_id: str, event_filter: str | None = None,
 def get_overview():
     """Build an aggregated overview for the EMS dashboard."""
     health = get_health()
-    # Query the latest analytics for the default eMBB slice
-    slice_filter = json.dumps({"snssais": [{"sst": 1}]})
-    slice_data = get_analytics("LOAD_LEVEL_INFORMATION", event_filter=slice_filter)
+    # This NWDAF profile accepts exactly one complete S-NSSAI per request.
+    slices, reports = [], []
+    for target in slice_catalog():
+        try:
+            data = get_analytics('LOAD_LEVEL_INFORMATION', event_filter=json.dumps({'snssais': [target['snssai']]}))
+            slices.append({**target, 'status': 'available' if data else 'no_data', 'analytics': data})
+            reports.extend((data or {}).get('sliceLoadLevelInfos', []))
+        except HTTPException:
+            slices.append({**target, 'status': 'unavailable', 'analytics': None})
 
     return {
         "service": health,
-        "slice_load": slice_data,
+        "slice_load": {'sliceLoadLevelInfos': reports},
+        "slices": slices,
         "closed_loop_enabled": health.get("closed_loop_enabled", False),
     }
 
@@ -104,7 +120,9 @@ def get_nf_analytics(nf: str, horizon: int) -> dict:
     """Resolve the NF through the configured PM map; never invent predictions."""
     health = get_health()
     maps = health.get("slice_maps", [])
-    matches = [entry for entry in maps if entry.get("object_id", "").split(":")[-1].upper() == nf]
+    target = next((item for item in slice_catalog() if item['nf'] == nf.upper()), None)
+    matches = [entry for entry in maps if target and entry.get('object_id') == target['object_id']
+               and entry.get('snssai') == target['snssai']]
     if len(matches) != 1:
         raise HTTPException(409, "NWDAF requiere un mapeo PM único para la NF indicada")
     snssai = matches[0]["snssai"]

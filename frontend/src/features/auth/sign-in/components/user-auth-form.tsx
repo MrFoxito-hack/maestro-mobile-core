@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useRouter } from '@tanstack/react-router'
 import { Loader2, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
@@ -25,6 +25,26 @@ const formSchema = z.object({
   password: z.string().min(1, 'Ingrese su contraseña.'),
 })
 
+function getSafeRedirect(redirect?: string): string {
+  if (!redirect) return '/'
+  let clean = redirect
+  try {
+    if (clean.startsWith('http://') || clean.startsWith('https://')) {
+      const url = new URL(clean)
+      clean = url.pathname + url.search
+    }
+  } catch {
+    return '/'
+  }
+  if (clean.includes('/sign-in') || clean.startsWith('/(auth)')) {
+    return '/'
+  }
+  if (!clean.startsWith('/')) {
+    return `/${clean}`
+  }
+  return clean
+}
+
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLFormElement> {
   redirectTo?: string
 }
@@ -36,6 +56,7 @@ export function UserAuthForm({
 }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
+  const router = useRouter()
   const { auth } = useAuthStore()
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -53,7 +74,10 @@ export function UserAuthForm({
       auth.setUser(response.data.user)
       auth.setAccessToken(response.data.access_token)
       toast.success(`Bienvenido, ${response.data.user.username}`)
-      await navigate({ to: redirectTo || '/', replace: true })
+
+      const destination = getSafeRedirect(redirectTo)
+      await router.invalidate()
+      await navigate({ to: destination as any, replace: true })
     } catch {
       toast.error('Usuario o contraseña incorrectos')
     } finally {

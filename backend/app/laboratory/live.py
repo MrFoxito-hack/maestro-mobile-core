@@ -10,7 +10,7 @@ import paramiko
 import yaml
 
 from app.core.config import get_settings
-from app.laboratory.preflight import CORE_UNITS, REQUIRED_GATES
+from app.laboratory.preflight import CORE_UNITS, EMBB_CRITICAL_UNITS, REQUIRED_GATES
 from app.laboratory.repository import canonical, stamp
 
 
@@ -190,11 +190,14 @@ class LivePreflight:
         if all(identities) and (identities[0]['address'] == identities[1]['address'] or identities[0]['interface'] == identities[1]['interface']):
             checks.append({'id': 'distinct_sessions', 'status': 'blocked'})
         services = {unit: raw['core'].get('services', {}).get(unit, {}).get('ActiveState', 'unknown') for unit in CORE_UNITS}
-        checks.append({'id': 'core_services', 'status': 'passed' if all(s == 'active' for s in services.values()) else 'blocked'})
+        critical = EMBB_CRITICAL_UNITS if all(b['dnn'] == 'internet' for b in bindings.values()) else CORE_UNITS
+        checks.append({'id': 'core_services', 'status': 'passed' if all(services[u] == 'active' for u in critical) else 'blocked'})
         # A budget check excludes neither future preparation nor unobserved competing traffic.
         return {'schema_version': 1, 'source': 'live_ssh', 'read_only': True,
                 'started_at': started, 'finished_at': stamp(), 'execution_ready': False,
                 'subjects': subjects, 'services': services, 'checks': checks,
+                'critical_services': list(critical),
+                'noncritical_observations': {u: services[u] for u in CORE_UNITS if u not in critical},
                 'pending_gates': list(REQUIRED_GATES), 'errors': errors,
                 'clocks': {n: {k: raw[n].get(k) for k in ('clock_start', 'clock_end')} for n in probes},
                 'raw_sha256': hashlib.sha256(canonical(raw).encode()).hexdigest(),

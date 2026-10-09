@@ -66,6 +66,7 @@ def main():
   type filter hook input priority -10; policy accept;
   ip daddr 10.46.0.1 tcp dport 8080 iifname "ogstun" ip saddr 10.46.0.0/16 counter accept
   iifname "ogstun" ip saddr 10.46.0.0/16 ip daddr 10.46.0.1 icmp type echo-request counter accept
+  iifname "ogstun" ip saddr 10.46.0.0/16 ip daddr 10.46.0.1 ct state established icmp type echo-reply counter accept
   iifname "ogstun" counter reject
   ip daddr 10.46.0.1 tcp dport 8080 counter reject
  }

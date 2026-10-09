@@ -29,13 +29,14 @@ def sync():
     if not settings.ssh_strict_host_key: ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
         history = ROOT/'backend/data/nwdaf-upf-pm.sqlite3'
-        upf_status = collect(settings, history)
+        version = 2 if settings.multi_upf_enabled else 1
+        upf_status = collect(settings, history, version=version)
         ssh.connect(settings.testbed_host,port=settings.ssh_port,username=settings.ssh_user,
                     password=settings.ssh_password,look_for_keys=False,allow_agent=False,timeout=10)
         with tempfile.TemporaryDirectory(prefix='maestro-pm-') as temp:
             snapshot = Path(temp)/'pm.sqlite3'
             metadata = module.export_snapshot(source,snapshot)
-            merge_snapshot(history,snapshot)
+            merge_snapshot(history,snapshot,version=version)
             metadata['upf_measurements'] = upf_status
             remote = '/home/emsadmin/maestro-charging/nwdaf/data/pm-source.sqlite3'
             staging = remote+'.'+uuid.uuid4().hex

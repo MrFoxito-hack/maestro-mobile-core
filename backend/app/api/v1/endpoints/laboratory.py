@@ -5,7 +5,7 @@ from fastapi.responses import Response
 
 from app.api.deps import current_user
 from app.core.config import get_settings
-from app.laboratory.capabilities import CAPABILITIES, templates
+from app.laboratory.capabilities import CAPABILITIES, templates, c6_preset
 from app.laboratory.planner import validate_design
 from app.laboratory.repository import ConflictError, Repository
 from app.laboratory.schemas import CampaignCreate, Descriptor, ExperimentCreate
@@ -86,6 +86,11 @@ def capabilities(user: User):
 @router.get("/templates")
 def catalog(user: User):
     return templates()
+
+
+@router.get('/presets')
+def presets(user: User):
+    return [c6_preset()]
 
 
 @router.get("/experiments")

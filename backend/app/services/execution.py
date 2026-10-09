@@ -324,7 +324,7 @@ class RemoteExecutionAdapter(ExecutionAdapter):
     def _port_for_unit(self, unit: str) -> int:
         if unit in ("open5gs-upfd2", "open5gs-upfd-2"):
             return getattr(self.settings, "upf2_ssh_port", 2224)
-        if unit == "open5gs-upfd":
+        if unit in ("open5gs-upfd", "open5gs-upfd-urllc"):
             return getattr(self.settings, "upf_ssh_port", 2223)
         if unit == "ueransim-gnb":
             return getattr(self.settings, "gnb_ssh_port", 2225)
@@ -459,117 +459,39 @@ class RemoteExecutionAdapter(ExecutionAdapter):
         return output.splitlines()
 
     async def runtime_snapshot(self) -> dict:
-        upf1_port = getattr(self.settings, "upf_ssh_port", 2223)
-        upf2_port = getattr(self.settings, "upf2_ssh_port", 2224)
-        gnb_port = getattr(self.settings, "gnb_ssh_port", 2225)
-        ue_port = getattr(self.settings, "ue_ssh_port", 2226)
-        core_task = asyncio.gather(
-            self._run("hostname", port=self.settings.ssh_port),
-            self._run("ip -j address show", port=self.settings.ssh_port),
-            self._run("ss -H -lnutS", port=self.settings.ssh_port),
-        )
-        upf1_task = asyncio.gather(
-            self._run("hostname", port=upf1_port),
-            self._run("ip -j address show", port=upf1_port),
-            self._run("ss -H -lnutS", port=upf1_port),
-        )
-        upf2_task = asyncio.gather(
-            self._run("hostname", port=upf2_port),
-            self._run("ip -j address show", port=upf2_port),
-            self._run("ss -H -lnutS", port=upf2_port),
-        )
-        gnb_task = asyncio.gather(
-            self._run("hostname", port=gnb_port),
-            self._run("ip -j address show", port=gnb_port),
-            self._run("ss -H -lnutS", port=gnb_port),
-        )
-        ue_task = asyncio.gather(
-            self._run("hostname", port=ue_port),
-            self._run("ip -j address show", port=ue_port),
-            self._run("ss -H -lnutS", port=ue_port),
-        )
-        try:
-            (c_host, c_if, c_ss), (u1_host, u1_if, u1_ss), (u2_host, u2_if, u2_ss), (gnb_host, gnb_if, gnb_ss), (ue_host, ue_if, ue_ss) = await asyncio.gather(
-                core_task, upf1_task, upf2_task, gnb_task, ue_task
-            )
-            core_payload = _runtime_payload("remote", c_host, c_if, c_ss)
-            u1_payload = _runtime_payload("remote", u1_host, u1_if, u1_ss)
-            u2_payload = _runtime_payload("remote", u2_host, u2_if, u2_ss)
-            gnb_payload = _runtime_payload("remote", gnb_host, gnb_if, gnb_ss)
-            ue_payload = _runtime_payload("remote", ue_host, ue_if, ue_ss)
+        from app.services.upf_inventory import inventory
+        from datetime import datetime, timezone
+        targets = [
+            {'id': 'core', 'port': self.settings.ssh_port, 'namespace': None, 'role': '5GC control'},
+            {'id': 'gnb-vm', 'port': self.settings.gnb_ssh_port, 'namespace': None, 'role': 'UERANSIM gNB'},
+            {'id': 'ue-vm', 'port': self.settings.ue_ssh_port, 'namespace': None, 'role': 'UERANSIM terminals'},
+        ]
+        contexts = {'upf-01': 'upf-vm', 'upf-02': 'upf-vm2', 'upf-03': 'upf-urllc'}
+        for target in inventory()['targets']:
+            targets.append({'id': contexts[target['id']], 'port': getattr(self.settings, target['ssh_port_setting']),
+                            'namespace': target['namespace'], 'role': target['label'], 'ip': target['n3_address']})
 
-            u1_ifaces = [
-                item for item in u1_payload["interfaces"]
-                if item["name"] == "ogstun" or not any(ci["name"] == item["name"] for ci in core_payload["interfaces"])
-            ]
-            u2_ifaces = [
-                item for item in u2_payload["interfaces"]
-                if item["name"] == "ogstun" or not any(ci["name"] == item["name"] for ci in core_payload["interfaces"])
-            ]
-            gnb_ifaces = [
-                item for item in gnb_payload["interfaces"]
-                if not any(ci["name"] == item["name"] for ci in core_payload["interfaces"])
-            ]
-            ue_ifaces = [
-                item for item in ue_payload["interfaces"]
-                if item["name"].startswith("uesimtun") or not any(ci["name"] == item["name"] for ci in core_payload["interfaces"])
-            ]
-            return {
-                "source": "remote",
-                "hostname": f"{c_host.strip()} + {u1_host.strip()} + {u2_host.strip()} + {gnb_host.strip()} + {ue_host.strip()}",
-                "hosts": [
-                    {
-                        "id": "core",
-                        "hostname": c_host.strip(),
-                        "ip": "10.210.50.1",
-                        "role": "Plano de Control 5GC (AMF, SMF, UDM, NRF)",
-                        "port": self.settings.ssh_port,
-                        "interfaces": core_payload["interfaces"],
-                        "listening_ports": core_payload["listening_ports"],
-                    },
-                    {
-                        "id": "upf-vm",
-                        "hostname": u1_host.strip(),
-                        "ip": "10.210.50.8",
-                        "role": "Plano de Usuario UPF-01 (Internet / eMBB)",
-                        "port": upf1_port,
-                        "interfaces": u1_payload["interfaces"],
-                        "listening_ports": u1_payload["listening_ports"],
-                    },
-                    {
-                        "id": "upf-vm2",
-                        "hostname": u2_host.strip(),
-                        "ip": "10.210.50.9",
-                        "role": "Plano de Usuario UPF-02 (Corporativo / MEC)",
-                        "port": upf2_port,
-                        "interfaces": u2_payload["interfaces"],
-                        "listening_ports": u2_payload["listening_ports"],
-                    },
-                    {
-                        "id": "gnb-vm",
-                        "hostname": gnb_host.strip(),
-                        "ip": "10.210.50.10",
-                        "role": "Radio Access Network gNodeB (UERANSIM)",
-                        "port": gnb_port,
-                        "interfaces": gnb_payload["interfaces"],
-                        "listening_ports": gnb_payload["listening_ports"],
-                    },
-                    {
-                        "id": "ue-vm",
-                        "hostname": ue_host.strip(),
-                        "ip": "10.210.50.11",
-                        "role": "Dispositivo de Usuario 5G (Dual PDU Sessions)",
-                        "port": ue_port,
-                        "interfaces": ue_payload["interfaces"],
-                        "listening_ports": ue_payload["listening_ports"],
-                    },
-                ],
-                "interfaces": core_payload["interfaces"] + u1_ifaces + u2_ifaces + gnb_ifaces + ue_ifaces,
-                "listening_ports": core_payload["listening_ports"] + u1_payload["listening_ports"] + u2_payload["listening_ports"] + gnb_payload["listening_ports"] + ue_payload["listening_ports"],
-            }
-        except Exception:
-            hostname, interfaces, sockets = await core_task
-            return _runtime_payload("remote", hostname, interfaces, sockets)
+        async def observe(target):
+            prefix = 'ip netns exec ' + shlex.quote(target['namespace']) + ' ' if target['namespace'] else ''
+            def command(value):
+                return self._sudo_cmd(prefix + value) if prefix else value
+            base = {**target, 'observed_at': datetime.now(timezone.utc).isoformat()}
+            try:
+                host, links, sockets = await asyncio.gather(*[
+                    self._run(command(value), port=target['port'])
+                    for value in ('hostname', 'ip -j address show', 'ss -H -lnutS')])
+                payload = _runtime_payload('remote', host, links, sockets)
+                for key in ('interfaces', 'listening_ports'):
+                    payload[key] = [{**v, 'runtime_id': target['id'], 'namespace': target['namespace']} for v in payload[key]]
+                return {**base, **payload, 'observation_status': 'observed'}
+            except Exception as exc:
+                return {**base, 'hostname': None, 'interfaces': [], 'listening_ports': [],
+                        'observation_status': 'unavailable', 'error': type(exc).__name__}
+        hosts = await asyncio.gather(*(observe(target) for target in targets))
+        return {'source': 'remote', 'hostname': ' + '.join(h['hostname'] for h in hosts if h['hostname']),
+                'hosts': hosts, 'interfaces': [i for h in hosts for i in h['interfaces']],
+                'listening_ports': [p for h in hosts for p in h['listening_ports']],
+                'complete': all(h['observation_status'] == 'observed' for h in hosts)}
 
     @staticmethod
     def _capture_paths(trace_id: str) -> tuple[str, str]:
@@ -722,7 +644,7 @@ class RemoteExecutionAdapter(ExecutionAdapter):
             f"rm -f -- {shlex.quote(pcap_path)} {shlex.quote(log_path)} {shlex.quote(filtered_path)}"
         )
 
-    def _read_file_sync(self, remote_path: str) -> str:
+    def _read_file_sync(self, remote_path: str, component_id: str | None = None) -> str:
         import paramiko
         client = paramiko.SSHClient()
         if self.settings.ssh_strict_host_key:
@@ -731,14 +653,7 @@ class RemoteExecutionAdapter(ExecutionAdapter):
         else:
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
-            if "upf.yaml" in remote_path:
-                target_port = getattr(self.settings, "upf_ssh_port", 2223)
-            elif "gnb" in remote_path:
-                target_port = getattr(self.settings, "gnb_ssh_port", 2225)
-            elif "ue" in remote_path:
-                target_port = getattr(self.settings, "ue_ssh_port", 2226)
-            else:
-                target_port = self.settings.ssh_port
+            target_port = self._config_port(remote_path, component_id)
             connect_kwargs = {
                 "hostname": self.settings.testbed_host,
                 "port": target_port,
@@ -764,10 +679,21 @@ class RemoteExecutionAdapter(ExecutionAdapter):
         finally:
             client.close()
 
-    async def read_remote_file(self, remote_path: str) -> str:
+    def _config_port(self, remote_path, component_id=None):
+        profiles = json.loads(self.settings.profiles_path.read_text(encoding='utf-8'))
+        candidates = [p for key, p in profiles.items()
+                      if (key.startswith('5G:') or key.startswith('common:'))
+                      and remote_path in p.get('config_paths', [])
+                      and (component_id is None or key.split(':', 1)[1] == component_id)]
+        ports = {getattr(self.settings, p.get('ssh_port_setting', 'ssh_port')) for p in candidates}
+        if len(ports) != 1:
+            raise ExecutionError('Configuración sin destino único declarado en el catálogo')
+        return ports.pop()
+
+    async def read_remote_file(self, remote_path: str, *, component_id: str | None = None) -> str:
         if not remote_path.startswith(("/etc/open5gs/", "/etc/mongod.conf", "/home/emsadmin/UERANSIM/config/")):
             raise ExecutionError("Ruta remota fuera de las ubicaciones permitidas")
-        return await asyncio.to_thread(self._read_file_sync, remote_path)
+        return await asyncio.to_thread(self._read_file_sync, remote_path, component_id)
 
     @staticmethod
     def _parse_kpi_text(output: str) -> dict:
@@ -1025,6 +951,7 @@ def _validate_info_endpoint(component: str, endpoint: str | None) -> str:
         "amf": {"ue-info", "gnb-info"},
         "smf": {"pdu-info"},
         "smf2": {"pdu-info"},
+        "smf3": {"pdu-info"},
         "mme": {"ue-info", "enb-info"},
     }
     if endpoint not in allowed.get(component, set()):
@@ -1033,7 +960,7 @@ def _validate_info_endpoint(component: str, endpoint: str | None) -> str:
 
 
 def _component_binary(component: str) -> str:
-    if component == "smf2":
+    if component in ("smf2", "smf3"):
         return "/home/emsadmin/maestro-charging/open5gs/build/src/smf/open5gs-smfd"
     if component in {"gnb", "ue"}:
         return "nr-gnb" if component == "gnb" else "nr-ue"
@@ -1062,6 +989,8 @@ def _json_operation_payload(output: str) -> dict:
 def _info_address(component: str) -> tuple[str, int]:
     if component == "smf2":
         return "127.0.0.15", 9091
+    if component == "smf3":
+        return "10.210.50.18", 9092
     return {"amf": "127.0.0.5", "smf": "127.0.0.4", "mme": "127.0.0.2"}[component], get_settings().open5gs_info_port
 
 

@@ -1,6 +1,5 @@
-import { ChevronsUpDown, LogOut, Moon, Sun } from 'lucide-react'
+import { ChevronsUpDown, LogOut } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
-import { useTheme } from '@/context/theme-provider'
 import useDialogState from '@/hooks/use-dialog-state'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -23,18 +22,12 @@ type NavUserProps = { user: { name: string; email: string; avatar: string } }
 export function NavUser({ user: defaultUser }: NavUserProps) {
   const { isMobile } = useSidebar()
   const [open, setOpen] = useDialogState()
-  const { theme, setTheme } = useTheme()
   const user = useAuthStore((state) => state.auth.user)
   const name = user?.username ?? defaultUser.name
   const detail = user
     ? `${user.role} · ${user.testbed ?? 'compartido'}`
     : defaultUser.email
   const initials = name.slice(0, 2).toUpperCase()
-  const isDark =
-    theme === 'dark' ||
-    (theme === 'system' &&
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches)
 
   return (
     <>
@@ -70,17 +63,6 @@ export function NavUser({ user: defaultUser }: NavUserProps) {
                   {detail}
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => setTheme(isDark ? 'light' : 'dark')}
-              >
-                {isDark ? (
-                  <Sun className='size-4 text-amber-500' />
-                ) : (
-                  <Moon className='size-4 text-indigo-500' />
-                )}
-                <span>{isDark ? 'Modo Claro' : 'Modo Oscuro'}</span>
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant='destructive'

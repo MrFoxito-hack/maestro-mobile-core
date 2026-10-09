@@ -67,6 +67,8 @@ export type Metrics = {
     total_nfs: number
     ue_registered: number
     pdu_sessions: number
+    slices_active?: number
+    slices_detail?: string[]
   }
   history?: {
     time: string

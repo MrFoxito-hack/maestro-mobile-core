@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from app.errors import ChargingError
-from app.migrations import migrate_v2
+from app.migrations import migrate_v2, migrate_v3
 
 
 def utc_now() -> str:
@@ -41,11 +41,11 @@ class ChargingRepository:
     def initialize(self) -> None:
         with self.transaction() as conn:
             version = conn.execute('PRAGMA user_version').fetchone()[0]
-            if version > 2:
+            if version > 3:
                 raise RuntimeError('Charging database is newer than this binary; refusing downgrade')
             exists = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='charging_accounts'").fetchone()
-            if exists and version < 2:
-                backup_path = self.database_path.with_suffix('.v1-backup.sqlite3')
+            if exists and version < 3:
+                backup_path = self.database_path.with_suffix(f'.v{max(1, version)}-backup.sqlite3')
                 if not backup_path.exists():
                     backup = sqlite3.connect(backup_path)
                     try:
@@ -95,6 +95,60 @@ class ChargingRepository:
                 """
             )
             migrate_v2(conn)
+            migrate_v3(conn)
+
+    def upsert_policy(self, policy, actor='admin'):
+        from app.models import ServicePolicy
+        policy = ServicePolicy.model_validate(policy)
+        with self.transaction(immediate=True) as conn:
+            conn.execute('''INSERT INTO service_policies VALUES(?,?,?,?,?)
+                ON CONFLICT(dnn,sst,sd,rating_group) DO UPDATE SET policy_json=excluded.policy_json''',
+                (policy.dnn, policy.sst, policy.sd, policy.ratingGroup, policy.model_dump_json()))
+            self.append_ledger(conn, '*', None, 'SERVICE_POLICY', actor, policy.model_dump())
+        return policy.model_dump()
+
+    def list_policies(self):
+        with self.transaction() as conn:
+            return [json.loads(row[0]) for row in conn.execute(
+                'SELECT policy_json FROM service_policies ORDER BY dnn,sst,sd,rating_group')]
+
+    @staticmethod
+    def resolve_policy(conn, context, rating_group):
+        pdu = context.pduSessionInformation if context else None
+        slicing = pdu.networkSlicingInfo if pdu else None
+        snssai = slicing.sNSSAI if slicing else None
+        row = None
+        if snssai and snssai.sd:
+            row = conn.execute('''SELECT policy_json FROM service_policies
+                WHERE dnn=? AND sst=? AND sd=? AND rating_group=?''',
+                (pdu.dnnId.lower(), snssai.sst, snssai.sd.lower(), rating_group)).fetchone()
+        return json.loads(row[0]) if row else {'mode': 'BYTE_QUOTA', 'source': 'legacy-default'}
+
+    @staticmethod
+    def message_snapshot(conn, supi):
+        row = conn.execute('''SELECT a.*, COALESCE((SELECT SUM(reserved_messages)
+            FROM charging_sessions WHERE supi=a.supi AND status='OPEN'),0) AS reserved_messages
+            FROM message_accounts a WHERE supi=?''', (supi,)).fetchone()
+        if not row:
+            return None
+        result = dict(row)
+        result['available_messages'] = result['quota_messages'] - result['consumed_messages'] - result['reserved_messages']
+        return result
+
+    def upsert_message_account(self, supi, quota, actor='admin'):
+        from app.models import MessageAccountUpsert
+        MessageAccountUpsert(quotaMessages=quota)
+        with self.transaction(immediate=True) as conn:
+            if not self.account_snapshot(conn, supi):
+                raise ChargingError(404, 'USER_UNKNOWN', 'byte account identity must exist')
+            before = self.message_snapshot(conn, supi)
+            if before and quota < before['consumed_messages'] + before['reserved_messages']:
+                raise ChargingError(409, 'QUOTA_COMMITTED', 'message quota is already committed')
+            conn.execute('''INSERT INTO message_accounts(supi,quota_messages) VALUES(?,?)
+                ON CONFLICT(supi) DO UPDATE SET quota_messages=excluded.quota_messages''', (supi, quota))
+            after = self.message_snapshot(conn, supi)
+            self.append_ledger(conn, supi, None, 'MESSAGE_ACCOUNT_UPSERT', actor, {'before': before, 'after': after})
+            return after
 
     def upsert_account(self, supi: str, quota_bytes: int | None, enabled: bool, actor: str = "admin") -> dict:
         from app.models import AccountUpsert
@@ -158,6 +212,7 @@ class ChargingRepository:
             return None
         result = dict(row)
         result['available_bytes'] = result['quota_bytes'] - result['consumed_bytes'] - result['reserved_bytes']
+        result['messages'] = ChargingRepository.message_snapshot(conn, supi)
         return result
 
     @staticmethod
@@ -177,7 +232,12 @@ class ChargingRepository:
                     WHERE s.supi=a.supi AND status='OPEN'),0) > quota_bytes LIMIT 1""").fetchone()
             if invalid:
                 raise ChargingError(503, "SYSTEM_FAILURE", "account invariants require reconciliation")
-        return {"status": "ready", "schemaVersion": 2}
+            invalid = conn.execute('''SELECT supi FROM message_accounts a WHERE consumed_messages +
+                COALESCE((SELECT SUM(reserved_messages) FROM charging_sessions
+                WHERE supi=a.supi AND status='OPEN'),0) > quota_messages LIMIT 1''').fetchone()
+            if invalid:
+                raise ChargingError(503, 'SYSTEM_FAILURE', 'message account invariant violated')
+        return {"status": "ready", "schemaVersion": 3}
 
     def list_records(self, kind, *, supi=None, limit=100, offset=0):
         tables = {"accounts": ("charging_accounts", "supi"),
@@ -192,7 +252,7 @@ class ChargingRepository:
             total = conn.execute(f"SELECT COUNT(*) FROM {table}{where}", params).fetchone()[0]
             items = [self.account_snapshot(conn, row['supi']) if kind == 'accounts' else dict(row) for row in rows]
             for item in items:
-                for key in ("context_json", "record_json", "snapshot_json"):
+                for key in ("context_json", "record_json", "snapshot_json", "policy_json"):
                     if item.get(key):
                         item[key.removesuffix('_json')] = json.loads(item.pop(key))
             return {"items": items, "total": total, "limit": limit, "offset": offset}

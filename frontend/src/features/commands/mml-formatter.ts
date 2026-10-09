@@ -35,6 +35,7 @@ export const MML_TO_OP: Record<
   'LST CHF-CDR': { opId: 'chf.cdrs', defaultTarget: 'chf' },
   'ADD 5G-SUB': { opId: 'subscriber.create', defaultTarget: 'udm' },
   'MOD 5G-SUB': { opId: 'subscriber.update', defaultTarget: 'udm' },
+  'SET 5G-SUB': { opId: 'subscriber.update', defaultTarget: 'udm' },
   'RMV 5G-SUB': { opId: 'subscriber.delete', defaultTarget: 'udm' },
   'ADD CHF-QUOTA': { opId: 'chf.quota', defaultTarget: 'chf' },
   'MOD CHF-STATE': { opId: 'chf.state', defaultTarget: 'chf' },
@@ -50,8 +51,8 @@ export const MML_TO_OP: Record<
 }
 
 export const MML_SUGGESTIONS = [
-  'ADD 5G-SUB: IMSI="imsi-999700000000006", SST=1, SD="000002", DNN="corporate";',
-  'MOD 5G-SUB: IMSI="imsi-999700000000006", SD="000002", DNN="corporate";',
+  'ADD 5G-SUB: IMSI="imsi-999700000000006", SST=3, SD="000003", DNN="corporate";',
+  'SET 5G-SUB: IMSI="imsi-999700000000006", SST=3, SD="000003", DNN="corporate";',
   'RMV 5G-SUB: IMSI="imsi-999700000000006";',
   'ADD CHF-QUOTA: IMSI="imsi-999700000000004", QUOTA_MB=50;',
   'MOD CHF-STATE: IMSI="imsi-999700000000004", STATE="ACTIVE";',
@@ -360,6 +361,16 @@ export function parseMmlCommand(
       !p.options.some((option) => option.value === value)
     )
       return { success: false, error: `Valor no permitido para ${p.label}.` }
+  }
+
+  if (['subscriber.create', 'subscriber.update'].includes(resolvedOpId)) {
+    const triplets: Record<string, [number, string]> = {
+      internet: [1, '000001'], '5g-plus': [2, '000002'], corporate: [3, '000003'],
+    }
+    const expected = triplets[String(cleanParams.apn_dnn)]
+    if (!expected || cleanParams.sst !== expected[0] || String(cleanParams.sd).toLowerCase() !== expected[1]) {
+      return { success: false, error: 'Triplete SST/SD/DNN incompatible; indique los tres parámetros del servicio.' }
+    }
   }
 
   const normalized = toMmlSyntax(

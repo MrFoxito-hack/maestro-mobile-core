@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <linearGradient id="corpGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#007aff"/>
+      <stop offset="100%" stop-color="#5856d6"/>
+    </linearGradient>
+    <clipPath id="squircleClip">
+      <path d="M233 300H67c-36.85 0-67-30.15-67-67V67C0 30.15 30.15 0 67 0h166c36.85 0 67 30.15 67 67v166c0 36.85-30.15 67-67 67z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#squircleClip)">
+    <rect width="300" height="300" fill="url(#corpGrad)"/>
+    <!-- Enterprise Intranet Shield & Building Motif -->
+    <path d="M150 45 L225 78 V140 C225 190 185 235 150 255 C115 235 75 190 75 140 V78 Z" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.35)" stroke-width="4" stroke-linejoin="round"/>
+    <!-- Enterprise Pillars -->
+    <path d="M110 185 V125 H125 V185 M142.5 185 V125 H157.5 V185 M175 185 V125 H190 V185 M95 195 H205 M100 120 L150 85 L200 120 Z" fill="none" stroke="white" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

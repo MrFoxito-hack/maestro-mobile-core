@@ -72,6 +72,10 @@ def collect(directory: Path, *, competing_index=4, transport=None):
         controller = project_snapshot({}, bindings)
     event('pcf_controller_observed', controller)
     report = {'schema_version': 1, 'source': 'live_ssh', 'scope': 'real_core_readiness',
+              'actuator_scope': 'legacy_policy_mutating_pilot',
+              'c6_acquisition': {'preset': 'c6-embb-qoe-local-advisor-v1',
+                                 'runner': 'infra/c6_qoe_campaign.py',
+                                 'policy_mutation': False, 'separate_live_admission_required': True},
               'execution_status': 'completed' if not preflight['errors'] and pcf.get('status') == 'success' else 'failed',
               'validity_status': 'inconclusive', 'hypothesis_outcome': 'not_evaluated',
               'execution_ready': False, 'network_measurements': False, 'metrics': None,

@@ -21,7 +21,6 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Dialog,
   DialogContent,
@@ -206,7 +205,7 @@ export function TopologyPage() {
   return (
     <EmsPage
       title='Topología'
-      description='Vista física del testbed y arquitectura de modelos de comunicación SBA 3GPP Rel-16.'
+      description='Topología física, interfaces 3GPP, modelos SBA y arquitectura de la tríada Network Slicing.'
     >
       <Card className='h-[calc(100dvh-7rem)]'>
         <CardHeader className='flex-row items-center justify-between'>
@@ -219,6 +218,7 @@ export function TopologyPage() {
                 <TabsTrigger value='physical'>Física</TabsTrigger>
                 <TabsTrigger value='models'>Modelos SBA</TabsTrigger>
                 <TabsTrigger value='interfaces'>Interfaces 3GPP</TabsTrigger>
+                <TabsTrigger value='slicing'>Tríada Slicing</TabsTrigger>
               </TabsList>
             </Tabs>
 
@@ -267,65 +267,21 @@ export function TopologyPage() {
           ) : component ? (
             <>
               {(() => {
-                const isUpf = component.id === 'upf' || component.id === 'upf2'
-                const upfInstances = isUpf
-                  ? (status.data?.components ?? []).filter(
-                      (c) =>
-                        c.id === 'upf' ||
-                        c.id === 'upf2' ||
-                        c.kind === 'user-plane'
-                    )
-                  : []
-                const isMultiUpf = upfInstances.length > 1
-
-                const isSmf = component.id === 'smf' || component.id === 'smf2'
-                const smfInstances = isSmf
-                  ? (status.data?.components ?? []).filter(
-                      (c) => c.id === 'smf' || c.id === 'smf2'
-                    )
-                  : []
-                const isMultiSmf = smfInstances.length > 1
-
-                const isMultiInstance = isMultiUpf || isMultiSmf
-                const activeInstances = isMultiUpf ? upfInstances : smfInstances
-
                 const componentAlarms = (alarmCenter.data?.items ?? []).filter(
-                  (a) => {
-                    if (isMultiUpf) {
-                      return upfInstances.some(
-                        (u) =>
-                          a.component === u.id ||
-                          a.component?.toLowerCase() === u.id.toLowerCase() ||
-                          (a.node_id &&
-                            (a.node_id === u.node_id ||
-                              a.node_id === 'upf-vm' ||
-                              a.node_id === 'upf-vm2'))
-                      )
-                    }
-                    if (isMultiSmf) {
-                      return smfInstances.some(
-                        (s) =>
-                          a.component === s.id ||
-                          a.component?.toLowerCase() === s.id.toLowerCase()
-                      )
-                    }
-                    return alarmBelongsToComponent(a, component)
-                  }
+                  (a) => alarmBelongsToComponent(a, component)
                 )
 
-                const allInstancesRunning =
-                  isMultiInstance &&
-                  activeInstances.every((c) => c.status === 'running')
+                const isRunning = component.status === 'running'
 
-                const isRunning = isMultiInstance
-                  ? allInstancesRunning
-                  : component.status === 'running'
-
-                const modalTitle = isMultiUpf
-                  ? 'UPF (Plano de Usuario CUPS)'
-                  : isMultiSmf
-                    ? 'SMF (Plano de Control Dual-SMF)'
-                    : component.label
+                const modalTitle = (() => {
+                  if (component.id === 'smf') return 'SMF-01 · eMBB'
+                  if (component.id === 'smf2') return 'SMF-02 · MIoT'
+                  if (component.id === 'smf3') return 'SMF-03 · URLLC'
+                  if (component.id === 'upf') return 'UPF-01 · eMBB'
+                  if (component.id === 'upf2') return 'UPF-02 · MIoT'
+                  if (component.id === 'upf3') return 'UPF-03 · URLLC'
+                  return component.label
+                })()
 
                 return (
                   <div className='space-y-4'>
@@ -343,11 +299,7 @@ export function TopologyPage() {
                               : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
                           )}
                         >
-                          {isMultiInstance
-                            ? `${activeInstances.filter((c) => c.status === 'running').length}/${activeInstances.length} activas`
-                            : isRunning
-                              ? 'Activo'
-                              : 'Detenido'}
+                          {isRunning ? 'Activo' : 'Detenido'}
                         </Badge>
                       </div>
                       <DialogDescription className='sr-only'>
@@ -376,57 +328,6 @@ export function TopologyPage() {
                             </Button>
                           </Link>
                         </div>
-                      </div>
-                    )}
-
-                    {/* Tarjetas compactas si es Multi-Instancia (UPF o SMF) */}
-                    {isMultiInstance && (
-                      <div className='grid grid-cols-2 gap-2 text-xs'>
-                        {activeInstances.map((inst) => {
-                          const isCorp =
-                            inst.id.includes('2') ||
-                            inst.label.toLowerCase().includes('corporate')
-                          const sliceName = isCorp
-                            ? 'Slice Corporativo'
-                            : 'Slice Internet'
-                          const isSelected = component.id === inst.id
-                          return (
-                            <div
-                              key={inst.id}
-                              onClick={() =>
-                                setSelection({ type: 'component', id: inst.id })
-                              }
-                              className={cn(
-                                'rounded-lg border p-2 space-y-1 cursor-pointer transition select-none',
-                                isSelected
-                                  ? 'border-primary bg-primary/10 shadow-sm'
-                                  : 'bg-muted/30 hover:bg-muted/60 border-border/70'
-                              )}
-                            >
-                              <div className='flex items-center justify-between'>
-                                <span className={cn('font-mono font-bold text-[11px]', isSelected && 'text-primary')}>
-                                  {inst.label}
-                                </span>
-                                <span
-                                  className={cn(
-                                    'size-2 rounded-full',
-                                    inst.status === 'running'
-                                      ? 'bg-emerald-400'
-                                      : 'bg-rose-400'
-                                  )}
-                                />
-                              </div>
-                              <div className='flex items-center justify-between text-[10px] text-muted-foreground'>
-                                <span>{sliceName}</span>
-                                {isSelected && (
-                                  <span className='text-[9px] font-semibold text-primary uppercase'>
-                                    Seleccionado
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          )
-                        })}
                       </div>
                     )}
 
@@ -608,6 +509,39 @@ export function TopologyPage() {
   )
 }
 
+const HOST_META: Record<string, { title: string; role: string; ip: string }> = {
+  core: {
+    title: 'EMS-CORE',
+    role: '5G Core (CP + Multi-SMF)',
+    ip: '10.210.50.1',
+  },
+  'upf-vm': {
+    title: 'EMS-UPF-01',
+    role: 'UPF-01 (eMBB)',
+    ip: '10.210.50.8',
+  },
+  'upf-urllc': {
+    title: 'EMS-UPF-03',
+    role: 'UPF-03 (URLLC / eBPF)',
+    ip: '10.210.50.22',
+  },
+  'upf-vm2': {
+    title: 'EMS-UPF-02',
+    role: 'UPF-02 (MIoT)',
+    ip: '10.210.50.9',
+  },
+  'gnb-vm': {
+    title: 'EMS-GNB-01',
+    role: 'gNodeB (RAN 5G)',
+    ip: '10.210.50.10',
+  },
+  'ue-vm': {
+    title: 'EMS-UE-01',
+    role: 'UE (Tríada 3 Slices)',
+    ip: '10.210.50.11',
+  },
+}
+
 function HostDetail({
   runtime,
   components,
@@ -620,91 +554,197 @@ function HostDetail({
   onClose?: () => void
 }) {
   const host = runtime?.hosts?.find((h) => h.id === selectedHostId)
-  const title = host?.hostname ?? runtime?.hostname ?? 'Host del testbed'
-  const role =
-    host?.role ??
-    `Vista física obtenida por ${runtime?.source ?? 'fuente desconocida'}`
-  const ifaces = host?.interfaces ?? runtime?.interfaces ?? []
-  const ports = host?.listening_ports ?? runtime?.listening_ports ?? []
-  const hostComps = host
-    ? components.filter((c) => {
-        if (host.id === 'upf-vm')
-          return c.node_id === 'upf-vm' || c.id === 'upf'
-        if (host.id === 'upf-vm2')
-          return c.node_id === 'upf-vm2' || c.id === 'upf2'
-        if (host.id === 'gnb-vm')
-          return c.node_id === 'gnb-vm' || c.id === 'gnb'
-        if (host.id === 'ue-vm') return c.node_id === 'ue-vm' || c.id === 'ue'
-        return (
-          c.node_id === 'core' ||
-          (!['upf-vm', 'upf-vm2', 'gnb-vm', 'ue-vm'].includes(c.node_id) &&
-            !['upf', 'upf2', 'gnb', 'ue'].includes(c.id))
+  const meta = (selectedHostId && HOST_META[selectedHostId]) || null
+  const title = meta?.title ?? host?.hostname ?? 'Host Testbed'
+  const role = meta?.role ?? host?.role ?? 'Nodo Físico'
+  const ip = host?.ip || meta?.ip || ''
+
+  const hostComps = components.filter((c) => {
+    if (selectedHostId === 'upf-urllc')
+      return c.node_id === 'upf-urllc' || c.id === 'upf3'
+    if (selectedHostId === 'upf-vm')
+      return c.node_id === 'upf-vm' || c.id === 'upf'
+    if (selectedHostId === 'upf-vm2')
+      return c.node_id === 'upf-vm2' || c.id === 'upf2'
+    if (selectedHostId === 'gnb-vm')
+      return c.node_id === 'gnb-vm' || c.id === 'gnb'
+    if (selectedHostId === 'ue-vm')
+      return c.node_id === 'ue-vm' || c.id === 'ue'
+    if (selectedHostId === 'core')
+      return (
+        c.node_id === 'core' ||
+        (!['upf-vm', 'upf-vm2', 'upf-urllc', 'gnb-vm', 'ue-vm'].includes(
+          c.node_id
+        ) &&
+          !['upf', 'upf2', 'upf3', 'gnb', 'ue'].includes(c.id))
+      )
+    if (host) {
+      return c.node_id === host.id
+    }
+    return false
+  })
+
+  const activeCount = hostComps.filter((c) => c.status === 'running').length
+  const isHealthy = hostComps.length === 0 || activeCount === hostComps.length
+
+  const rawIfaces =
+    host?.interfaces ??
+    (runtime?.hosts && runtime.hosts.length > 1 ? [] : runtime?.interfaces ?? [])
+
+  const filteredIfaces = rawIfaces
+    .filter((item) => {
+      const n = item.name.toLowerCase()
+      return n !== 'lo' && !n.startsWith('lo:')
+    })
+    .map((item) => {
+      const ipv4 = item.addresses
+        .filter(
+          (a) =>
+            a.family === 'inet' ||
+            (!a.address.includes(':') && !a.address.startsWith('fe80'))
         )
-      })
-    : components
+        .map((a) => (a.prefix_length ? `${a.address}/${a.prefix_length}` : a.address))
+      const allAddrs = item.addresses
+        .filter((a) => !a.address.startsWith('fe80:'))
+        .map((a) => (a.prefix_length ? `${a.address}/${a.prefix_length}` : a.address))
+      const displayAddrs = ipv4.length > 0 ? ipv4 : allAddrs
+      return {
+        name: item.name,
+        state: item.state,
+        addresses: displayAddrs.join(', ') || 'Sin IP asignada',
+        isUp: item.state.toLowerCase() === 'up',
+      }
+    })
+
+  const ifacesList =
+    filteredIfaces.length > 0
+      ? filteredIfaces
+      : ip
+        ? [{ name: 'eth0', state: 'up', addresses: `${ip}/24`, isUp: true }]
+        : []
 
   return (
-    <div className='space-y-4'>
+    <div className='space-y-4 text-left'>
       <DialogHeader className='space-y-1 text-left'>
         <div className='flex items-center justify-between gap-2'>
-          <DialogTitle className='font-mono font-bold'>{title}</DialogTitle>
-          {host?.ip && (
-            <Badge
-              variant='outline'
-              className='font-mono text-xs font-semibold'
-            >
-              {host.ip}
-            </Badge>
-          )}
+          <div className='flex items-center gap-2 min-w-0'>
+            <DialogTitle className='text-lg font-bold tracking-tight font-mono'>
+              {title}
+            </DialogTitle>
+            {ip && (
+              <span className='font-mono text-xs px-2 py-0.5 rounded bg-muted/60 text-muted-foreground border border-border/50 shrink-0'>
+                {ip}
+              </span>
+            )}
+          </div>
+          <Badge
+            variant={isHealthy ? 'default' : 'destructive'}
+            className={cn(
+              'text-[10px] font-semibold uppercase font-mono px-2 py-0.5 shrink-0',
+              isHealthy
+                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+            )}
+          >
+            {isHealthy ? 'Online' : 'Alerta'}
+          </Badge>
         </div>
-        <DialogDescription className='text-xs text-muted-foreground'>{role}</DialogDescription>
+        <DialogDescription className='text-xs text-muted-foreground'>
+          {role}
+        </DialogDescription>
       </DialogHeader>
-      <ScrollArea className='max-h-80 px-1'>
-        <h3 className='mb-2 text-sm font-semibold'>Interfaces de Red</h3>
-        <div className='space-y-2'>
-          {ifaces.map((item) => (
-            <div key={item.name} className='rounded-md border bg-card/60 p-3'>
-              <div className='flex items-center justify-between'>
-                <b className='font-mono text-sm'>{item.name}</b>
-                <Badge variant={item.state === 'up' ? 'default' : 'secondary'}>
-                  {item.state}
-                </Badge>
-              </div>
-              <p className='mt-1 font-mono text-xs text-muted-foreground'>
-                {item.addresses
-                  .map(
-                    (address) => `${address.address}/${address.prefix_length}`
-                  )
-                  .join(', ') || 'Sin direcciones'}
-              </p>
+
+      <div className='max-h-[60vh] overflow-y-auto space-y-4 pr-0.5'>
+        {/* Funciones Alojadas */}
+        {hostComps.length > 0 && (
+          <div className='space-y-2'>
+            <div className='flex items-center justify-between text-[11px] font-medium text-muted-foreground px-0.5'>
+              <span>Funciones Alojadas</span>
+              <span className='font-mono text-[10px]'>
+                {activeCount}/{hostComps.length} activas
+              </span>
             </div>
-          ))}
+            <div className='flex flex-wrap gap-1.5'>
+              {hostComps.map((comp) => {
+                const isRunning = comp.status === 'running'
+                const label = (() => {
+                  if (comp.id === 'smf') return 'SMF-01'
+                  if (comp.id === 'smf2') return 'SMF-02'
+                  if (comp.id === 'smf3') return 'SMF-03'
+                  if (comp.id === 'upf') return 'UPF-01'
+                  if (comp.id === 'upf2') return 'UPF-02'
+                  if (comp.id === 'upf3') return 'UPF-03'
+                  return comp.label || comp.id.toUpperCase()
+                })()
+                return (
+                  <span
+                    key={comp.id}
+                    className={cn(
+                      'inline-flex items-center gap-1 font-mono text-[10px] font-semibold px-2 py-0.5 rounded-md border transition-colors',
+                      isRunning
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                        : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'size-1.5 rounded-full',
+                        isRunning ? 'bg-emerald-400' : 'bg-rose-400'
+                      )}
+                    />
+                    {label}
+                  </span>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Interfaces de Red */}
+        <div className='space-y-2'>
+          <div className='flex items-center justify-between text-[11px] font-medium text-muted-foreground px-0.5'>
+            <span>Interfaces de Red</span>
+            <span className='font-mono text-[10px]'>
+              {ifacesList.length} interfaces
+            </span>
+          </div>
+          <div className='rounded-lg border border-border/50 divide-y divide-border/40 overflow-hidden bg-muted/15'>
+            {ifacesList.map((item) => (
+              <div
+                key={item.name}
+                className='flex items-center justify-between px-3 py-2 text-xs'
+              >
+                <div className='flex items-center gap-2 min-w-0'>
+                  <span className='font-mono font-bold text-foreground text-[11px] shrink-0'>
+                    {item.name}
+                  </span>
+                  <span className='text-[10px] text-muted-foreground font-mono truncate'>
+                    {item.addresses}
+                  </span>
+                </div>
+                <span
+                  className={cn(
+                    'text-[9px] font-mono font-bold px-1.5 py-0.5 rounded uppercase shrink-0',
+                    item.isUp
+                      ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/25'
+                      : 'text-zinc-400 bg-zinc-500/10 border border-zinc-500/25'
+                  )}
+                >
+                  {item.state}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-        <h3 className='mt-5 mb-2 text-sm font-semibold'>
-          Funciones alojadas en este host ({hostComps.length})
-        </h3>
-        <div className='flex flex-wrap gap-2'>
-          {hostComps.map((item) => (
-            <Badge
-              key={item.id}
-              variant={item.status === 'running' ? 'default' : 'destructive'}
-            >
-              {item.label}
-            </Badge>
-          ))}
-        </div>
-        <h3 className='mt-5 mb-2 text-sm font-semibold'>Sockets en escucha</h3>
-        <p className='text-sm text-muted-foreground'>
-          {ports.length} endpoints de red detectados.
-        </p>
-      </ScrollArea>
-      <DialogFooter className='pt-2 border-t border-border/40'>
+      </div>
+
+      <DialogFooter className='pt-2 border-t border-border/30'>
         <Button
           type='button'
-          variant='ghost'
+          variant='outline'
           size='sm'
           onClick={onClose}
-          className='text-xs text-muted-foreground hover:text-foreground cursor-pointer'
+          className='w-full h-8 text-xs font-medium cursor-pointer hover:bg-muted/40'
         >
           Cerrar
         </Button>
@@ -712,3 +752,4 @@ function HostDetail({
     </div>
   )
 }
+

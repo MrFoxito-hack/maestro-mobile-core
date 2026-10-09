@@ -11,7 +11,6 @@ import {
 import { sidebarData } from './data/sidebar-data'
 import { NavGroup } from './nav-group'
 import { NavUser } from './nav-user'
-import { SidebarThemeToggle } from './sidebar-theme-toggle'
 import { TeamSwitcher } from './team-switcher'
 
 export function AppSidebar() {
@@ -38,7 +37,6 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
       <SidebarFooter className='gap-1.5'>
-        <SidebarThemeToggle />
         <NavUser user={sidebarData.user} />
       </SidebarFooter>
       <SidebarRail />

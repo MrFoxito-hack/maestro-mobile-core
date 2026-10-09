@@ -99,11 +99,25 @@ export const sidebarData: SidebarData = {
           color: 'text-indigo-500',
           description: 'Hipótesis, diseños y planes experimentales reproducibles',
         },
+        {
+          title: 'Inyección de Fallas',
+          url: '/diagnostico/fallas',
+          icon: ShieldAlert,
+          color: 'text-amber-500',
+          description: 'Catálogo e inyección controlada de fallas en funciones 5G',
+        },
       ],
     },
     {
       title: 'Servicios',
       items: [
+        {
+          title: 'Casos Verticales (URLLC & MIoT)',
+          url: '/services/verticals',
+          icon: Radio,
+          color: 'text-teal-500',
+          description: 'Movilidad V2X y parque de telemetría masiva',
+        },
         {
           title: 'Suscriptores',
           url: '/subscribers',

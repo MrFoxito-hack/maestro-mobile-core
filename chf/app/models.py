@@ -28,7 +28,7 @@ class NFIdentification(StrictModel):
 
 class RequestedUnit(StrictModel):
     totalVolume: Volume | None = None
-    # Non-volume units are not silently accepted or converted to bytes.
+    serviceSpecificUnits: Volume | None = None
 
 
 class Trigger(StrictModel):
@@ -42,13 +42,16 @@ class UsedUnitContainer(StrictModel):
     totalVolume: Volume | None = None
     uplinkVolume: Volume | None = None
     downlinkVolume: Volume | None = None
+    serviceSpecificUnits: Volume | None = None
     triggers: list[Trigger] = Field(default_factory=list, max_length=16)
     triggerTimestamp: AwareDatetime | None = None
     quotaManagementIndicator: Literal["ONLINE_CHARGING"] | None = None
 
     @model_validator(mode="after")
     def consistent_volume(self):
-        if self.totalVolume is None and (self.uplinkVolume is None or self.downlinkVolume is None):
+        if self.totalVolume is None and (self.uplinkVolume is not None or self.downlinkVolume is not None) and (self.uplinkVolume is None or self.downlinkVolume is None):
+            raise ValueError('both directional volumes are required without totalVolume')
+        if self.serviceSpecificUnits is None and self.totalVolume is None and (self.uplinkVolume is None or self.downlinkVolume is None):
             raise ValueError("provide totalVolume or both directional volumes")
         directional = (self.uplinkVolume or 0) + (self.downlinkVolume or 0)
         if self.totalVolume is not None:
@@ -61,7 +64,7 @@ class UsedUnitContainer(StrictModel):
         return self
 
     def volume(self) -> int:
-        return self.totalVolume if self.totalVolume is not None else self.uplinkVolume + self.downlinkVolume
+        return self.totalVolume if self.totalVolume is not None else (self.uplinkVolume or 0) + (self.downlinkVolume or 0)
 
 
 class MultipleUnitUsage(StrictModel):
@@ -116,7 +119,8 @@ class ChargingDataRequest(StrictModel):
 
 
 class GrantedUnit(StrictModel):
-    totalVolume: Volume
+    totalVolume: Volume | None = None
+    serviceSpecificUnits: Volume | None = None
 
 
 class FinalUnitIndication(StrictModel):
@@ -160,3 +164,17 @@ class ReconcileRequest(StrictModel):
 class TopupRequest(StrictModel):
     requestId: str = Field(pattern=r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')
     amountBytes: Annotated[int, Field(strict=True, gt=0, le=100_000_000)]
+
+
+class ServicePolicy(StrictModel):
+    dnn: str = Field(min_length=1, max_length=100, pattern=r'^[a-z0-9.-]+$')
+    sst: Annotated[int, Field(strict=True, ge=0, le=255)]
+    sd: str = Field(pattern=r'^[0-9a-f]{6}$')
+    ratingGroup: Uint32
+    mode: Literal['BYTE_QUOTA', 'ZERO_RATED', 'MESSAGE_QUOTA']
+    grantBlockSize: Annotated[int, Field(strict=True, gt=0, le=MAX_BYTES)] = 100
+    unitKind: Literal['MESSAGE', 'IP_PACKET'] = 'MESSAGE'
+
+
+class MessageAccountUpsert(StrictModel):
+    quotaMessages: Volume

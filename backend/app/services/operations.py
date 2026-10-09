@@ -17,7 +17,10 @@ from app.services.operation_mutations import mutation_definitions, execute_mutat
 
 
 class OperationError(RuntimeError):
-    pass
+    def __init__(self, message, status_code=422, result=None):
+        super().__init__(message)
+        self.status_code = status_code
+        self.result = result
 
 
 @dataclass(frozen=True)
@@ -204,6 +207,9 @@ INFO_OPERATIONS = {
     ],
     "smf2": [
         OperationDefinition("smf2.pdu-info", "Sesiones PDU Corporate", "Sesiones de SMF-02: SUPI, DNN, dirección, S-NSSAI y QoS.", "Open5GS InfoAPI", "info", endpoint="pdu-info"),
+    ],
+    "smf3": [
+        OperationDefinition("smf3.pdu-info", "Sesiones PDU URLLC", "Sesiones de SMF-03: SUPI, DNN, dirección, S-NSSAI y QoS.", "Open5GS InfoAPI", "info", endpoint="pdu-info"),
     ],
 }
 
@@ -424,6 +430,7 @@ class OperationsService:
         operation_id: str,
         raw_parameters: dict[str, Any],
         user: UserPublic,
+        authority: dict | None = None,
     ) -> dict:
         if scenario_id not in CATALOG:
             raise KeyError("scenario")
@@ -443,6 +450,14 @@ class OperationsService:
             raise PermissionError("Esta operación requiere rol docente o administrador")
 
         parameters = _validate_parameters(definition, raw_parameters)
+        policy_mutation = definition.mutating and component_id in {'pcf', 'nwdaf', 'smf', 'smf2', 'smf3', 'upf', 'upf2', 'upf3'}
+        if policy_mutation:
+            if definition.executor != 'mutation':
+                raise OperationError('native_fenced_infrastructure_mutation_unavailable', 503)
+            if authority is None:
+                raise OperationError('policy_authority_lease_required', 428)
+            from app.services.policy_authority_client import owner_for
+            authority = {**authority, 'owner': owner_for(user)}
         started = datetime.now(timezone.utc)
         started_clock = time.perf_counter()
         run_id = uuid.uuid4().hex
@@ -451,9 +466,10 @@ class OperationsService:
         output = ""
         data: Any = None
         error = None
+        error_status = 422
         try:
             if definition.executor == "mutation":
-                data, source = await execute_mutation(operation_id, parameters, run_id)
+                data, source = await execute_mutation(operation_id, parameters, run_id, authority=authority)
                 output = json.dumps(_safe_value(data), ensure_ascii=False, indent=2)
             elif definition.executor == "status":
                 state = await scenario_manager.adapter.service_status(component["unit"])
@@ -542,6 +558,10 @@ class OperationsService:
             else:
                 raise OperationError("Ejecutor no reconocido")
         except Exception as exc:
+            if operation_id.startswith('subscriber.'):
+                error_status = getattr(exc, 'status_code', 422)
+            if policy_mutation:
+                error_status = getattr(exc, 'status_code', 503)
             status = "failed"
             error = _safe_output(str(getattr(exc, "detail", str(exc))))
             output = error
@@ -589,7 +609,7 @@ class OperationsService:
                 ),
             )
         if status == "failed":
-            raise OperationError(error or "La operación falló")
+            raise OperationError(error or "La operación falló", error_status, response)
         return response
 
     def history(self, user: UserPublic, scenario_id: str | None, limit: int) -> list[dict]:

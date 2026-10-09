@@ -142,6 +142,39 @@ export const PERFORMANCE_TEMPLATES: PerformanceTemplate[] = [
     defaultCounterIds: ['5g.pdu.active'],
     defaultAggregation: 'last',
   },
+  // Physical NF IDs are preserved; new counter IDs never relabel legacy history.
+  {
+    id: 'upf-slice-performance',
+    title: 'Rendimiento por Slice (eMBB / URLLC / MIoT)',
+    subtitle: 'Throughput UL/DL y paquetes por UPF dedicado',
+    nf: 'upf',
+    nfName: 'UPF',
+    icon: Network,
+    scenario: '5g-sa',
+    matchObjects: (o) => ['nf:upf', 'nf:upf2', 'nf:upf3'].includes(o.id),
+    defaultObjectIds: ['nf:upf', 'nf:upf2', 'nf:upf3'],
+    matchCounters: (c) => c.id.startsWith('upf.triad.'),
+    defaultCounterIds: ['upf.triad.dl.mbps'],
+    defaultAggregation: 'avg',
+    defaultRangeKey: '1h',
+  },
+  {
+    id: 'upf-xdp-acceleration',
+    title: 'Aceleración eBPF/XDP (Comparación A/B)',
+    subtitle:
+      'Conmutación en caliente A/B y métricas de aceleración kernel bypass',
+    nf: 'upf',
+    nfName: 'UPF',
+    icon: Zap,
+    scenario: '5g-sa',
+    matchObjects: (o) => ['nf:upf', 'nf:upf3'].includes(o.id),
+    defaultObjectIds: ['nf:upf3'],
+    matchCounters: (c) =>
+      c.id.startsWith('upf.triad.') || c.id.startsWith('interface.'),
+    defaultCounterIds: ['upf.triad.dl.mbps', 'upf.triad.dl.pps'],
+    defaultAggregation: 'avg',
+    defaultRangeKey: '1h',
+  },
   // ================= UPF (UPF-01 y UPF-02) =================
   {
     id: 'upf-throughput',
@@ -523,14 +556,29 @@ export function getObjectPresentation(
   if (objectId === 'interface:ogstun')
     return { label: 'ogstun', badge: 'Interfaz de usuario' }
   if (objectId === 'nf:upf') {
-    return { label: 'UPF-01 (Internet)', badge: 'UDG 1', roleBadge: 'UPF' }
+    return {
+      label: 'UPF-01 · Smartphone (eMBB · Internet)',
+      badge: 'eMBB · SST 1',
+      roleBadge: 'UPF',
+    }
   }
   if (
     objectId === 'nf:upf2' ||
     objectId === 'interface:ogstun_corp' ||
     objectId === 'interface:ogstun2'
   ) {
-    return { label: 'UPF-02 (Corporate)', badge: 'UDG 2', roleBadge: 'UPF' }
+    return {
+      label: 'UPF-02 · Sensor (MIoT · Corporate)',
+      badge: 'MIoT · SST 3',
+      roleBadge: 'UPF',
+    }
+  }
+  if (objectId === 'nf:upf3') {
+    return {
+      label: 'UPF-03 · Vehículo (URLLC · 5g-plus)',
+      badge: 'URLLC · SST 2',
+      roleBadge: 'UPF',
+    }
   }
   if (objectId === 'procedure:registration')
     return { label: 'Procedimiento Registration', badge: 'Global · logs' }

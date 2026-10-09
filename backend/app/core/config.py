@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     chf_reader_token_file: str = "/home/emsadmin/maestro-charging/management/reader.token"
     chf_admin_environment_file: str = "/home/emsadmin/maestro-charging/management/management.env"
     nwdaf_enabled: bool = False
+    multi_upf_enabled: bool = False
     nwdaf_port: int = 8085
     nwdaf_token_file: str = "/home/emsadmin/maestro-charging/nwdaf/nwdaf.token"
     testbed_host: str | None = None

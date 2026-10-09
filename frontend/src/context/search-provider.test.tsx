@@ -7,7 +7,6 @@ const COMMAND_MENU_PLACEHOLDER = 'Type a command or search...'
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
-  setTheme: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
@@ -17,10 +16,6 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
     useNavigate: () => mocks.navigate,
   }
 })
-
-vi.mock('@/context/theme-provider', () => ({
-  useTheme: () => ({ setTheme: mocks.setTheme }),
-}))
 
 type ShortcutModifier = 'Control' | 'Meta'
 
@@ -69,10 +64,6 @@ describe('SearchProvider and CommandMenu', () => {
     await expect
       .element(getByPlaceholder(COMMAND_MENU_PLACEHOLDER))
       .toBeInTheDocument()
-    await expect.element(getByText('Theme')).toBeInTheDocument()
-    await expect.element(getByText('Light')).toBeInTheDocument()
-    await expect.element(getByText('Dark')).toBeInTheDocument()
-    await expect.element(getByText('System')).toBeInTheDocument()
     await expect.element(getByText('Resumen')).toBeInTheDocument()
   })
 
@@ -119,28 +110,15 @@ describe('SearchProvider and CommandMenu', () => {
 
   it('navigates to management routes', async () => {
     const screen = await renderWithSearchProvider()
-    const { getByPlaceholder, getByRole } = screen
+    const { getByPlaceholder } = screen
 
     await openCommandPalette(screen)
 
-    await userEvent.click(getByRole('option', { name: 'Sistema Auditoría' }))
+    await userEvent.click(screen.getByText('Auditoría'))
 
     expect(mocks.navigate).toHaveBeenCalledWith({ to: '/audit' })
     await expect
       .element(getByPlaceholder(COMMAND_MENU_PLACEHOLDER))
-      .not.toBeInTheDocument()
-  })
-
-  it('applies theme and closes the palette when a theme command is chosen', async () => {
-    const screen = await renderWithSearchProvider()
-
-    await openCommandPalette(screen)
-
-    await userEvent.click(screen.getByText('Dark'))
-
-    expect(mocks.setTheme).toHaveBeenCalledWith('dark')
-    await expect
-      .element(screen.getByPlaceholder(COMMAND_MENU_PLACEHOLDER))
       .not.toBeInTheDocument()
   })
 

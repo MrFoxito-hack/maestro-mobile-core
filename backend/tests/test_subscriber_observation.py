@@ -84,7 +84,7 @@ def test_list_retains_sim_profiles_and_masks_keys(observation, monkeypatch):
     }})
     result = service.list()
     assert len(result) == 2
-    assert result[0]['terminal_label'] == 'Equipo 1'
+    assert result[0]['terminal_label'] == 'Grupo 1 · Smartphone (eMBB)'
     assert result[0]['security']['k'] != 'a' * 32
     assert result[0]['live_status']['registered'] is True
     assert result[1]['live_status']['registered'] is None
