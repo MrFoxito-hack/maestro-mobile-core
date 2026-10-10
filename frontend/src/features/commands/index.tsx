@@ -23,6 +23,7 @@ import { toast } from 'sonner'
 import { isAxiosError } from 'axios'
 import { useScenarioStore } from '@/stores/scenario-store'
 import { api, apiErrorMessage } from '@/lib/api'
+import { newRequestId } from '@/lib/request-id'
 import { cn } from '@/lib/utils'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -258,7 +259,7 @@ export function CommandsPage() {
       // new lease or repeat a mutation automatically after an unknown outcome.
       const result = (await api.post<OperationResult>('/operations/execute', {
         ...payload,
-        authority: { ...lease, action_id: crypto.randomUUID() },
+        authority: { ...lease, action_id: newRequestId() },
       })).data
       const receipt = result.data as { version?: number; effective_policy_verified?: boolean } | null
       if (receipt?.effective_policy_verified !== true || receipt.version === undefined) {
@@ -323,7 +324,7 @@ export function CommandsPage() {
     const timestamp = new Date().toISOString()
     setLastMmlCommand(redactMml(command))
     setLastResult({
-      id: crypto.randomUUID(),
+      id: newRequestId(),
       scenario_id: scenario,
       testbed_id: '',
       component_id: currentComponent?.id ?? '',

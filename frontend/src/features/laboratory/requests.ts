@@ -1,12 +1,13 @@
 import { useRef } from 'react'
 import { api } from '@/lib/api'
+import { newRequestId } from '@/lib/request-id'
 
 export function useIdempotentPost() {
   const pending = useRef<{ signature: string; key: string } | null>(null)
   return async function post<T>(path: string, body: unknown): Promise<T> {
     const signature = JSON.stringify([path, body])
     if (pending.current?.signature !== signature) {
-      pending.current = { signature, key: crypto.randomUUID() }
+      pending.current = { signature, key: newRequestId() }
     }
     const key = pending.current.key
     const response = await api.post<T>(path, body, {

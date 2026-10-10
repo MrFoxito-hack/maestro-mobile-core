@@ -1,6 +1,7 @@
 import { TerminalScope } from './terminal-scope'
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
+import { newRequestId } from '@/lib/request-id'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Activity,
@@ -1145,7 +1146,7 @@ function ScopedSmartphone({
                 <button
                   disabled={busy || !balance}
                   onClick={() => {
-                    pendingTopup.current ??= crypto.randomUUID()
+                    pendingTopup.current ??= newRequestId()
                     run('topup', { request_id: pendingTopup.current })
                   }}
                   className='flex w-full items-center justify-center gap-2 rounded-2xl bg-[#30d158] hover:bg-[#28cd41] py-3 text-[13.5px] font-semibold text-black shadow-md transition-all active:scale-98 disabled:opacity-40 cursor-pointer'

@@ -23,6 +23,23 @@
     />
 
     <meta name="theme-color" content="#020817" />
+    <script>
+      if (typeof window.crypto !== 'undefined' && typeof window.crypto.randomUUID !== 'function') {
+        window.crypto.randomUUID = function() {
+          if (typeof window.crypto.getRandomValues === 'function') {
+            var b = window.crypto.getRandomValues(new Uint8Array(16));
+            b[6] = (b[6] & 0x0f) | 0x40;
+            b[8] = (b[8] & 0x3f) | 0x80;
+            var h = Array.from(b, function(x) { return x.toString(16).padStart(2, '0'); }).join('');
+            return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+          }
+          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0;
+            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+          });
+        };
+      }
+    </script>
     <script type="module" src="/libs/model-viewer.min.js"></script>
   </head>
 

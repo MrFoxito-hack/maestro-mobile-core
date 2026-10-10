@@ -1,3 +1,5 @@
+import { newRequestId } from '@/lib/request-id'
+
 type PlaybackState = 'loading' | 'playing' | 'buffering' | 'paused' | 'ended' | 'stopped'
 
 export type PlaybackObservation = {
@@ -22,7 +24,7 @@ export function observePlayback(
   const normalizedImsi = imsi.startsWith('imsi-') ? imsi : `imsi-${imsi}`
   const started = performance.now()
   const data: PlaybackObservation = {
-    imsi: normalizedImsi, profile, session_id: crypto.randomUUID(), sequence: 0,
+    imsi: normalizedImsi, profile, session_id: newRequestId(), sequence: 0,
     state: 'loading', startup_seconds: null, played_seconds: 0,
     rebuffer_count: 0, rebuffer_seconds: 0, received_bytes: 0,
   }
