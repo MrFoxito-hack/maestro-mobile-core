@@ -104,7 +104,9 @@ function PerformanceWorkspace({ scenario }: { scenario: '5g-sa' | '4g-epc' }) {
     queryFn: async () =>
       (await api.get<PerformanceCatalog>(`/performance/catalog/${scenario}`))
         .data,
-    refetchInterval: 15_000,
+    staleTime: 60_000,
+    gcTime: 300_000,
+    refetchInterval: 30_000,
   })
 
   const saved = useQuery({
@@ -192,6 +194,7 @@ function PerformanceWorkspace({ scenario }: { scenario: '5g-sa' | '4g-epc' }) {
       (await api.post<KpiQueryResult>('/performance/query', draft)).data,
     enabled: catalog.isSuccess && objectIds.length > 0 && counterIds.length > 0,
     refetchInterval: 10_000,
+    staleTime: 5_000,
   })
 
   const applyTemplate = (t: PerformanceTemplate) => {
@@ -580,7 +583,11 @@ function PerformanceWorkspace({ scenario }: { scenario: '5g-sa' | '4g-epc' }) {
                   'No se pudo cargar la consulta'
                 )}
               </div>
-            ) : catalog.isLoading || result.isLoading ? (
+            ) : catalog.isLoading && !catalog.data ? (
+              <div className='flex h-full items-center justify-center text-xs text-muted-foreground'>
+                Cargando catálogo de red…
+              </div>
+            ) : result.isLoading && !result.data ? (
               <div className='flex h-full items-center justify-center text-xs text-muted-foreground'>
                 Cargando mediciones…
               </div>
@@ -598,6 +605,26 @@ function PerformanceWorkspace({ scenario }: { scenario: '5g-sa' | '4g-epc' }) {
             {!!result.data?.missing_series?.length && (
               <span>
                 {result.data.missing_series.length} series sin muestras
+              </span>
+            )}
+            {catalog.data?.inventory_freshness && (
+              <span
+                className='flex items-center gap-1.5'
+                title={`Última sincronización NRM: ${catalog.data.inventory_freshness.last_sync ?? 'Inicialización T=0'}`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    catalog.data.inventory_freshness.is_stale
+                      ? 'bg-amber-500'
+                      : 'bg-emerald-500'
+                  }`}
+                />
+                <span>
+                  NRM:{' '}
+                  {catalog.data.inventory_freshness.data_age_seconds !== null
+                    ? `${Math.round(catalog.data.inventory_freshness.data_age_seconds)}s`
+                    : 'T=0'}
+                </span>
               </span>
             )}
             <div className='ml-auto'>

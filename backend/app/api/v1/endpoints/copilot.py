@@ -1,4 +1,5 @@
 """Copilot NOC 5G API - Conectado al LLM Local (Ollama Qwen 2.5 7B en GPU RTX 5070) con RAG y telemetría en vivo."""
+import asyncio
 import json
 import logging
 import urllib.request
@@ -20,6 +21,45 @@ OLLAMA_API_URL = "http://127.0.0.1:11434/api/chat"
 DEFAULT_MODEL = "qwen2.5:7b-instruct-q4_K_M"
 
 
+async def get_live_ue_telemetry() -> str:
+    """Consulta la telemetría real de UEs en el AMF vía Open5GS InfoAPI sin inventar datos."""
+    try:
+        from app.services.scenarios import scenario_manager
+        result = await asyncio.wait_for(
+            scenario_manager.adapter.native_operation("open5gs-info", "amf", {"endpoint": "ue-info"}),
+            timeout=2.0
+        )
+        items = result.get("data", {}).get("items", [])
+        if not items:
+            return "- Telemetría Core AMF en vivo: 0 terminales detectados en la tabla de contextos."
+
+        reg_lines = []
+        for u in items:
+            supi = u.get("supi", "desconocido")
+            mm = u.get("mm_state", "unknown")
+            cm = u.get("cm_state", "unknown")
+            sessions = u.get("pdu_sessions", [])
+            sess_desc = []
+            for s in sessions:
+                dnn = s.get("dnn", "")
+                slice_info = s.get("snssai", {})
+                sst = slice_info.get("sst")
+                sd = slice_info.get("sd")
+                sess_desc.append(f"DNN: {dnn} (SST={sst}, SD={sd})")
+
+            pdu_str = f"Sesiones PDU: {', '.join(sess_desc)}" if sess_desc else "Sin sesiones PDU"
+            msisdn = u.get("msisdn", [])
+            msisdn_str = f", MSISDN: {msisdn[0]}" if msisdn else ""
+            reg_lines.append(f"  * {supi}{msisdn_str} -> Estado 3GPP: MM-{mm.upper()} ({cm.upper()}) | {pdu_str}")
+
+        count_reg = sum(1 for u in items if u.get("mm_state") == "registered")
+        return f"- Telemetría Core AMF en vivo ({count_reg} terminales registrados):\n" + "\n".join(reg_lines)
+    except Exception as e:
+        logger.debug(f"No se pudo consultar telemetría en vivo del AMF: {e}")
+        return "- Telemetría Core AMF en vivo: Consulta no disponible temporalmente."
+
+
+
 class ChatMessagePayload(BaseModel):
     role: Literal["user", "assistant", "system"]
     content: str
@@ -35,7 +75,7 @@ class ChatResponse(BaseModel):
     source: str
 
 
-def build_system_context(user: UserPublic) -> str:
+async def build_system_context(user: UserPublic) -> str:
     """Construye el contexto en tiempo real del testbed y del usuario autenticado."""
     doc = inventory()
     user_devices = terminal_access.visible_devices(user)
@@ -45,6 +85,9 @@ def build_system_context(user: UserPublic) -> str:
         label = d.get("label", d.get("name", d.get("id")))
         supi = d.get("supi", "")
         devices_summary.append(f"- {label} (SUPI/IMSI: {supi})")
+
+    # Telemetría real del AMF (cero alucinaciones)
+    ue_telemetry = await get_live_ue_telemetry()
 
     # Saldo CHF si existe
     chf_info = "Cuenta activa en CHF (Rating Group 100) con 1.26 GB (1290 MB) disponibles."
@@ -66,11 +109,7 @@ Contexto en tiempo real del usuario y del testbed 5G:
 - Terminales asignados/visibles para este usuario:
 {chr(10).join(devices_summary) if devices_summary else '- Todos los terminales del testbed (Grupo 1 y Grupo Docente)'}
 
-- Terminal activo en UERANSIM actualmente:
-  * Smartphone (Grupo 1, imsi-999700000000001), MSISDN: +51 987 654 321.
-  * Estado 3GPP: RM-REGISTERED (Normal Service en AMF).
-  * Sesión PDU: Activa (PS-ACTIVE) con IP 10.45.0.2 en interfaz de túnel uesimtun2.
-  * APN/DNN: internet sobre slice eMBB (SST 1 / SD 000001).
+{ue_telemetry}
 - Terminales del Grupo Docente:
   * Docente · Smartphone (eMBB): imsi-999700000000004
   * Docente · Vehículo V2X (URLLC): imsi-999700000000005
@@ -102,7 +141,7 @@ REGLAS DE RESPUESTA CRÍTICAS (OBLIGATORIAS):
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat_with_copilot(payload: ChatRequest, user: UserPublic = Depends(current_user)):
-    system_prompt = build_system_context(user)
+    system_prompt = await build_system_context(user)
 
     # Preparar mensajes para Ollama
     formatted_messages = [{"role": "system", "content": system_prompt}]

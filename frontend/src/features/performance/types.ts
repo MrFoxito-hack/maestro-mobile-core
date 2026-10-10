@@ -4,6 +4,14 @@ export type KpiObject = {
   type: 'testbed' | 'nf' | 'interface' | 'procedure'
   group: string
   status?: string
+  expected?: boolean
+  admin_state?: 'UNLOCKED' | 'LOCKED'
+  oper_state?: 'UNKNOWN' | 'ENABLED' | 'DISABLED' | 'DEGRADED'
+  reachability?: 'UNKNOWN' | 'REACHABLE' | 'PROBE_FAILED' | 'UNREACHABLE'
+  consecutive_failures?: number
+  last_seen?: string | null
+  data_age_seconds?: number | null
+  last_error?: string | null
   counter_count?: number
   capabilities?: {
     metrics_status: string
@@ -28,11 +36,40 @@ export type KpiCounter = {
   min_granularity_seconds?: number
 }
 
+export type NetworkSlice = {
+  id: string
+  sst: number
+  sd?: string | null
+  name: string
+  service: string
+  description?: string
+}
+
+export type SliceUPFAssociation = {
+  slice_id: string
+  sst: number
+  sd?: string | null
+  dnn: string
+  upf_id: string
+  interface_id: string
+  n3_address: string
+  pm_object_id: string
+  xdp_expected: boolean
+}
+
 export type PerformanceCatalog = {
   scenario_id: string
   testbed_id: string
   objects: KpiObject[]
   counters: KpiCounter[]
+  slices?: NetworkSlice[]
+  slice_associations?: SliceUPFAssociation[]
+  inventory_freshness?: {
+    last_sync: string | null
+    data_age_seconds: number | null
+    is_stale: boolean
+    reachability_summary: Record<string, number>
+  }
   collector: {
     interval_seconds: number
     retention_days: number
